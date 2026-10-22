@@ -527,3 +527,62 @@ html.reduce-motion .reveal { opacity: 1; transform: none; }
 @media (max-width: 1099px) { .cat-item { flex-basis: calc((100% - 14px * 3) / 4); } }
 @media (max-width: 699px) { .cat-row { gap: 10px; } .cat-item { flex-basis: calc((100% - 10px * 2) / 2.6); } .cat-nav { display: none; } }
 .foot .brand { align-items: flex-start; text-align: left; } .foot .brand img { width: 84px; }
+
+/* ---------- thanh bên thu gọn dạng biểu tượng (máy tính) ----------
+   Mặc định chỉ hiện biểu tượng; rê chuột hoặc dùng phím Tab thì mở rộng đè lên nội dung.
+   Nút ghim giữ thanh bên luôn mở (lưu trên trình duyệt). */
+@media (min-width: 1100px) {
+  :root { --rail-w: 92px; --side-open: 252px; }
+  .app { grid-template-columns: var(--rail-w) minmax(0, 1fr); transition: grid-template-columns .35s cubic-bezier(.2, .8, .2, 1); }
+  .app.side-pinned { grid-template-columns: calc(var(--side-open) + 16px) minmax(0, 1fr); }
+  .side { z-index: 60; width: var(--rail-w); padding: 14px 0 14px 14px; }
+  .side-in {
+    position: relative; width: calc(var(--rail-w) - 14px); padding: 16px 12px; gap: 4px; overflow-x: hidden;
+    transition: width .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s, background .35s;
+  }
+  .side:hover .side-in, .side:focus-within .side-in, .app.side-pinned .side-in { width: var(--side-open); }
+  .side:hover .side-in, .side:focus-within .side-in { background: linear-gradient(160deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .01) 40%), #0b0f11; box-shadow: 24px 0 60px -10px rgba(0, 0, 0, .7), 0 0 0 1px rgba(243, 199, 107, .22), 0 0 30px -12px rgba(243, 199, 107, .35); }
+  .app.side-pinned .side:not(:hover) .side-in { box-shadow: none; }
+
+  /* chữ ẩn khi thu gọn */
+  .side .nav a > span:not(.badge), .side .brand b, .side-user > span:not(.avatar), .side-promo, .side-pin { opacity: 0; transition: opacity .2s; white-space: nowrap; }
+  .side:hover .nav a > span, .side:focus-within .nav a > span, .app.side-pinned .nav a > span,
+  .side:hover .brand b, .side:focus-within .brand b, .app.side-pinned .brand b,
+  .side:hover .side-user > span:not(.avatar), .side:focus-within .side-user > span:not(.avatar), .app.side-pinned .side-user > span:not(.avatar),
+  .side:hover .side-promo, .side:focus-within .side-promo, .app.side-pinned .side-promo,
+  .side:hover .side-pin, .side:focus-within .side-pin, .app.side-pinned .side-pin { opacity: 1; transition: opacity .25s .12s; }
+  .side-promo { width: calc(var(--side-open) - 24px); pointer-events: none; white-space: normal !important; }
+  .side:hover .side-promo, .side:focus-within .side-promo, .app.side-pinned .side-promo { pointer-events: auto; }
+
+  /* logo */
+  .side .brand { padding: 4px 0 14px; gap: 8px; width: calc(var(--side-open) - 24px); align-items: flex-start; }
+  .side .brand img { width: 44px; margin-left: 4px; transition: width .35s cubic-bezier(.2, .8, .2, 1), margin .35s; }
+  .side .brand b { font-size: 13px; line-height: 1.35; margin-left: 4px; }
+  .side:hover .brand img, .side:focus-within .brand img, .app.side-pinned .brand img { width: 92px; }
+
+  /* mục menu: ô vuông phát sáng khi thu gọn */
+  .side .nav a { position: relative; gap: 16px; padding: 12px 14px; width: 100%; border-radius: 14px; overflow: hidden; }
+  .side .nav a svg { width: 20px; height: 20px; opacity: .8; transition: transform .25s, opacity .25s, filter .25s; }
+  .side .nav a:hover svg { transform: scale(1.12); opacity: 1; filter: drop-shadow(0 0 6px rgba(243, 199, 107, .6)); color: var(--gold); }
+  .side .nav a.active svg { opacity: 1; filter: drop-shadow(0 0 8px rgba(243, 199, 107, .75)); }
+  .side .nav a.active::before { content: ""; position: absolute; left: 0; top: 22%; bottom: 22%; width: 3px; border-radius: 3px; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+  .side .nav a .badge { position: absolute; left: 28px; top: 5px; height: 16px; min-width: 16px; padding: 0 4px; font-size: 10px; margin: 0; }
+  .side:hover .nav a .badge, .side:focus-within .nav a .badge, .app.side-pinned .nav a .badge { position: static; margin-left: auto; height: 20px; font-size: 11px; }
+  .side .nav-label { position: relative; height: 18px; margin: 12px 4px 4px; white-space: nowrap; color: transparent; transition: color .2s; }
+  .side .nav-label::before { content: ""; position: absolute; left: 10px; width: 30px; top: 50%; border-top: 1px solid var(--line); transition: opacity .2s; }
+  .side:hover .nav-label, .side:focus-within .nav-label, .app.side-pinned .nav-label { color: var(--text-3); }
+  .side:hover .nav-label::before, .side:focus-within .nav-label::before, .app.side-pinned .nav-label::before { opacity: 0; }
+  .side .nav-cats { display: none; }
+
+  /* người dùng và nút ghim */
+  .side-user { padding: 12px 5px 0; width: calc(var(--side-open) - 24px); margin-top: auto; }
+  .side-promo + .side-user { margin-top: 14px; }
+  .side-pin { position: absolute; right: 10px; top: 12px; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; border: 1px solid var(--line); background: rgba(255, 255, 255, .03); color: var(--text-3); cursor: pointer; }
+  .side-pin svg { width: 15px; height: 15px; }
+  .side-pin:hover { color: var(--gold); border-color: rgba(243, 199, 107, .4); }
+  .app.side-pinned .side-pin { color: var(--gold); border-color: rgba(243, 199, 107, .45); background: rgba(243, 199, 107, .1); }
+}
+@media (min-width: 1100px) and (max-height: 820px) { .side-promo { display: none; } }
+@media (min-width: 1100px) and (prefers-reduced-motion: reduce) { html.reduce-motion .side-in, html.reduce-motion .app { transition: none; } }
+.side-pin { display: none; }
+@media (min-width: 1100px) { .side-pin { display: grid; } }

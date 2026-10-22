@@ -343,6 +343,7 @@
     const cur = document.body.dataset.page, u = auth.user();
     const link = n => `<a href="${n.href}" class="${n.id === cur ? 'active' : ''}"${n.id === cur ? ' aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span>${n.cart ? '<span class="badge gold" data-cart-count hidden>0</span>' : ''}</a>`;
     const app = document.createElement('div'); app.className = 'app';
+    try { if (localStorage.getItem('psq_side_pin') === '1') app.classList.add('side-pinned'); } catch (e) {}
     app.innerHTML = `
       <div class="side-back" data-nav-close></div>
       <aside class="side" aria-label="Điều hướng">
@@ -358,6 +359,7 @@
             <p class="dim" style="font-size:12px;margin:6px 0 12px">Kích hoạt cộng tác viên, lên đại lý để nhận hoa hồng và điểm thưởng.</p>
             <a class="btn btn-grad btn-sm btn-block" href="thanh-vien.html">${u ? 'Vào tài khoản' : 'Đăng ký thành viên'}</a>
           </div></div>
+          <button class="side-pin" type="button" data-side-pin aria-label="Ghim thanh bên" title="Ghim thanh bên">${icon('menu')}</button>
           <a class="side-user" href="thanh-vien.html">
             <span class="avatar">${u ? esc(initials(u.name)) : icon('user')}</span>
             <span><b>${u ? esc(u.name) : 'Khách'}</b><small>${u ? (u.role === 'admin' ? 'Quản trị viên' : 'Thành viên') : 'Đăng nhập / Đăng ký'}</small></span>
@@ -397,6 +399,8 @@
       </aside>
       <div class="toasts" aria-live="polite"></div>`);
     document.addEventListener('click', e => {
+      const pin = e.target.closest('[data-side-pin]');
+      if (pin) { const on = app.classList.toggle('side-pinned'); try { localStorage.setItem('psq_side_pin', on ? '1' : '0'); } catch (er) {} pin.blur(); setTimeout(() => dispatchEvent(new Event('resize')), 400); return; }
       const t = e.target.closest('[data-nav-open],[data-nav-close],[data-cart-open],[data-cart-close],[data-add],[data-qty]');
       if (!t) return;
       if (t.matches('[data-nav-open]')) app.classList.add('nav-open');
