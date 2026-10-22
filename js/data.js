@@ -12,6 +12,7 @@ window.SITE = {
   logo: 'img/logo-psq.png',
   phone: '0900 000 000',           // TODO: số điện thoại thật
   zalo: '0900000000',
+  messenger: '',                   // TODO: tên trang Facebook để mở Messenger (m.me/ten-trang); để trống sẽ mở trang Liên hệ
   email: 'lienhe@tenmien.vn',
   address: 'Số nhà, đường, phường, tỉnh/thành phố (mẫu)',
   hours: 'Thứ 2 đến Chủ nhật, 8:00 đến 20:00',

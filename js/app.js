@@ -70,6 +70,8 @@
     download: '<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.6 13H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 5 7.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.5 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/>',
     zalo: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h4l-4 4h4M14 9v4M16.5 9a1.5 2 0 1 1 0 4 1.5 2 0 0 1 0-4z"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>',
+    messenger: '<path d="M12 3C6.9 3 3 6.7 3 11.4c0 2.6 1.2 4.9 3.2 6.4V21l2.9-1.6c.9.3 1.9.4 2.9.4 5.1 0 9-3.7 9-8.4S17.1 3 12 3z"/><path d="M7.5 13.5l3-3.2 2.2 2 3.8-2.8-3 3.3-2.2-2z" fill="currentColor"/>',
     facebook: '<path d="M14 8h3V4h-3a4 4 0 0 0-4 4v3H7v4h3v6h4v-6h3l1-4h-4V8.5a.5.5 0 0 1 .5-.5z"/>',
     youtube: '<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l5 3-5 3z"/>',
     tiktok: '<path d="M14 3v11a4 4 0 1 1-4-4"/><path d="M14 3a5 5 0 0 0 5 5"/>'
@@ -348,7 +350,7 @@
       <div class="side-back" data-nav-close></div>
       <aside class="side" aria-label="Điều hướng">
         <div class="side-in card">
-          <a class="brand" href="index.html"><img src="${S.logo}" alt="${esc(S.short)}"><b>${esc(S.brand)}</b></a>
+          <a class="brand notranslate" translate="no" href="index.html"><img src="${S.logo}" alt="${esc(S.short)}"><b>${esc(S.brand)}</b></a>
           <nav class="nav">${NAV.map(link).join('')}</nav>
           <div class="nav-label">Quản lý</div>
           <nav class="nav">${link({ id: 'admin', href: 'quan-tri.html', label: 'Quản trị', icon: 'grid' })}</nav>
@@ -361,7 +363,7 @@
           </div></div>
           <button class="side-pin" type="button" data-side-pin aria-label="Ghim thanh bên" title="Ghim thanh bên">${icon('menu')}</button>
           <a class="side-user" href="thanh-vien.html">
-            <span class="avatar">${u ? esc(initials(u.name)) : icon('user')}</span>
+            <span class="avatar">${u ? (u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials(u.name))) : icon('user')}</span>
             <span><b>${u ? esc(u.name) : 'Khách'}</b><small>${u ? (u.role === 'admin' ? 'Quản trị viên' : 'Thành viên') : 'Đăng nhập / Đăng ký'}</small></span>
           </a>
         </div>
@@ -372,6 +374,7 @@
           <div><div class="crumb">${esc(S.brand)} / ${esc(page.dataset.crumb || page.dataset.title || '')}</div><h1>${esc(page.dataset.title || '')}</h1></div>
           <div class="top-actions">
             <form class="search" action="san-pham.html" role="search">${icon('search')}<input name="q" placeholder="Tìm sản phẩm, bài viết..." aria-label="Tìm kiếm"></form>
+            ${window.PSQLang ? `<button class="icon-btn lang-btn notranslate" type="button" translate="no" aria-label="Chọn ngôn ngữ" aria-haspopup="dialog" data-lang-open>${icon('globe')}<b>${esc(PSQLang.info.tag)}</b></button>` : ''}
             <button class="icon-btn" type="button" aria-label="Giỏ hàng" data-cart-open>${icon('cart')}<span class="count" data-cart-count hidden>0</span></button>
             <a class="icon-btn" href="thanh-vien.html" aria-label="Tài khoản">${icon('user')}</a>
           </div>
@@ -397,8 +400,15 @@
         <div class="drawer-body" id="drawerBody"></div>
         <div class="drawer-foot" id="drawerFoot"></div>
       </aside>
-      <div class="toasts" aria-live="polite"></div>`);
+      <div class="toasts" aria-live="polite"></div>
+      ${cur === 'admin' ? '' : `<div class="contact-dock" aria-label="Liên hệ nhanh">
+        <a class="cd-btn cd-zalo" href="https://zalo.me/${esc(String(S.zalo || '').replace(/\D/g, ''))}" target="_blank" rel="noopener" aria-label="Chat Zalo"><span class="cd-ico notranslate" translate="no">Zalo</span><span class="cd-tip">Chat Zalo</span></a>
+        <a class="cd-btn cd-mess" href="${S.messenger ? 'https://m.me/' + esc(S.messenger) : 'lien-he.html'}"${S.messenger ? ' target="_blank" rel="noopener"' : ''} aria-label="Nhắn tin Messenger"><span class="cd-ico">${icon('messenger')}</span><span class="cd-tip">Nhắn Messenger</span></a>
+        <a class="cd-btn cd-call" href="tel:${esc(String(S.phone || '').replace(/[^\d+]/g, ''))}" aria-label="Gọi ${esc(S.phone || '')}"><span class="cd-ico">${icon('phone')}</span><span class="cd-tip">Gọi ${esc(S.phone || '')}</span></a>
+      </div>`}`);
     document.addEventListener('click', e => {
+      const lb = e.target.closest('[data-lang-open]');
+      if (lb) { e.stopPropagation(); if (document.querySelector('.lang-pop')) return PSQLang.close(); PSQLang.menu(lb); return; }
       const pin = e.target.closest('[data-side-pin]');
       if (pin) { const on = app.classList.toggle('side-pinned'); try { localStorage.setItem('psq_side_pin', on ? '1' : '0'); } catch (er) {} pin.blur(); setTimeout(() => dispatchEvent(new Event('resize')), 400); return; }
       const t = e.target.closest('[data-nav-open],[data-nav-close],[data-cart-open],[data-cart-close],[data-add],[data-qty]');

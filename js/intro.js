@@ -83,7 +83,7 @@
     </div>
     <canvas aria-hidden="true"></canvas>
     <button class="intro-skip" type="button" data-at="1">Bỏ qua</button>
-    ${INTRO.tapToStart ? `<button class="intro-gate" type="button" aria-label="${INTRO.tapText}"><img src="${INTRO.logo}" alt=""><span>${INTRO.tapText}</span></button>` : ''}
+    ${INTRO.tapToStart ? `<div class="intro-gate" role="button" tabindex="-1"><img src="${INTRO.logo}" alt=""><div class="intro-gate-row"><button class="intro-tap" type="button">${INTRO.tapText}</button>${window.PSQLang ? `<button class="intro-lang" type="button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/></svg><span>${PSQLang.current === 'vi' ? 'Chọn ngôn ngữ' : PSQLang.info.name}</span></button>` : ''}</div></div>` : ''}
     <button class="intro-sound" type="button" data-at="1" aria-label="Bật/tắt nhạc" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="w" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M16 9l6 6M22 9l-6 6"/></svg>
     </button>
@@ -552,7 +552,7 @@
 
   }
   el.addEventListener('click', e => { if (e.target.closest('#introEnter, .intro-skip')) enter(); });
-  addEventListener('keydown', e => { if (!exitAt && (e.key === 'Enter' || e.key === 'Escape')) enter(); });
+  addEventListener('keydown', e => { if (document.querySelector('.intro-gate:not(.gone)') || document.querySelector('.lang-pop')) return; if (!exitAt && (e.key === 'Enter' || e.key === 'Escape')) enter(); });
 
   // chờ cả 2 ảnh và phông chữ sẵn sàng rồi mới chạy, để cảnh không bị trống hay giật lúc đầu
   const decode = img => (img.decode ? img.decode() : new Promise(r => { img.complete ? r() : (img.onload = img.onerror = r); })).catch(() => {});
@@ -562,8 +562,11 @@
   const gate = el.querySelector('.intro-gate');
   let tapped = !gate, isReady = false;
   const begin = () => { if (tapped && isReady) start(); };
-  if (gate) gate.addEventListener('click', () => {
-    if (tapped) return; tapped = true; playMusic();
+  const langBtn = el.querySelector('.intro-lang');
+  if (langBtn) langBtn.addEventListener('click', e => { e.stopPropagation(); if (document.querySelector('.lang-pop')) return PSQLang.close(); PSQLang.menu(langBtn, { center: true, parent: el }); });
+  if (gate) setTimeout(() => { const t = gate.querySelector('.intro-tap'); t && t.focus({ preventScroll: true }); }, 50);
+  if (gate) gate.addEventListener('click', e => {
+    if (tapped || e.target.closest('.intro-lang, .lang-pop')) return; tapped = true; playMusic();
     gate.classList.add('gone'); setTimeout(() => gate.remove(), 900);
     begin();
   });

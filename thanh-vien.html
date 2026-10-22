@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
+<script src="js/lang.js"></script>
 <style>
   /* đăng nhập, đăng ký */
   .auth-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 18px; align-items: stretch; }
@@ -69,6 +70,28 @@
   .wcard .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .wcard .spk { height: 36px; margin-top: 6px; } .wcard .spk svg { width: 100%; height: 36px; display: block; }
   @media (min-width: 700px) { .wcard .amt { white-space: nowrap; } }
+  /* lưới 5 ví: 3 + 2 trên màn rộng, 2 cột trên điện thoại (ví cuối trải hết hàng) */
+  .wgrid { display: grid; gap: 14px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .wgrid > * { grid-column: span 2; } .wgrid > :nth-child(n+4) { grid-column: span 3; }
+  .wgrid .wcard { display: flex; flex-direction: column; gap: 4px; }
+  .wfoot { display: flex; align-items: flex-end; gap: 6px; margin-top: auto; padding-top: 10px; position: relative; z-index: 1; }
+  .wfoot .acts { margin: 0 !important; flex: 1; min-width: 0; }
+  .whist { width: 32px; height: 32px; border-radius: 10px; margin-left: auto; flex: none; color: var(--c); border-color: color-mix(in srgb, var(--c) 40%, transparent); background: rgba(0, 0, 0, .25); cursor: pointer; }
+  .whist:hover { color: var(--text); border-color: var(--c); }
+  .whist svg { width: 16px; height: 16px; }
+  .wlink { position: absolute; inset: 0; border-radius: inherit; z-index: 0; }
+  .wcard:has(.wlink:hover) { border-color: var(--c); }
+  .wh-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+  .wh-sum > div { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, .2); min-width: 0; }
+  .wh-sum span { display: block; font-size: 11.5px; color: var(--text-3); } .wh-sum b { font-size: 14px; overflow-wrap: anywhere; }
+  .modal.wh-modal { width: min(860px, 100%); }
+  .ref-mini { display: flex; gap: 6px; align-items: center; margin-top: 8px; min-width: 0; }
+  .ref-mini .input { height: 34px; font-size: 12.5px; flex: 1; min-width: 0; }
+  .khach-note { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text-2); margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; border: 1px dashed rgba(79, 230, 223, .4); background: rgba(79, 230, 223, .05); }
+  .khach-note svg { width: 15px; height: 15px; flex: none; margin-top: 2px; color: var(--cyan); }
+  .avatar.xl { width: 120px; height: 120px; font-size: 38px; }
+  .av-box { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .av-box .biz-act { flex-direction: column; align-items: stretch; }
   .wtot { grid-template-columns: minmax(0, 1fr) minmax(0, 280px); align-items: center; column-gap: 18px; }
   .wtot .spk { padding-right: 44px; margin: 0; }
 
@@ -128,6 +151,20 @@
     .alloc { grid-template-columns: 1fr; }
     .wtot { grid-template-columns: 1fr; } .wtot .spk { padding-right: 0; margin-top: 6px; }
     .pkg-split { grid-template-columns: 1fr; }
+    .wgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .wgrid > *, .wgrid > :nth-child(n+4) { grid-column: auto; } .wgrid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .wgrid.one-s { grid-template-columns: minmax(0, 1fr); } .wgrid.one-s > * { grid-column: auto !important; }
+    .wh-sum { grid-template-columns: 1fr 1fr; } .wh-sum > :last-child { grid-column: 1 / -1; }
+    /* lịch sử ví trên điện thoại: mỗi giao dịch một khối, không cuộn ngang */
+    .wh-tbl thead { display: none; }
+    .wh-tbl, .wh-tbl tbody { display: block; min-width: 0 !important; width: 100%; }
+    .wh-modal .table-wrap { overflow: visible; }
+    .wh-tbl tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "t t a" "n n n" "d s b"; gap: 4px 10px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+    .wh-tbl td { padding: 0 !important; border: 0 !important; min-width: 0 !important; }
+    .wh-tbl .c-t { grid-area: t; font-weight: 600; white-space: normal; } .wh-tbl .c-a { grid-area: a; text-align: right; }
+    .wh-tbl .c-n { grid-area: n; font-size: 12.5px; } .wh-tbl .c-d { grid-area: d; font-size: 12px; }
+    .wh-tbl .c-s { grid-area: s; } .wh-tbl .c-b { grid-area: b; font-size: 12px; color: var(--text-3); text-align: right; }
+    .wh-tbl .c-b::before { content: "Số dư "; }
   }
 </style>
 </head>
@@ -146,11 +183,27 @@
   const refCode = (PSQ.qs('ref') || '').trim().toUpperCase().slice(0, 20);
   const W = ADB.WALLETS, WK = Object.keys(W);
   const ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
-  const sps = n => `<b class="nowrap ${n < 0 ? 'red' : 'green'}">${n > 0 ? '+' : ''}${ps(n)}</b>`;
   const WST = { done: ['Hoàn tất', 'ok'], pending: ['Chờ duyệt', 'pending'], rejected: ['Từ chối', 'failed'] };
   const wB = s => `<span class="badge ${(WST[s] || [])[1] || ''}">${(WST[s] || [s])[0]}</span>`;
   const tierB = u => { const t = ADB.tierOf(u); return `<span class="badge tier-b" style="--c:${t.color}">${icon((u.tier || 'khach') === 'daily' ? 'award' : (u.tier || 'khach') === 'ctv' ? 'star' : 'user')} ${esc(t.name)}</span>`; };
   const wdot = k => `<span class="wdot" style="--c:${W[k].color}">${esc(W[k].short)}</span>`;
+  // ảnh đại diện (nếu có) hoặc chữ viết tắt
+  const av = (u, cls = '') => `<span class="avatar ${cls}">${u && u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials((u && u.name) || ''))}</span>`;
+  const wamt = (k, n) => k === 'cash' ? money(n) : ps(n);
+  const wnote = k => k === 'sales' ? 'Rút sang ví tiền mặt, trừ thuế thu nhập ' + ((ADB.load().settings.plan || {}).taxRate ?? 10) + '%' : W[k].note;
+  const lower1 = s => s.charAt(0).toLowerCase() + s.slice(1);
+  const histBtn = k => `<button class="icon-btn whist" type="button" data-wh="${k}" aria-label="Lịch sử ${esc(lower1(W[k].name))}" title="Lịch sử giao dịch">${icon('clock')}</button>`;
+  // giao dịch gần đây: chỉ hoa hồng bán hàng, thưởng giới thiệu CTV, lệnh nạp và rút tiền
+  const RECENT = ['commission', 'referral', 'topup', 'withdraw', 'tocash'];
+  const recentOf = rows => rows.filter(w => RECENT.includes(w.type) && !(w.type === 'tocash' && ADB.walletOf(w) === 'cash'));
+  const isKhach = u => (u.tier || 'khach') === 'khach' && u.role !== 'admin';
+  const refLinkOf = u => location.origin + location.pathname + '?ref=' + encodeURIComponent(u.code || '');
+  const khachNote = (act = true) => `<p class="khach-note">${icon('info')}<span>Tài khoản khách hàng vẫn giới thiệu được người khác nhưng chưa nhận hoa hồng. Kích hoạt CTV để bắt đầu nhận hoa hồng.${act ? ' <a class="gold" href="#kich-hoat">Kích hoạt CTV</a>' : ''}</span></p>`;
+  async function copyFrom(inp) {
+    if (!inp) return;
+    try { await navigator.clipboard.writeText(inp.value); } catch (e) { inp.select(); try { document.execCommand('copy'); } catch (er) {} }
+    toast('Đã sao chép đường dẫn giới thiệu');
+  }
   const save = (d, action, detail, msg) => { ADB.log(d, action, detail); ADB.save(d); toast(msg); };
   const head = (t, sub, right = '') => `<div class="card-head" style="flex-wrap:wrap"><div><h3>${t}</h3>${sub ? `<div class="sub">${sub}</div>` : ''}</div>${right ? `<div style="margin-left:auto">${right}</div>` : ''}</div>`;
   const ph = (t, sub) => `<div class="tv-ph"><h2>${t}</h2>${sub ? `<p class="dim">${sub}</p>` : ''}</div>`;
@@ -178,7 +231,7 @@
   /* ---------- menu ---------- */
   let ME = null;
   const MENU = (d, me) => [
-    ['', [['tong-quan', 'Tổng quan', 'grid'], (me.tier || 'khach') === 'khach' && ['kich-hoat', 'Kích hoạt CTV', 'sparkle'], ['dai-ly', 'Danh sách đại lý', 'users'], ['cho-len-cay', 'Chờ lên cây', 'clock'], ['lanh-dao', 'Cấp bậc lãnh đạo', 'star']].filter(Boolean)],
+    ['', [['tong-quan', 'Tổng quan', 'grid'], (me.tier || 'khach') === 'khach' && ['kich-hoat', 'Kích hoạt CTV', 'sparkle'], ['dai-ly', 'Danh sách đại lý', 'users'], ['khach-hang', 'Khách hàng', 'user'], ['lanh-dao', 'Cấp bậc lãnh đạo', 'star']].filter(Boolean)],
     ['Mua hàng', [['san-pham', 'Sản phẩm', 'bag'], ['gio-hang', 'Giỏ hàng', 'cart'], ['don-hang', 'Đơn hàng của tôi', 'truck']]],
     ['Tài chính', [['vi', 'Ví của tôi', 'wallet'], ['giao-dich', 'Giao dịch của tôi', 'activity'], ['hoa-hong', 'Hoa hồng', 'award'], ['nap-diem', 'Nạp điểm', 'plus']]],
     ['Tài khoản', [['ho-so', 'Hồ sơ của tôi', 'user'], ['dia-chi', 'Sổ địa chỉ', 'pin']]]
@@ -200,6 +253,8 @@
     // nút thao tác ví dùng chung trong mọi màn hình
     $('#tvPane').addEventListener('click', e => {
       const a = e.target.closest('[data-wa]'); if (a) return walletAct(a.dataset.wa);
+      const h = e.target.closest('[data-wh]'); if (h) { e.preventDefault(); return walletHist(h.dataset.wh); }
+      const cp = e.target.closest('[data-copy]'); if (cp) return copyFrom(document.getElementById(cp.dataset.copy));
       const c = e.target.closest('[data-cart]'); if (c) return PSQ.openCart(true);
     });
     addEventListener('hashchange', () => { render(); const top = $('#tvPane').getBoundingClientRect().top; if (top < 0) scrollTo({ top: scrollY + top - 90 }); });
@@ -209,12 +264,14 @@
 
   function render() {
     const d = ADB.load(), me = ADB.user(d, ME); if (!me) { auth.logout(); return location.reload(); }
-    let r = route(); if (!PANES[r]) r = 'tong-quan';
-    const menu = MENU(d, me), wait = d.users.filter(x => x.sponsor === me.id && x.placed === false).length;
-    $('#tvMe').innerHTML = `<span class="avatar g">${esc(initials(me.name))}</span><div><b>${esc(me.name)}</b>@${esc(me.username || '')} · <span style="color:${ADB.tierOf(me).color}">${esc(ADB.tierOf(me).name)}</span></div>`;
+    let r = route();
+    if (r === 'cho-len-cay') { history.replaceState(null, '', '#khach-hang'); r = 'khach-hang'; } // đường dẫn cũ
+    if (!PANES[r]) r = 'tong-quan';
+    const menu = MENU(d, me), wait = d.users.filter(x => x.sponsor === me.id && isKhach(x)).length;
+    $('#tvMe').innerHTML = `${av(me, 'g')}<div><b>${esc(me.name)}</b>@${esc(me.username || '')} · <span style="color:${ADB.tierOf(me).color}">${esc(ADB.tierOf(me).name)}</span></div>`;
     $('#tvNav').innerHTML = (me.role === 'admin' ? `<a href="quan-tri.html">${icon('shield')}<span>Trang quản trị</span></a>` : '') + menu.map(([g, list]) => (g ? `<h4>${esc(g)}</h4>` : '') + list.map(([id, l, ic]) => ACTIONS[id]
       ? `<button type="button" data-act="${id}">${icon(ic)}<span>${esc(l)}</span></button>`
-      : `<a href="#${id}" class="${id === r ? 'on' : ''}${id === 'kich-hoat' && id !== r ? ' hot' : ''}"${id === r ? ' aria-current="page"' : ''}>${icon(ic)}<span>${esc(l)}</span>${id === 'cho-len-cay' && wait ? `<span class="badge pending">${wait}</span>` : ''}</a>`).join('')).join('');
+      : `<a href="#${id}" class="${id === r ? 'on' : ''}${id === 'kich-hoat' && id !== r ? ' hot' : ''}"${id === r ? ' aria-current="page"' : ''}>${icon(ic)}<span>${esc(l)}</span>${id === 'khach-hang' && wait ? `<span class="badge">${wait}</span>` : ''}</a>`).join('')).join('');
     $('#tvPick').innerHTML = menu.map(([g, list]) => `<optgroup label="${esc(g || 'Tài khoản kinh doanh')}">${list.map(([id, l]) => `<option value="${id}"${id === r ? ' selected' : ''}>${esc(l)}</option>`).join('')}</optgroup>`).join('');
     if (!list(menu).includes(r)) { const o = document.createElement('option'); o.value = r; o.textContent = 'Kích hoạt CTV'; o.selected = true; $('#tvPick').prepend(o); }
     const box = $('#tvPane'); box.innerHTML = '';
@@ -232,14 +289,16 @@
     const KIND = [['ref', 'Thưởng giới thiệu', '#f3c76b'], ['direct', 'Hoa hồng bán hàng', '#4fe6df'], ['override', 'Thu nhập từ đại lý tuyến dưới', '#b98cff']];
     box.innerHTML = `
       <section class="card glow-mix tv-hello">
-        <span class="avatar lg g">${esc(initials(me.name))}</span>
+        ${av(me, 'lg g')}
         <div><h2>Xin chào, ${esc(me.name)}</h2>
           <div class="meta mt-1">@${esc(me.username || '')} · ${esc(me.email)}${me.phone ? ' · ' + esc(me.phone) : ''}</div>
-          <div class="row wrap mt-1" style="gap:8px">${tierB(me)}<span class="dim" style="font-size:12.5px">Mã giới thiệu <b class="gold">${esc(me.code || '')}</b></span></div></div>
+          <div class="row wrap mt-1" style="gap:8px">${tierB(me)}<span class="dim" style="font-size:12.5px">Mã giới thiệu <b class="gold">${esc(me.code || '')}</b></span></div>
+</div>
         <div class="acts"><a class="btn btn-sm btn-outline-gold" href="#don-hang">${icon('truck')} Đơn hàng</a><a class="btn btn-sm" href="#giao-dich">${icon('activity')} Giao dịch</a></div>
+        ${isKhach(me) ? `<div style="grid-column:1 / -1;min-width:0"><div class="ref-mini" style="margin:0"><input class="input" id="ovRef" value="${esc(refLinkOf(me))}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" data-copy="ovRef">${icon('check')} Sao chép</button></div>${khachNote()}</div>` : ''}
       </section>
 
-      <section class="grid g-4 keep-2 mt-2">${WK.map(k => `<a class="wcard" href="#vi" style="--c:${W[k].color}"><span class="ico">${icon(W[k].icon)}</span><span class="amt">${ps(b[k])}</span><span class="nm">${esc(W[k].name)}</span><small class="hide-s">${esc(W[k].note)}</small></a>`).join('')}</section>
+      <section class="wgrid mt-2">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><a class="wlink" href="#vi" aria-label="${esc(W[k].name)}: ${wamt(k, b[k])}"></a><span class="ico">${icon(W[k].icon)}</span><span class="amt">${wamt(k, b[k])}</span><span class="nm">${esc(W[k].name)}</span><small class="hide-s">${esc(wnote(k))}</small><div class="wfoot">${histBtn(k)}</div></div>`).join('')}</section>
 
       <a class="wcard wtot mt-2" href="#hoa-hong" style="--c:#f3c76b"><span class="ico">${icon('trend')}</span><span style="display:grid;gap:4px;min-width:0"><span class="amt">${ps(e.total)}</span><span class="nm">Tổng hoa hồng</span><small>${C.length} khoản đã ghi nhận · biểu đồ 6 tháng gần đây</small></span><span class="spk">${PSQ.spark(mv, '#f3c76b')}</span></a>
 
@@ -248,7 +307,7 @@
           <div class="alloc"><div id="tvDonut"></div>
             <div>${KIND.map(([k, l, c]) => `<div class="lg-line" style="--c:${c}"><i></i><span>${l}</span><b class="nowrap">${pctOf(e[k], e.total)}%</b></div>`).join('')}</div></div>
           <div class="divider"></div>
-          <div class="quick"><button class="btn btn-outline-gold" type="button" data-wa="withdraw">${icon('download')} Rút hoa hồng bán hàng</button><button class="btn" type="button" data-wa="convert">${icon('gift')} Điểm thưởng sang khả dụng</button><button class="btn" type="button" data-wa="toshop">${icon('bag')} Khả dụng sang ví mua hàng</button><button class="btn" type="button" data-wa="transfer">${icon('users')} Chuyển điểm cho thành viên</button></div>
+          <div class="quick"><button class="btn btn-outline-gold" type="button" data-wa="tocash">${icon('arrow')} Rút hoa hồng sang ví tiền mặt</button><button class="btn btn-outline-gold" type="button" data-wa="withdraw">${icon('download')} Rút tiền mặt về ngân hàng</button><button class="btn" type="button" data-wa="convert">${icon('gift')} Điểm thưởng sang khả dụng</button><button class="btn" type="button" data-wa="toshop">${icon('bag')} Khả dụng sang ví mua hàng</button><button class="btn" type="button" data-wa="transfer">${icon('users')} Chuyển điểm cho thành viên</button></div>
         </div>
         <div class="card glow-gold">${head('Điều kiện cấp bậc', 'Khách hàng, Cộng tác viên, Đại lý')}${tierSteps(d, me, P, spent)}</div>
       </section>`;
@@ -301,27 +360,28 @@
   function pTeam(box, d, me) {
     const refs = d.users.filter(x => x.sponsor === me.id).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
     const earned = id => (d.commissions || []).filter(c => c.user === me.id && c.from === id && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
-    const link = location.origin + location.pathname + '?ref=' + encodeURIComponent(me.code || '');
+    const link = refLinkOf(me);
     const sp = me.sponsor && ADB.user(d, me.sponsor), cnt = t => refs.filter(x => (x.tier || 'khach') === t).length;
     box.innerHTML = ph('Danh sách đại lý', 'Những người anh chị giới thiệu trực tiếp') + `<div class="stack">
       <div class="card glow-gold">${head('Mã giới thiệu của tôi', 'gửi cho người thân, bạn bè khi đăng ký')}
         <div class="ref-code">${esc(me.code || '')}</div>
-        <div class="ref-link mt-2"><input class="input" id="refLink" value="${esc(link)}" readonly aria-label="Đường dẫn giới thiệu"><button class="btn btn-gold" type="button" id="refCopy">${icon('check')} Sao chép</button></div>
+        <div class="ref-link mt-2"><input class="input" id="refLink" value="${esc(link)}" readonly aria-label="Đường dẫn giới thiệu"><button class="btn btn-gold" type="button" data-copy="refLink">${icon('check')} Sao chép</button></div>
+        ${isKhach(me) ? khachNote() : ''}
         <dl class="kv mt-2"><dt>Người giới thiệu tôi</dt><dd>${sp ? esc(sp.name) + ' <span class="dim">@' + esc(sp.username || '') + '</span>' : '<span class="dim">Không có</span>'}</dd><dt>Đã giới thiệu</dt><dd>${refs.length} người</dd><dt>Đại lý</dt><dd>${cnt('daily')}</dd><dt>Cộng tác viên</dt><dd>${cnt('ctv')}</dd><dt>Khách hàng</dt><dd>${cnt('khach')}</dd></dl></div>
       <div class="card glow-cyan">${head('Người tôi giới thiệu', refs.length + ' người')}
-        ${refs.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Cấp bậc</th><th>Tổng mua</th><th>Tôi nhận được</th><th>Ngày tham gia</th></tr></thead><tbody>${refs.map((x, i) => `<tr><td><div class="who"><span class="avatar ${['', 'v', 'g'][i % 3]}">${esc(initials(x.name))}</span><div><b>${esc(x.name)}</b><small>@${esc(x.username || '')}${x.placed === false ? ' · chờ lên cây' : ''}</small></div></div></td><td>${tierB(x)}</td><td class="nowrap">${money(ADB.spent(d, x.id))}</td><td class="gold nowrap"><b>${ps(earned(x.id))}</b></td><td class="dim nowrap">${fdate(x.created)}</td></tr>`).join('')}</tbody></table></div>`
+        ${refs.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Cấp bậc</th><th>Tổng mua</th><th>Tôi nhận được</th><th>Ngày tham gia</th></tr></thead><tbody>${refs.map((x, i) => `<tr><td><div class="who">${av(x, ['', 'v', 'g'][i % 3])}<div><b>${esc(x.name)}</b><small>@${esc(x.username || '')}</small></div></div></td><td>${tierB(x)}</td><td class="nowrap">${money(ADB.spent(d, x.id))}</td><td class="gold nowrap"><b>${ps(earned(x.id))}</b></td><td class="dim nowrap">${fdate(x.created)}</td></tr>`).join('')}</tbody></table></div>`
         : `<div class="empty">${icon('users')}Anh chị chưa giới thiệu ai. Gửi mã giới thiệu để mời người thân tham gia.</div>`}</div></div>`;
-    $('#refCopy', box).addEventListener('click', async () => {
-      const inp = $('#refLink', box); try { await navigator.clipboard.writeText(inp.value); } catch (e) { inp.select(); try { document.execCommand('copy'); } catch (er) {} }
-      toast('Đã sao chép đường dẫn giới thiệu');
-    });
   }
-  function pWait(box, d, me) {
-    const w = d.users.filter(x => x.sponsor === me.id && x.placed === false);
-    box.innerHTML = ph('Chờ lên cây', 'Người anh chị giới thiệu, đang chờ công ty xếp vào sơ đồ') + `<div class="card glow-cyan">
-      <p class="biz-note">${icon('info')}Công ty (quản trị viên) xếp thành viên mới lên cây. Anh chị chỉ xem, không cần thao tác.</p>
-      ${w.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Cấp bậc</th><th>Ngày đăng ký</th><th>Trạng thái</th></tr></thead><tbody>${w.map(x => `<tr><td><div class="who"><span class="avatar">${esc(initials(x.name))}</span><div><b>${esc(x.name)}</b><small>@${esc(x.username || '')}</small></div></div></td><td>${tierB(x)}</td><td class="dim nowrap">${fdate(x.created)}</td><td><span class="badge pending">Chờ lên cây</span></td></tr>`).join('')}</tbody></table></div>`
-      : `<div class="empty">${icon('clock')}Không có ai đang chờ lên cây.</div>`}</div>`;
+  /* ---------- KHÁCH HÀNG (người mình giới thiệu, chưa kích hoạt CTV) ---------- */
+  function pCustomers(box, d, me) {
+    const w = d.users.filter(x => x.sponsor === me.id && isKhach(x)).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+    const nOrd = id => d.orders.filter(o => o.userId === id && ['paid', 'ship', 'done'].includes(o.status)).length;
+    box.innerHTML = ph('Khách hàng', 'Người anh chị giới thiệu, đang ở cấp khách hàng (chưa kích hoạt cộng tác viên)') + `<div class="stack">
+      ${isKhach(me) ? `<div class="card glow-gold">${head('Đường dẫn giới thiệu của tôi', 'mã ' + esc(me.code || ''))}<div class="ref-link"><input class="input" id="khRef" value="${esc(refLinkOf(me))}" readonly aria-label="Đường dẫn giới thiệu"><button class="btn btn-gold" type="button" data-copy="khRef">${icon('check')} Sao chép</button></div>${khachNote()}</div>` : ''}
+      <div class="card glow-cyan">${head('Danh sách khách hàng', w.length + ' người')}
+      <p class="biz-note">${icon('info')}Khách hàng cũng có đường dẫn giới thiệu riêng để chia sẻ, nhưng chưa nhận hoa hồng cho đến khi kích hoạt cộng tác viên.</p>
+      ${w.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Khách hàng</th><th>Ngày tham gia</th><th>Đơn đã mua</th><th>Tổng mua</th></tr></thead><tbody>${w.map((x, i) => `<tr><td><div class="who">${av(x, ['', 'v', 'g'][i % 3])}<div><b>${esc(x.name)}</b><small>@${esc(x.username || '')}</small></div></div></td><td class="dim nowrap">${fdate(x.created)}</td><td>${nOrd(x.id)}</td><td class="gold nowrap"><b>${money(ADB.spent(d, x.id))}</b></td></tr>`).join('')}</tbody></table></div>`
+      : `<div class="empty">${icon('user')}Chưa có khách hàng nào. Người đăng ký bằng mã giới thiệu của anh chị và chưa kích hoạt CTV sẽ hiện ở đây.</div>`}</div></div>`;
   }
   function pLeader(box, d, me) {
     const L = ADB.leader(d, me.id), ranks = d.settings.leaderRanks, i = ranks.findIndex(r => r.id === L.rank.id), nx = ranks[i + 1];
@@ -352,16 +412,32 @@
   }
 
   /* ---------- VÍ ---------- */
-  const WACT = { sales: [['withdraw', 'Rút tiền', 'download']], bonus: [['convert', 'Chuyển sang khả dụng', 'arrow']], avail: [['toshop', 'Sang ví mua hàng', 'bag'], ['transfer', 'Chuyển cho thành viên', 'users']], shop: [] };
+  const WACT = { sales: [['tocash', 'Rút sang ví tiền mặt', 'arrow']], bonus: [['convert', 'Chuyển sang khả dụng', 'arrow']], avail: [['toshop', 'Sang ví mua hàng', 'bag'], ['transfer', 'Chuyển cho thành viên', 'users']], shop: [], cash: [['withdraw', 'Rút về ngân hàng', 'download']] };
+  const byNewest = (x, y) => (y.date || '').localeCompare(x.date || '');
   function pWallet(box, d, me) {
-    const b = ADB.balances(d, me.id), mine = (d.wallet || []).filter(w => w.user === me.id).sort((x, y) => (y.date || '').localeCompare(x.date || ''));
-    const held = -mine.filter(w => w.type === 'withdraw' && w.status === 'pending').reduce((s, w) => s + w.amount, 0);
-    box.innerHTML = ph('Ví của tôi', '1 điểm PS = 1 đồng') + note + `<section class="grid g-2">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><span class="ico">${icon(W[k].icon)}</span><span class="amt">${ps(b[k])}</span><span class="nm">${esc(W[k].name)}</span><small>${esc(W[k].note)}${k === 'sales' && held ? `. Đang chờ rút ${ps(held)}` : ''}</small>
-        <div class="acts">${WACT[k].map(([a, l, ic]) => `<button class="btn btn-sm${a === 'withdraw' ? ' btn-gold' : ''}" type="button" data-wa="${a}">${icon(ic)} ${l}</button>`).join('') || `<button class="btn btn-sm" type="button" data-cart>${icon('cart')} Dùng khi đặt hàng</button>`}</div></div>`).join('')}</section>
-      <div class="card glow-cyan mt-2">${head('Giao dịch gần đây', '', `<a class="card-link" href="#giao-dich">Xem tất cả</a>`)}${txTable(mine.slice(0, 8))}</div>`;
+    const b = ADB.balances(d, me.id), mine = (d.wallet || []).filter(w => w.user === me.id).sort(byNewest), P = ADB.plan(d);
+    const held = k => -mine.filter(w => w.type === 'withdraw' && w.status === 'pending' && ADB.walletOf(w) === k).reduce((s, w) => s + w.amount, 0);
+    box.innerHTML = ph('Ví của tôi', '1 điểm PS = 1 đồng · rút ví hoa hồng sang ví tiền mặt trừ thuế thu nhập ' + P.taxRate + '%') + note + `<section class="wgrid one-s">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><span class="ico">${icon(W[k].icon)}</span><span class="amt">${wamt(k, b[k])}</span><span class="nm">${esc(W[k].name)}</span><small>${esc(wnote(k))}${held(k) ? `. Đang chờ rút ${wamt(k, held(k))}` : ''}</small>
+        <div class="wfoot"><div class="acts">${WACT[k].map(([a, l, ic]) => `<button class="btn btn-sm${a === 'withdraw' || a === 'tocash' ? ' btn-gold' : ''}" type="button" data-wa="${a}">${icon(ic)} ${l}</button>`).join('') || `<button class="btn btn-sm" type="button" data-cart>${icon('cart')} Dùng khi đặt hàng</button>`}</div>${histBtn(k)}</div></div>`).join('')}</section>
+      <div class="card glow-cyan mt-2">${head('Giao dịch gần đây', 'hoa hồng bán hàng, thưởng giới thiệu CTV, nạp và rút tiền', `<a class="card-link" href="#giao-dich">Xem tất cả</a>`)}${txTable(recentOf(mine).slice(0, 8))}</div>`;
+  }
+  // lịch sử từng ví, mới nhất trước, kèm số dư sau giao dịch
+  function walletHist(k) {
+    const d = ADB.load(), me = ADB.user(d, ME); if (!me || !W[k]) return;
+    const rows = (d.wallet || []).map((w, i) => ({ w, i })).filter(({ w }) => w.user === me.id && ADB.walletOf(w) === k)
+      .sort((x, y) => (x.w.date || '').localeCompare(y.w.date || '') || x.i - y.i);
+    let run = 0; rows.forEach(r => { if (r.w.status === 'done' || (r.w.status === 'pending' && r.w.amount < 0)) run += r.w.amount; r.bal = run; });
+    rows.reverse();
+    const inn = rows.filter(r => r.w.amount > 0 && r.w.status === 'done').reduce((s, r) => s + r.w.amount, 0), out = -rows.filter(r => r.w.amount < 0 && r.w.status !== 'rejected').reduce((s, r) => s + r.w.amount, 0);
+    const sg = n => `<b class="nowrap ${n < 0 ? 'red' : 'green'}">${n > 0 ? '+' : ''}${wamt(k, n)}</b>`;
+    const md = modal(`<div class="card-head"><div><h3>Lịch sử ${esc(lower1(W[k].name))}</h3><div class="sub">${rows.length} giao dịch · mới nhất trước</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      <div class="wh-sum"><div><span>Số dư hiện tại</span><b style="color:${W[k].color}">${wamt(k, ADB.balances(d, me.id)[k])}</b></div><div><span>Tổng cộng vào</span><b class="green">${wamt(k, inn)}</b></div><div><span>Tổng trừ ra</span><b class="red">${wamt(k, out)}</b></div></div>
+      ${rows.length ? `<div class="table-wrap"><table class="tbl wh-tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Số dư sau</th><th>Trạng thái</th></tr></thead><tbody>${rows.map(({ w, bal }) => `<tr${w.status === 'rejected' ? ' style="opacity:.6"' : ''}><td class="dim nowrap c-d">${fdate(w.date)}</td><td class="nowrap c-t">${esc(ADB.walletType[w.type] || w.type)}</td><td class="dim c-n" style="min-width:190px">${esc(w.note || '')}${w.type === 'tocash' && w.amount < 0 && w.tax ? `<br><small>Thuế ${money(w.tax)}, thực nhận ${money(w.net != null ? w.net : -w.amount - w.tax)}</small>` : ''}</td><td class="c-a">${sg(w.amount)}</td><td class="nowrap c-b">${wamt(k, bal)}</td><td class="c-s">${wB(w.status)}</td></tr>`).join('')}</tbody></table></div>`
+        : `<div class="empty">${icon('clock')}Ví này chưa có giao dịch.</div>`}`);
+    md.el.querySelector('.modal').classList.add('wh-modal');
   }
   function txTable(rows) {
-    return rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Ví</th><th>Loại</th><th>Nội dung</th><th>Số điểm</th><th>Trạng thái</th></tr></thead><tbody>${rows.map(w => `<tr><td class="dim nowrap">${fdate(w.date)}</td><td>${wdot(ADB.walletOf(w))}</td><td class="nowrap">${esc(ADB.walletType[w.type] || w.type)}</td><td class="dim" style="min-width:200px">${esc(w.note || '')}</td><td>${sps(w.amount)}</td><td>${wB(w.status)}</td></tr>`).join('')}</tbody></table></div>`
+    return rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Ví</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>${rows.map(w => `<tr><td class="dim nowrap">${fdate(w.date)}</td><td>${wdot(ADB.walletOf(w))}</td><td class="nowrap">${esc(ADB.walletType[w.type] || w.type)}</td><td class="dim" style="min-width:200px">${esc(w.note || '')}</td><td><b class="nowrap ${w.amount < 0 ? 'red' : 'green'}">${w.amount > 0 ? '+' : ''}${wamt(ADB.walletOf(w), w.amount)}</b></td><td>${wB(w.status)}</td></tr>`).join('')}</tbody></table></div>`
       : `<div class="empty">${icon('wallet')}Chưa có giao dịch.</div>`;
   }
   let txF = { w: '', t: '' };
@@ -374,7 +450,7 @@
       $('#txSum', box).textContent = rows.length + ' giao dịch · cộng ' + ps(rows.filter(w => w.amount > 0 && w.status === 'done').reduce((s, w) => s + w.amount, 0)) + ' · trừ ' + ps(-rows.filter(w => w.amount < 0 && w.status !== 'rejected').reduce((s, w) => s + w.amount, 0));
       return rows;
     };
-    box.innerHTML = ph('Giao dịch của tôi', 'Mọi thay đổi trên 4 ví') + note + `<div class="card glow-cyan">
+    box.innerHTML = ph('Giao dịch của tôi', 'Mọi thay đổi trên ' + WK.length + ' ví') + note + `<div class="card glow-cyan">
       <div class="toolbar"><select class="input" id="txW" aria-label="Lọc theo ví"><option value="">Tất cả ví</option>${WK.map(k => `<option value="${k}"${txF.w === k ? ' selected' : ''}>${esc(W[k].name)}</option>`).join('')}</select>
         <select class="input" id="txT" aria-label="Lọc theo loại"><option value="">Tất cả loại</option>${types.map(t => `<option value="${t}"${txF.t === t ? ' selected' : ''}>${esc(ADB.walletType[t] || t)}</option>`).join('')}</select>
         <button class="btn btn-sm" type="button" id="txCsv">${icon('download')} Tải Excel (CSV)</button></div>
@@ -440,14 +516,44 @@
         <div class="field full"><label>Email</label><div class="ro">${esc(me.email)}</div></div></div>
       <p class="red mt-1" id="pfE" style="font-size:13px;min-height:18px"></p>
       <button class="btn btn-gold" type="submit">${icon('check')} Lưu hồ sơ</button></form>
+      <div class="stack"><div class="card glow-gold">${head('Ảnh đại diện', 'ảnh vuông, hiển thị trên trang thành viên')}
+        <div class="av-box">${av(me, 'xl g')}<div class="biz-act"><label class="btn btn-sm btn-gold" for="pfAv" style="cursor:pointer">${icon('edit')} Đổi ảnh đại diện</label>${me.avatar ? `<button class="btn btn-sm btn-ghost" type="button" id="pfAvX">${icon('trash')} Xóa ảnh</button>` : ''}</div></div>
+        <input type="file" id="pfAv" accept="image/*" class="sr-only">
+        <p class="dim mt-1" style="font-size:12px">JPG, PNG hoặc WebP, tối đa 8MB. Ảnh được cắt vuông ở giữa.</p>
+        <p class="red" id="pfAvE" style="font-size:13px;min-height:18px;margin:0"></p></div>
       <div class="card glow-cyan">${head('Tài khoản')}<dl class="kv"><dt>Cấp bậc</dt><dd>${tierB(me)}</dd><dt>Tham gia</dt><dd>${fdate(me.created)}</dd><dt>Người giới thiệu</dt><dd>${sp ? esc(sp.name) : '<span class="dim">Không có</span>'}</dd><dt>Trên cây</dt><dd>${me.placed === false ? '<span class="badge pending">Chờ lên cây</span>' : '<span class="badge ok">Đã xếp</span>'}</dd></dl>
-        ${me.role === 'admin' ? `<a class="btn btn-sm btn-outline-gold mt-2" href="quan-tri.html">${icon('shield')} Trang quản trị</a>` : ''}</div></div>`;
+        ${me.role === 'admin' ? `<a class="btn btn-sm btn-outline-gold mt-2" href="quan-tri.html">${icon('shield')} Trang quản trị</a>` : ''}</div></div></div>`;
+    const setAv = (url, msg) => { const dd = ADB.load(), u = ADB.user(dd, me.id); if (url) u.avatar = url; else delete u.avatar; save(dd, url ? 'Cập nhật ảnh đại diện' : 'Xóa ảnh đại diện', '@' + u.username, msg); redo(); };
+    $('#pfAv', box).addEventListener('change', async e => {
+      const f = e.target.files && e.target.files[0], er = $('#pfAvE', box); er.textContent = ''; e.target.value = '';
+      if (!f) return;
+      if (!/^image\//.test(f.type)) return er.textContent = 'Anh chị chọn một tệp ảnh (JPG, PNG hoặc WebP).';
+      if (f.size > 8 * 1024 * 1024) return er.textContent = 'Ảnh lớn hơn 8MB, anh chị chọn ảnh nhỏ hơn.';
+      try { setAv(await squareAvatar(f, 256), 'Đã cập nhật ảnh đại diện'); } catch (x) { er.textContent = 'Không đọc được ảnh này, anh chị thử ảnh khác.'; }
+    });
+    const ax = $('#pfAvX', box); if (ax) ax.addEventListener('click', () => { if (confirm('Xóa ảnh đại diện?')) setAv(null, 'Đã xóa ảnh đại diện'); });
     $('#pfF', box).addEventListener('submit', e => {
       e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), name = f.name.trim(), phone = f.phone.trim();
       if (name.length < 2) return $('#pfE', box).textContent = 'Anh chị nhập họ và tên.';
       if (phone && !/^[0-9 +.]{9,15}$/.test(phone)) return $('#pfE', box).textContent = 'Số điện thoại chưa đúng.';
       const dd = ADB.load(), u = ADB.user(dd, me.id); Object.assign(u, { name, phone, birthday: f.birthday });
       save(dd, 'Cập nhật hồ sơ', `@${u.username}: ${name}`, 'Đã lưu hồ sơ'); redo();
+    });
+  }
+
+  // cắt vuông ở giữa, thu về size px, JPEG 0,85
+  function squareAvatar(file, size) {
+    return new Promise((ok, fail) => {
+      const url = URL.createObjectURL(file), img = new Image();
+      img.onload = () => {
+        const s = Math.min(img.naturalWidth, img.naturalHeight); if (!s) { URL.revokeObjectURL(url); return fail(new Error('empty')); }
+        const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
+        g.fillStyle = '#0e1417'; g.fillRect(0, 0, size, size); g.imageSmoothingQuality = 'high';
+        g.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
+        URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('decode')); };
+      img.src = url;
     });
   }
 
@@ -495,7 +601,8 @@
   function walletAct(kind) {
     const d = ADB.load(), me = ADB.user(d, ME), P = ADB.plan(d), b = ADB.balances(d, me.id), min = d.settings.minWithdraw || 0, tx = P.taxRate;
     const cfg = {
-      withdraw: { t: 'Rút tiền về ngân hàng', from: 'sales', sub: `Tối thiểu ${money(min)}. Trừ thuế ${tx}%, công ty chuyển phần còn lại.` },
+      tocash: { t: 'Rút sang ví tiền mặt', from: 'sales', sub: `Trừ thuế thu nhập ${tx}%. Ví tiền mặt nhận số tiền thực rút, chuyển ngay.` },
+      withdraw: { t: 'Rút về ngân hàng', from: 'cash', sub: `Từ ví tiền mặt, tối thiểu ${money(min)}. Thuế đã trừ khi rút sang ví tiền mặt, công ty chuyển khoản đủ số tiền sau khi duyệt.` },
       convert: { t: 'Chuyển điểm thưởng sang khả dụng', from: 'bonus', sub: `Trừ thuế ${tx}% khi chuyển.` },
       toshop: { t: 'Chuyển sang ví mua hàng', from: 'avail', sub: 'Không mất phí. Điểm mua hàng chỉ dùng thanh toán đơn trên web.' },
       transfer: { t: 'Chuyển điểm cho thành viên', from: 'avail', sub: 'Từ ví điểm khả dụng của anh chị sang ví điểm khả dụng của người nhận.' }
@@ -503,9 +610,9 @@
     const max = Math.max(0, b[cfg.from]), tax = a => Math.round(a * tx / 100);
     const md = modal(`<form id="waF" novalidate>
       <div class="card-head"><div><h3>${cfg.t}</h3><div class="sub">${cfg.sub}</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-      <div class="row between wa-bal" style="--c:${W[cfg.from].color};gap:10px"><span class="dim">${esc(W[cfg.from].name)}</span><b class="nowrap">${ps(max)}</b></div>
+      <div class="row between wa-bal" style="--c:${W[cfg.from].color};gap:10px"><span class="dim">${esc(W[cfg.from].name)}</span><b class="nowrap">${wamt(cfg.from, max)}</b></div>
       ${kind === 'transfer' ? `<div class="field mt-2"><label for="waU">Tên truy cập người nhận</label><input class="input" id="waU" name="user" autocomplete="off" autocapitalize="off" placeholder="Ví dụ khach2"><div class="wa-prev" id="waP"></div></div>` : ''}
-      <div class="field mt-2"><label for="waA">${kind === 'withdraw' ? 'Số tiền rút (1 PS = 1đ)' : 'Số điểm'}</label><div class="row" style="gap:8px"><input class="input" id="waA" name="amount" type="number" min="1" step="1000" inputmode="numeric" style="flex:1;min-width:0"><button class="btn btn-sm" type="button" id="waMax">Tối đa</button></div></div>
+      <div class="field mt-2"><label for="waA">${kind === 'withdraw' ? 'Số tiền rút về ngân hàng (đồng)' : kind === 'tocash' ? 'Số tiền rút (1 PS = 1đ)' : 'Số điểm'}</label><div class="row" style="gap:8px"><input class="input" id="waA" name="amount" type="number" min="1" step="1000" inputmode="numeric" style="flex:1;min-width:0"><button class="btn btn-sm" type="button" id="waMax">Tối đa</button></div></div>
       ${kind === 'withdraw' ? `<div class="form-grid mt-2"><div class="field"><label for="waB">Ngân hàng</label><input class="input" id="waB" name="bank" placeholder="Ví dụ Vietcombank"></div><div class="field"><label for="waN">Số tài khoản, tên chủ tài khoản</label><input class="input" id="waN" name="account"></div></div>` : ''}
       ${kind === 'transfer' ? `<div class="field mt-2"><label for="waT">Lời nhắn (nếu có)</label><input class="input" id="waT" name="note" maxlength="80"></div>` : ''}
       <dl class="calc mt-2" id="waC"></dl>
@@ -518,7 +625,8 @@
       const a = Math.max(0, Math.round(+A.value || 0)), kv = r => r.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
       F.dataset.ok = ''; C.classList.remove('ok'); if (kind === 'transfer') S.textContent = 'Tiếp tục';
       if (!a) { C.innerHTML = ''; return; }
-      C.innerHTML = kind === 'withdraw' ? kv([['Số tiền rút', ps(a)], [`Thuế ${tx}%`, '<span class="red">-' + money(tax(a)) + '</span>'], ['Công ty chuyển', '<span class="green">' + money(a - tax(a)) + '</span>']])
+      C.innerHTML = kind === 'tocash' ? kv([['Trừ ví hoa hồng bán hàng', ps(a)], [`Thuế thu nhập ${tx}%`, '<span class="red">-' + money(tax(a)) + '</span>'], ['Thực nhận vào ví tiền mặt', '<span class="green">' + money(a - tax(a)) + '</span>']])
+        : kind === 'withdraw' ? kv([['Trừ ví tiền mặt', money(a)], ['Công ty chuyển khoản', '<span class="green">' + money(a) + '</span>'], ['Số dư còn lại', money(max - a)]])
         : kind === 'convert' ? kv([['Trừ ví điểm thưởng', ps(a)], [`Thuế ${tx}%`, '<span class="red">-' + ps(tax(a)) + '</span>'], ['Vào ví điểm khả dụng', '<span class="green">' + ps(a - tax(a)) + '</span>']])
         : kind === 'toshop' ? kv([['Trừ ví điểm khả dụng', ps(a)], ['Vào ví điểm mua hàng', '<span class="green">' + ps(a) + '</span>']])
         : kv([['Người nhận', (() => { const t = rcpt(); return t ? esc(t.name) + ' @' + esc(t.username) : '<span class="dim">chưa chọn</span>'; })()], ['Số điểm chuyển', ps(a)], ['Số dư còn lại', ps(max - a)]]);
@@ -529,7 +637,7 @@
     if (U) U.addEventListener('input', () => {
       const v = U.value.trim(), to = v && ADB.byUsername(d, v);
       $('#waP', el).innerHTML = !v ? '' : !to || to.role === 'admin' ? '<span class="red">Không tìm thấy thành viên có tên truy cập này.</span>' : to.id === me.id ? '<span class="red">Đây là tài khoản của anh chị.</span>'
-        : `<div class="who"><span class="avatar v">${esc(initials(to.name))}</span><div><b>${esc(to.name)}</b><small>@${esc(to.username)} · ${esc(ADB.tierOf(to).name)}</small></div></div>`;
+        : `<div class="who">${av(to, 'v')}<div><b>${esc(to.name)}</b><small>@${esc(to.username)} · ${esc(ADB.tierOf(to).name)}</small></div></div>`;
       calc();
     });
     F.addEventListener('submit', e => {
@@ -539,7 +647,10 @@
         const bank = $('#waB', el).value.trim(), account = $('#waN', el).value.trim();
         if (!bank || !account) return E.textContent = 'Anh chị điền tên ngân hàng và số tài khoản.';
         r = ADB.withdraw(dd, u, a, { bank, account }); if (r.error) return E.textContent = r.error;
-        save(dd, 'Yêu cầu rút tiền', `@${u.username}: ${ps(a)}, thuế ${money(r.entry.tax)}, thực nhận ${money(r.entry.net)}`, 'Đã gửi yêu cầu rút ' + money(a) + ', chờ công ty duyệt');
+        save(dd, 'Yêu cầu rút tiền', `@${u.username}: ${money(a)} từ ví tiền mặt về ${bank} ${account}`, 'Đã gửi yêu cầu rút ' + money(a) + ' về ngân hàng, chờ công ty duyệt');
+      } else if (kind === 'tocash') {
+        r = ADB.toCash(dd, u, a); if (r.error) return E.textContent = r.error;
+        save(dd, 'Rút sang ví tiền mặt', `@${u.username}: ${ps(a)}, thuế ${money(r.tax)}, thực nhận ${money(r.net)}`, 'Đã rút, ví tiền mặt nhận ' + money(r.net));
       } else if (kind === 'convert') {
         r = ADB.convert(dd, u, a); if (r.error) return E.textContent = r.error;
         save(dd, 'Chuyển điểm thưởng', `@${u.username}: ${ps(a)}, thuế ${ps(r.tax)}`, 'Đã chuyển, nhận ' + ps(r.net) + ' vào ví điểm khả dụng');
@@ -562,7 +673,7 @@
     setTimeout(() => (U || A).focus(), 60);
   }
 
-  const PANES = { 'tong-quan': pOverview, 'kich-hoat': pActivate, 'dai-ly': pTeam, 'cho-len-cay': pWait, 'lanh-dao': pLeader, 'don-hang': pOrders, vi: pWallet, 'giao-dich': pTx, 'hoa-hong': pCom, 'nap-diem': pTopup, 'ho-so': pProfile, 'dia-chi': pAddr };
+  const PANES = { 'tong-quan': pOverview, 'kich-hoat': pActivate, 'dai-ly': pTeam, 'khach-hang': pCustomers, 'lanh-dao': pLeader, 'don-hang': pOrders, vi: pWallet, 'giao-dich': pTx, 'hoa-hong': pCom, 'nap-diem': pTopup, 'ho-so': pProfile, 'dia-chi': pAddr };
 
   /* ---------- chưa đăng nhập ---------- */
   function guest(mode = 'login') {
@@ -573,7 +684,7 @@
         <span class="eyebrow">Thành viên Phúc Sinh QuanTum</span>
         <h2 class="display mt-1" style="font-size:clamp(30px,3.6vw,46px);line-height:1.08">Mỗi đơn hàng là một bước <span class="gold">lên hạng</span>.</h2>
         <div class="grid g-3 mt-3" style="gap:10px">
-          ${[['wallet', '4 ví điểm PS'], ['bag', 'Gian hàng online'], ['shield', 'Bảo hành trọn đời']].map(([i, t]) => `<div class="row" style="gap:8px;font-size:13px"><span class="stat-ico gold">${icon(i)}</span>${t}</div>`).join('')}
+          ${[['wallet', 'Ví điểm PS và ví tiền mặt'], ['bag', 'Gian hàng online'], ['shield', 'Bảo hành trọn đời']].map(([i, t]) => `<div class="row" style="gap:8px;font-size:13px"><span class="stat-ico gold">${icon(i)}</span>${t}</div>`).join('')}
         </div>
       </div>
       <div class="card glow-gold">

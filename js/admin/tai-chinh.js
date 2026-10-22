@@ -93,39 +93,44 @@
   /* ---------- Đối soát ví & dòng tiền ---------- */
   const WK = Object.keys(ADB.WALLETS);
   const wTag = k => { const w = ADB.WALLETS[k] || { short: k, color: '#9aa7ab' }; return `<span class="badge nowrap" style="color:${w.color};border-color:${w.color}55;background:${w.color}14">${esc(w.short)}</span>`; };
-  const taxOf = (d, w) => { const a = -w.amount, t = w.tax != null ? w.tax : Math.round(a * ADB.plan(d).taxRate / 100); return { a, t, net: w.net != null ? w.net : a - t }; };
+  // rút từ ví tiền mặt: thuế đã trừ lúc chuyển từ ví hoa hồng nên thuế 0; rút ví hoa hồng kiểu cũ: trừ thuế khi rút
+  const taxOf = (d, w) => { const a = -w.amount, t = w.tax != null ? w.tax : ADB.walletOf(w) === 'cash' ? 0 : Math.round(a * ADB.plan(d).taxRate / 100); return { a, t, net: w.net != null ? w.net : a - t }; };
+  const WCOL = ['gold', 'cyan', 'violet', 'green', 'red'];
   M.wallet = { render(el) {
     const d = ADB.load(), W = d.wallet || [], mem = d.users.filter(u => u.role !== 'admin'), P = ADB.plan(d);
     const pend = W.filter(w => w.type === 'withdraw' && w.status === 'pending');
     const bal = {}; mem.forEach(u => bal[u.id] = ADB.balances(d, u.id));
     const tot = k => mem.reduce((s, u) => s + bal[u.id][k], 0);
     const pendSum = pend.reduce((s, w) => s + taxOf(d, w).a, 0);
-    el.innerHTML = `${viewOnly()}<div class="grid g-5">
-        ${WK.map((k, i) => stat(ADB.WALLETS[k].name, `<span style="color:${ADB.WALLETS[k].color}">${sh(tot(k))}</span>`, ADB.WALLETS[k].icon, ['gold', 'cyan', 'violet', 'green'][i], i % 2 ? 'glow-cyan' : 'glow-gold', esc(ADB.WALLETS[k].note))).join('')}
-        ${stat('Đang chờ rút', sh(pendSum), 'clock', 'red', 'glow-gold', pend.length + ' yêu cầu, đã tạm giữ trong ví')}
+    const taxYear = W.filter(w => w.type === 'tocash' && w.amount < 0 && w.status === 'done' && String(w.date).slice(0, 4) === today().slice(0, 4)).reduce((s, w) => s + (w.tax || 0), 0);
+    el.innerHTML = `${viewOnly()}<div class="grid g-3 keep-2">
+        ${WK.map((k, i) => stat(ADB.WALLETS[k].name, `<span style="color:${ADB.WALLETS[k].color}">${sh(tot(k))}</span>`, ADB.WALLETS[k].icon, WCOL[i % WCOL.length], i % 2 ? 'glow-cyan' : 'glow-gold', esc(ADB.WALLETS[k].note))).join('')}
+        ${stat('Đang chờ rút', sh(pendSum), 'clock', 'gold', 'glow-cyan', `${pend.length} yêu cầu, đã tạm giữ trong ví · thuế TNCN đã khấu trừ năm nay ${sh(taxYear)}`)}
       </div>
-      <div class="card glow-gold mt-2">${head('Yêu cầu rút tiền chờ duyệt', `${pend.length} yêu cầu · thuế ${P.taxRate}% trừ khi rút ví hoa hồng bán hàng`, can() ? `<button class="btn btn-sm btn-gold" type="button" id="tcAdj">${icon('plus')} Điều chỉnh ví</button>` : '')}
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Số tiền rút</th><th>Thuế ${P.taxRate}%</th><th>Thực nhận</th><th>Ngân hàng</th><th>Còn lại trong ví</th><th>Ngày</th><th></th></tr></thead><tbody id="tcWp">
-        ${pend.length ? pend.map((w, i) => { const x = taxOf(d, w), b = (bal[w.user] || ADB.balances(d, w.user)).sales, bk = w.bank || {}; return `<tr><td>${who(d, w.user, i)}</td><td class="nowrap"><b>${money(x.a)}</b></td><td class="nowrap red">-${money(x.t)}</td><td class="nowrap green"><b>${money(x.net)}</b></td><td class="nowrap">${bk.bank ? `${esc(bk.bank)}<br><small class="dim">${esc(bk.account || '')}${bk.holder ? ' · ' + esc(bk.holder) : ''}</small>` : '<span class="dim">Chưa có</span>'}</td><td class="nowrap ${b < 0 ? 'red' : ''}">${money(b)}</td><td class="dim nowrap">${fdate(w.date)}</td><td>${can() ? `<div class="tc-act"><button class="btn btn-sm btn-gold" type="button" data-ok="${w.id}">Duyệt</button><button class="btn btn-sm btn-ghost" type="button" data-no="${w.id}">Từ chối</button></div>` : wBadge(w.status)}</td></tr>`; }).join('') : empty(8, 'Không có yêu cầu rút tiền đang chờ.')}
-        </tbody></table></div></div>
-      <div class="card glow-cyan mt-2">${head('Số dư 4 ví theo thành viên', 'khoản rút đang chờ đã được trừ tạm', csvBtn('tcWCsv'))}
+      <div class="card glow-gold mt-2">${head('Yêu cầu rút tiền chờ duyệt', `${pend.length} yêu cầu · thuế thu nhập ${P.taxRate}% đã trừ khi thành viên rút từ ví hoa hồng bán hàng sang ví tiền mặt, công ty chuyển khoản đủ số tiền rút từ ví tiền mặt`, can() ? `<button class="btn btn-sm btn-gold" type="button" id="tcAdj">${icon('plus')} Điều chỉnh ví</button>` : '')}
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Từ ví</th><th>Số tiền rút</th><th>Thuế</th><th>Chuyển khoản</th><th>Ngân hàng</th><th>Còn lại trong ví</th><th>Ngày</th><th></th></tr></thead><tbody id="tcWp">
+        ${pend.length ? pend.map((w, i) => { const x = taxOf(d, w), wk = ADB.walletOf(w), b = (bal[w.user] || ADB.balances(d, w.user))[wk], bk = w.bank || {}; return `<tr><td>${who(d, w.user, i)}</td><td>${wTag(wk)}</td><td class="nowrap"><b>${money(x.a)}</b></td><td class="nowrap ${x.t ? 'red' : 'dim'}">${x.t ? '-' + money(x.t) : wk === 'cash' ? 'Đã trừ trước' : '0đ'}</td><td class="nowrap green"><b>${money(x.net)}</b></td><td class="nowrap">${bk.bank ? `${esc(bk.bank)}<br><small class="dim">${esc(bk.account || '')}${bk.holder ? ' · ' + esc(bk.holder) : ''}</small>` : '<span class="dim">Chưa có</span>'}</td><td class="nowrap ${b < 0 ? 'red' : ''}">${money(b)}</td><td class="dim nowrap">${fdate(w.date)}</td><td>${can() ? `<div class="tc-act"><button class="btn btn-sm btn-gold" type="button" data-ok="${w.id}">Duyệt</button><button class="btn btn-sm btn-ghost" type="button" data-no="${w.id}">Từ chối</button></div>` : wBadge(w.status)}</td></tr>`; }).join('') : empty(9, 'Không có yêu cầu rút tiền đang chờ.')}
+        </tbody></table></div>
+        <p class="tc-note mt-1">Yêu cầu rút từ ví hoa hồng bán hàng (dữ liệu cũ) vẫn duyệt được như trước: thuế ${P.taxRate}% trừ khi duyệt.</p></div>
+      <div class="card glow-cyan mt-2">${head('Số dư ' + WK.length + ' ví theo thành viên', 'khoản rút đang chờ đã được trừ tạm', csvBtn('tcWCsv'))}
         <div class="toolbar"><input class="input" id="tcWq" placeholder="Tìm tên, email, mã thành viên" aria-label="Tìm thành viên"></div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th>${WK.map(k => `<th class="nowrap">${esc(ADB.WALLETS[k].short)}</th>`).join('')}<th>Chờ rút</th><th>Giao dịch</th></tr></thead><tbody id="tcWl"></tbody></table></div></div>`;
     const rowsOf = q => mem.filter(u => match(d, u.id, q)).map(u => { const mine = W.filter(w => w.user === u.id), b = bal[u.id];
       return { u, b, sum: WK.reduce((s, k) => s + b[k], 0), pw: -mine.filter(w => w.type === 'withdraw' && w.status === 'pending').reduce((s, w) => s + w.amount, 0), n: mine.length }; })
       .filter(r => r.n).sort((a, b) => b.sum - a.sum);
     const list = () => { const rs = rowsOf($('#tcWq', el).value.trim().toLowerCase());
-      $('#tcWl', el).innerHTML = rs.length ? rs.map((r, i) => `<tr><td>${who(d, r.u.id, i)}</td>${WK.map(k => `<td class="nowrap" style="${r.b[k] ? 'color:' + ADB.WALLETS[k].color : ''}">${r.b[k] ? '<b>' + money(r.b[k]) + '</b>' : '<span class="dim">0đ</span>'}</td>`).join('')}<td class="nowrap">${r.pw ? `<span class="badge pending">${money(r.pw)}</span>` : '<span class="dim">0đ</span>'}</td><td>${r.n}</td></tr>`).join('') : empty(7, 'Không có thành viên phù hợp.'); };
+      $('#tcWl', el).innerHTML = rs.length ? rs.map((r, i) => `<tr><td>${who(d, r.u.id, i)}</td>${WK.map(k => `<td class="nowrap" style="${r.b[k] ? 'color:' + ADB.WALLETS[k].color : ''}">${r.b[k] ? '<b>' + money(r.b[k]) + '</b>' : '<span class="dim">0đ</span>'}</td>`).join('')}<td class="nowrap">${r.pw ? `<span class="badge pending">${money(r.pw)}</span>` : '<span class="dim">0đ</span>'}</td><td>${r.n}</td></tr>`).join('') : empty(WK.length + 3, 'Không có thành viên phù hợp.'); };
     list(); $('#tcWq', el).addEventListener('input', list);
     $('#tcWCsv', el).addEventListener('click', () => ADB.csv('doi-soat-vi', [['Mã', 'Thành viên', 'Tên truy cập', 'Email', ...WK.map(k => ADB.WALLETS[k].name), 'Chờ rút', 'Số giao dịch'], ...rowsOf('').map(r => [r.u.code, r.u.name, r.u.username, r.u.email, ...WK.map(k => r.b[k]), r.pw, r.n])]));
     $('#tcWp', el).addEventListener('click', e => {
       const ok = e.target.closest('[data-ok]'), no = e.target.closest('[data-no]'); if (!ok && !no || !can()) return;
       const dd = ADB.load(), w = dd.wallet.find(x => x.id === (ok || no).dataset[ok ? 'ok' : 'no']); if (!w || w.status !== 'pending') return;
-      if (ok && ADB.balances(dd, w.user).sales < 0 && !confirm('Ví hoa hồng bán hàng không đủ cho yêu cầu này. Vẫn duyệt?')) return;
-      if (no && !confirm('Từ chối yêu cầu rút tiền này? Số tiền sẽ trả lại ví hoa hồng bán hàng.')) return;
+      const wn = (ADB.WALLETS[ADB.walletOf(w)] || { name: 'ví' }).name.toLowerCase();
+      if (ok && ADB.balances(dd, w.user)[ADB.walletOf(w)] < 0 && !confirm(`${wn.charAt(0).toUpperCase() + wn.slice(1)} không đủ cho yêu cầu này. Vẫn duyệt?`)) return;
+      if (no && !confirm(`Từ chối yêu cầu rút tiền này? Số tiền sẽ trả lại ${wn}.`)) return;
       const x = taxOf(dd, w); if (w.tax == null) w.tax = x.t; if (w.net == null) w.net = x.net;
       w.status = ok ? 'done' : 'rejected'; w.done = today();
-      commit(dd, ok ? 'Duyệt rút tiền' : 'Từ chối rút tiền', `${uname(dd, w.user)}: ${money(x.a)}${ok ? `, thuế ${money(x.t)}, chuyển khoản ${money(x.net)}` : ''}`, ok ? `Đã duyệt. Chuyển khoản ${money(x.net)} cho ${uname(dd, w.user)}` : 'Đã từ chối, tiền đã trả lại ví'); M.wallet.render(el);
+      commit(dd, ok ? 'Duyệt rút tiền' : 'Từ chối rút tiền', `${uname(dd, w.user)}: ${money(x.a)} từ ${wn}${ok ? `, thuế ${money(x.t)}, chuyển khoản ${money(x.net)}` : ''}`, ok ? `Đã duyệt. Chuyển khoản ${money(x.net)} cho ${uname(dd, w.user)}` : 'Đã từ chối, tiền đã trả lại ' + wn); M.wallet.render(el);
     });
     if (can()) $('#tcAdj', el).addEventListener('click', () => {
       const md = modal(`<form id="tcAf"><div class="card-head"><h3>Điều chỉnh ví thành viên</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>

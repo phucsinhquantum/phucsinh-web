@@ -586,3 +586,53 @@ html.reduce-motion .reveal { opacity: 1; transform: none; }
 @media (min-width: 1100px) and (prefers-reduced-motion: reduce) { html.reduce-motion .side-in, html.reduce-motion .app { transition: none; } }
 .side-pin { display: none; }
 @media (min-width: 1100px) { .side-pin { display: grid; } }
+.avatar { overflow: hidden; } .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+
+/* ---------- chọn ngôn ngữ ---------- */
+.lang-btn { width: auto; padding: 0 12px; gap: 6px; display: inline-flex; align-items: center; }
+.lang-btn b { font-size: 12px; letter-spacing: .06em; color: var(--gold); }
+.lang-pop { position: fixed; z-index: 10000; width: 240px; max-height: min(460px, calc(100vh - 24px)); overflow-y: auto; padding: 8px; border-radius: 16px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .01) 40%), #0b0f11; border: 1px solid rgba(243, 199, 107, .35);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, .8), 0 0 30px -12px rgba(243, 199, 107, .4); font-family: 'Be Vietnam Pro', system-ui, sans-serif; animation: langIn .2s ease both; }
+@keyframes langIn { from { opacity: 0; transform: translateY(-6px); } }
+.lang-pop-h { padding: 8px 10px 10px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #8c9799; }
+.lang-pop button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 10px; border: 0; border-radius: 10px; background: none; color: #dfe6e7; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.lang-pop button[dir="rtl"] { flex-direction: row-reverse; text-align: right; }
+.lang-pop button:hover, .lang-pop button:focus-visible { background: rgba(255, 255, 255, .06); outline: none; }
+.lang-pop button.on { background: rgba(243, 199, 107, .12); color: #f3c76b; }
+.lang-pop button b { flex: none; width: 34px; height: 26px; display: grid; place-items: center; border-radius: 8px; font-size: 12px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .1); color: #f3c76b; }
+.lang-pop button span { flex: 1; }
+.lang-pop button i { font-style: normal; color: #f3c76b; }
+.lang-pop-n { padding: 8px 10px 4px; font-size: 11px; color: #6f7a7c; }
+/* ẩn thanh công cụ của Google Dịch, giữ trang nguyên giao diện */
+.goog-te-banner-frame, iframe.skiptranslate, .skiptranslate > iframe, #goog-gt-tt, .goog-te-balloon-frame, .VIpgJd-ZVi9od-ORHb-OEVmcd, .VIpgJd-ZVi9od-aZ2wEe-wOHMyf, .VIpgJd-yAWNEb-L7lbkb { display: none !important; }
+html.lang-tr body { top: 0 !important; position: static !important; }
+.goog-text-highlight, font[style] { background: none !important; box-shadow: none !important; }
+
+/* ---------- nút liên hệ nổi: Zalo, Messenger, gọi điện ---------- */
+.contact-dock { position: fixed; right: 18px; bottom: 22px; z-index: 70; display: flex; flex-direction: column; gap: 12px; }
+.cd-btn { position: relative; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; padding: 4px;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, .12), rgba(255, 255, 255, 0) 60%), #0b1012;
+  border: 1px solid rgba(243, 199, 107, .45); box-shadow: 0 10px 26px -8px rgba(0, 0, 0, .8), 0 0 18px -6px rgba(243, 199, 107, .45);
+  transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s, border-color .25s; }
+.cd-ico { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.cd-ico svg { width: 22px; height: 22px; }
+.cd-zalo .cd-ico { background: linear-gradient(145deg, #2f8cff, #0060e6); font: 700 12.5px/1 'Be Vietnam Pro', system-ui, sans-serif; letter-spacing: .01em; }
+.cd-mess .cd-ico { background: conic-gradient(from 200deg at 30% 80%, #ff6a5c, #ff3d8b, #a64dff, #2f7bff, #00c6ff, #ff6a5c); }
+.cd-call .cd-ico { background: linear-gradient(145deg, #ffe3a1, #e0a640 60%, #a8741f); color: #2a1a05; }
+.cd-call::after { content: ""; position: absolute; inset: -1px; border-radius: 50%; border: 1px solid rgba(243, 199, 107, .7); animation: cdRing 2.4s ease-out infinite; pointer-events: none; }
+.cd-call .cd-ico svg { animation: cdShake 2.4s ease-in-out infinite; }
+@keyframes cdRing { 0% { transform: scale(1); opacity: .9; } 70%, 100% { transform: scale(1.55); opacity: 0; } }
+@keyframes cdShake { 0%, 60%, 100% { transform: rotate(0); } 64%, 72% { transform: rotate(-14deg); } 68%, 76% { transform: rotate(14deg); } }
+.cd-tip { position: absolute; right: calc(100% + 12px); top: 50%; transform: translate(8px, -50%); white-space: nowrap; padding: 7px 12px; border-radius: 10px; font-size: 13px; font-weight: 500;
+  color: #f3e7c7; background: rgba(11, 15, 17, .96); border: 1px solid rgba(243, 199, 107, .35); opacity: 0; pointer-events: none; transition: opacity .2s, transform .25s; }
+.cd-btn:hover, .cd-btn:focus-visible { transform: translateY(-2px) scale(1.06); border-color: rgba(243, 199, 107, .85); box-shadow: 0 14px 30px -8px rgba(0, 0, 0, .85), 0 0 26px -4px rgba(243, 199, 107, .6); outline: none; }
+.cd-btn:hover .cd-tip, .cd-btn:focus-visible .cd-tip { opacity: 1; transform: translate(0, -50%); }
+@media (max-width: 1099px) {
+  .contact-dock { right: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); gap: 10px; }
+  .cd-btn { width: 46px; height: 46px; padding: 3px; }
+  .cd-ico svg { width: 20px; height: 20px; }
+  .cd-zalo .cd-ico { font-size: 11px; }
+  .cd-tip { display: none; }
+}
+html.reduce-motion .cd-call::after, html.reduce-motion .cd-call .cd-ico svg { animation: none; }
