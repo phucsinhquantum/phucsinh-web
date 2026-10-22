@@ -185,7 +185,7 @@
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
   const view = $('#view');
   const refCode = (PSQ.qs('ref') || '').trim().toUpperCase().slice(0, 20);
-  const W = ADB.WALLETS, WK = ['cash', 'sales', 'avail', 'bonus', 'shop'].filter(k => W[k]).concat(Object.keys(W).filter(k => !['cash', 'sales', 'avail', 'bonus', 'shop'].includes(k)));
+  const W = ADB.WALLETS, WK = ['cash', 'avail', 'sales', 'bonus', 'shop'].filter(k => W[k]).concat(Object.keys(W).filter(k => !['cash', 'avail', 'sales', 'bonus', 'shop'].includes(k)));
   const ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
   const WST = { done: ['Hoàn tất', 'ok'], pending: ['Chờ duyệt', 'pending'], rejected: ['Từ chối', 'failed'] };
   const wB = s => `<span class="badge ${(WST[s] || [])[1] || ''}">${(WST[s] || [s])[0]}</span>`;
@@ -193,8 +193,8 @@
   const wdot = k => `<span class="wdot" style="--c:${W[k].color}">${esc(W[k].short)}</span>`;
   // ảnh đại diện (nếu có) hoặc chữ viết tắt
   const av = (u, cls = '') => `<span class="avatar ${cls}">${u && u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials((u && u.name) || ''))}</span>`;
-  const wamt = (k, n) => k === 'cash' ? money(n) : ps(n);
-  const wnote = k => k === 'sales' ? 'Rút sang ví tiền mặt, trừ thuế thu nhập ' + ((ADB.load().settings.plan || {}).taxRate ?? 10) + '%' : W[k].note;
+  const wamt = (k, n) => (W[k] && W[k].unit === 'vnd') ? money(n) : ps(n);
+  const wnote = k => { const t = (ADB.load().settings.plan || {}).taxRate ?? 10; return k === 'sales' ? 'Hoa hồng bằng tiền, rút sang ví tiền mặt trừ thuế thu nhập ' + t + '%' : k === 'bonus' ? 'Thu nhập từ đại lý tuyến dưới, chuyển sang ví khả dụng trừ thuế ' + t + '%' : W[k].note; };
   const lower1 = s => s.charAt(0).toLowerCase() + s.slice(1);
   const histBtn = k => `<button class="icon-btn whist" type="button" data-wh="${k}" aria-label="Lịch sử ${esc(lower1(W[k].name))}" title="Lịch sử giao dịch">${icon('clock')}</button>`;
   // giao dịch gần đây: chỉ hoa hồng bán hàng, thưởng giới thiệu CTV, lệnh nạp và rút tiền
@@ -211,7 +211,7 @@
   const save = (d, action, detail, msg) => { ADB.log(d, action, detail); ADB.save(d); toast(msg); };
   const head = (t, sub, right = '') => `<div class="card-head" style="flex-wrap:wrap"><div><h3>${t}</h3>${sub ? `<div class="sub">${sub}</div>` : ''}</div>${right ? `<div style="margin-left:auto">${right}</div>` : ''}</div>`;
   const ph = (t, sub) => `<div class="tv-ph"><h2>${t}</h2>${sub ? `<p class="dim">${sub}</p>` : ''}</div>`;
-  const note = `<p class="biz-note">${icon('info')}Rút tiền và nạp điểm do công ty xử lý (chạy thử, chưa chuyển tiền thật).</p>`;
+  const note = `<p class="biz-note">${icon('info')}Bản chạy thử: nạp tiền được xác nhận ngay, rút tiền do kế toán lập lệnh và công ty duyệt, chưa chuyển tiền thật.</p>`;
   const pctOf = (v, t) => t > 0 ? Math.round(v / t * 100) : 0;
   const isPkg = o => (o.items || []).some(x => x.id === ADB.PKG_ID);
   const pkgOrder = (d, id) => d.orders.find(o => o.userId === id && o.status !== 'failed' && isPkg(o));
@@ -237,7 +237,7 @@
   const MENU = (d, me) => [
     ['', [['tong-quan', 'Tổng quan', 'grid'], (me.tier || 'khach') === 'khach' && ['kich-hoat', 'Kích hoạt CTV', 'sparkle'], ['dai-ly', 'Danh sách đại lý', 'users'], ['khach-hang', 'Khách hàng', 'user'], ['lanh-dao', 'Cấp bậc lãnh đạo', 'star']].filter(Boolean)],
     ['Mua hàng', [['san-pham', 'Sản phẩm', 'bag'], ['gio-hang', 'Giỏ hàng', 'cart'], ['don-hang', 'Đơn hàng của tôi', 'truck']]],
-    ['Tài chính', [['vi', 'Ví của tôi', 'wallet'], ['giao-dich', 'Giao dịch của tôi', 'activity'], ['hoa-hong', 'Hoa hồng', 'award'], ['nap-diem', 'Nạp điểm', 'plus']]],
+    ['Tài chính', [['vi', 'Ví của tôi', 'wallet'], ['giao-dich', 'Giao dịch của tôi', 'activity'], ['hoa-hong', 'Hoa hồng', 'award'], ['nap-diem', 'Nạp tiền', 'plus']]],
     ['Tài khoản', [['ho-so', 'Hồ sơ của tôi', 'user'], ['dia-chi', 'Sổ địa chỉ', 'pin']]]
   ];
   const ACTIONS = { 'san-pham': () => { location.href = 'san-pham.html'; }, 'gio-hang': () => PSQ.openCart(true) };
@@ -304,18 +304,18 @@
 
       <section class="wgrid mt-2">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><a class="wlink" href="#vi" aria-label="${esc(W[k].name)}: ${wamt(k, b[k])}"></a><span class="ico">${icon(W[k].icon)}</span><span class="amt">${wamt(k, b[k])}</span><span class="nm">${esc(W[k].name)}</span><small class="hide-s">${esc(wnote(k))}</small><div class="wfoot">${histBtn(k)}</div></div>`).join('')}</section>
 
-      <a class="wcard wtot mt-2" href="#hoa-hong" style="--c:#f3c76b"><span class="ico">${icon('trend')}</span><span style="display:grid;gap:4px;min-width:0"><span class="amt">${ps(e.total)}</span><span class="nm">Tổng hoa hồng</span><small>${C.length} khoản đã ghi nhận · biểu đồ 6 tháng gần đây</small></span><span class="spk">${PSQ.spark(mv, '#f3c76b')}</span></a>
+      <a class="wcard wtot mt-2" href="#hoa-hong" style="--c:#f3c76b"><span class="ico">${icon('trend')}</span><span style="display:grid;gap:4px;min-width:0"><span class="amt">${money(e.total)}</span><span class="nm">Tổng hoa hồng</span><small>${C.length} khoản đã ghi nhận · biểu đồ 6 tháng gần đây</small></span><span class="spk">${PSQ.spark(mv, '#f3c76b')}</span></a>
 
       <section class="grid g-2 mt-2">
         <div class="card glow-cyan">${head('Phân bổ hoa hồng', 'theo loại thu nhập')}
           <div class="alloc"><div id="tvDonut"></div>
             <div>${KIND.map(([k, l, c]) => `<div class="lg-line" style="--c:${c}"><i></i><span>${l}</span><b class="nowrap">${pctOf(e[k], e.total)}%</b></div>`).join('')}</div></div>
           <div class="divider"></div>
-          <div class="quick"><button class="btn btn-outline-gold" type="button" data-wa="tocash">${icon('arrow')} Rút hoa hồng sang ví tiền mặt</button><button class="btn btn-outline-gold" type="button" data-wa="withdraw">${icon('download')} Rút tiền mặt về ngân hàng</button><button class="btn" type="button" data-wa="convert">${icon('gift')} Điểm thưởng sang khả dụng</button><button class="btn" type="button" data-wa="toshop">${icon('bag')} Khả dụng sang ví mua hàng</button><button class="btn" type="button" data-wa="transfer">${icon('users')} Chuyển điểm cho thành viên</button></div>
+          <div class="quick"><button class="btn btn-gold" type="button" data-wa="deposit">${icon('plus')} Nạp tiền vào ví tiền mặt</button><button class="btn btn-outline-gold" type="button" data-wa="tocash">${icon('arrow')} Rút hoa hồng sang ví tiền mặt</button><button class="btn btn-outline-gold" type="button" data-wa="withdraw">${icon('download')} Rút tiền mặt về ngân hàng</button><button class="btn" type="button" data-wa="convert">${icon('gift')} Điểm thưởng sang khả dụng</button><button class="btn" type="button" data-wa="toshop">${icon('bag')} Khả dụng sang ví mua hàng</button><button class="btn" type="button" data-wa="transfer">${icon('users')} Chuyển điểm cho thành viên</button></div>
         </div>
         <div class="card glow-gold">${head('Điều kiện cấp bậc', 'Khách hàng, Cộng tác viên, Đại lý')}${tierSteps(d, me, P, spent)}</div>
       </section>`;
-    PSQ.donut($('#tvDonut'), { segments: e.total ? KIND.map(([k, , c]) => ({ value: e[k], color: c })).filter(s => s.value > 0) : [{ value: 1, color: 'rgba(255,255,255,.08)' }], center: short(e.total), sub: 'PS hoa hồng', size: 160 });
+    PSQ.donut($('#tvDonut'), { segments: e.total ? KIND.map(([k, , c]) => ({ value: e[k], color: c })).filter(s => s.value > 0) : [{ value: 1, color: 'rgba(255,255,255,.08)' }], center: short(e.total), sub: 'tổng hoa hồng', size: 160 });
   }
 
   function tierSteps(d, me, P, spent) {
@@ -403,26 +403,27 @@
     const O = d.orders.filter(o => o.userId === me.id).sort((a, b) => (b.date || '').localeCompare(a.date || '') || String(b.id).localeCompare(String(a.id)));
     box.innerHTML = ph('Đơn hàng của tôi', O.length + ' đơn') + `<div class="card glow-cyan">${head('Danh sách đơn', 'bấm vào một đơn để xem chi tiết', `<a class="btn btn-sm btn-gold" href="san-pham.html">${icon('bag')} Mua thêm</a>`)}
       ${O.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Mã đơn</th><th>Sản phẩm</th><th>Tổng</th><th>Thanh toán</th><th>Trạng thái</th><th>Ngày</th></tr></thead><tbody>
-        ${O.map(o => `<tr data-o="${esc(o.id)}" style="cursor:pointer"><td><b>#${esc(o.id)}</b></td><td class="dim">${(o.items || []).map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="gold nowrap">${money(o.total)}</td><td class="nowrap" style="font-size:13px">${esc(PAYN[o.pay] || o.pay || '')}${o.shopPaid ? `<br><span class="green">Điểm mua hàng ${ps(o.shopPaid)}</span>` : ''}</td><td>${statusBadge(o.status)}</td><td class="dim nowrap">${fdate(o.date)}</td></tr>`).join('')}
+        ${O.map(o => `<tr data-o="${esc(o.id)}" style="cursor:pointer"><td><b>#${esc(o.id)}</b></td><td class="dim">${(o.items || []).map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="gold nowrap">${money(o.total)}</td><td class="nowrap" style="font-size:13px">${esc(PAYN[o.pay] || o.pay || '')}${o.shopPaid ? `<br><span class="green">Điểm mua hàng ${ps(o.shopPaid)}</span>` : ''}${o.cashPaid ? `<br><span class="cyan">Ví tiền mặt ${money(o.cashPaid)}</span>` : ''}</td><td>${statusBadge(o.status)}</td><td class="dim nowrap">${fdate(o.date)}</td></tr>`).join('')}
       </tbody></table></div>` : `<div class="empty">${icon('bag')}Chưa có đơn hàng.<div class="mt-2"><a class="btn btn-gold btn-sm" href="san-pham.html">Chọn sản phẩm</a></div></div>`}</div>`;
     box.querySelectorAll('[data-o]').forEach(r => r.addEventListener('click', () => {
       const o = O.find(x => x.id === r.dataset.o);
       modal(`<div class="card-head"><h3>Đơn #${esc(o.id)}</h3>${statusBadge(o.status)}<button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
         ${(o.items || []).map(x => `<div class="row between" style="padding:6px 0;gap:10px"><span>${esc(x.name)} x${x.qty}</span><b class="nowrap">${money(x.price * x.qty)}</b></div>`).join('')}
-        <div class="divider"></div>${o.shopPaid ? `<div class="row between"><span class="muted">Trả bằng ví điểm mua hàng</span><b class="green">${ps(o.shopPaid)}</b></div>` : ''}<div class="row between mt-1"><span class="muted">Tổng</span><b class="gold">${money(o.total)}</b></div>
+        <div class="divider"></div>${o.shopPaid ? `<div class="row between"><span class="muted">Trả bằng ví điểm mua hàng</span><b class="green">${ps(o.shopPaid)}</b></div>` : ''}${o.cashPaid ? `<div class="row between"><span class="muted">Trả bằng ví tiền mặt</span><b class="cyan">${money(o.cashPaid)}</b></div>` : ''}<div class="row between mt-1"><span class="muted">Tổng</span><b class="gold">${money(o.total)}</b></div>
         <p class="dim mt-2" style="font-size:13px">Ngày đặt ${fdate(o.date)} · ${esc(PAYN[o.pay] || o.pay || '')}</p>
         ${isPkg(o) && o.status === 'pending' ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>` : ''}`);
     }));
   }
 
   /* ---------- VÍ ---------- */
-  const WACT = { sales: [['tocash', 'Rút sang ví tiền mặt', 'arrow']], bonus: [['convert', 'Chuyển sang khả dụng', 'arrow']], avail: [['toshop', 'Sang ví mua hàng', 'bag'], ['transfer', 'Chuyển cho thành viên', 'users']], shop: [], cash: [['withdraw', 'Rút về ngân hàng', 'download']] };
+  const WACT = { cash: [['deposit', 'Nạp tiền', 'plus'], ['topoints', 'Đổi sang điểm PS', 'gem'], ['withdraw', 'Rút về ngân hàng', 'download']], avail: [['transfer', 'Chuyển cho thành viên', 'users'], ['toshop', 'Sang ví mua hàng', 'bag']], sales: [['tocash', 'Rút sang ví tiền mặt', 'arrow']], bonus: [['convert', 'Chuyển sang ví khả dụng', 'arrow']], shop: [] };
+  const GOLD = ['deposit', 'tocash', 'convert', 'transfer'];
   const byNewest = (x, y) => (y.date || '').localeCompare(x.date || '');
   function pWallet(box, d, me) {
     const b = ADB.balances(d, me.id), mine = (d.wallet || []).filter(w => w.user === me.id).sort(byNewest), P = ADB.plan(d);
     const held = k => -mine.filter(w => w.type === 'withdraw' && w.status === 'pending' && ADB.walletOf(w) === k).reduce((s, w) => s + w.amount, 0);
-    box.innerHTML = ph('Ví của tôi', '1 điểm PS = 1 đồng · rút ví hoa hồng sang ví tiền mặt trừ thuế thu nhập ' + P.taxRate + '%') + note + `<section class="wgrid one-s">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><span class="ico">${icon(W[k].icon)}</span><span class="amt">${wamt(k, b[k])}</span><span class="nm">${esc(W[k].name)}</span><small>${esc(wnote(k))}${held(k) ? `. Đang chờ rút ${wamt(k, held(k))}` : ''}</small>
-        <div class="wfoot"><div class="acts">${WACT[k].map(([a, l, ic]) => `<button class="btn btn-sm${a === 'withdraw' || a === 'tocash' ? ' btn-gold' : ''}" type="button" data-wa="${a}">${icon(ic)} ${l}</button>`).join('') || `<button class="btn btn-sm" type="button" data-cart>${icon('cart')} Dùng khi đặt hàng</button>`}</div>${histBtn(k)}</div></div>`).join('')}</section>
+    box.innerHTML = ph('Ví của tôi', 'Ví tiền và ví hoa hồng tính bằng đồng, ba ví điểm tính bằng PS · 1đ = 1 PS · thuế thu nhập ' + P.taxRate + '% trừ khi rút hoa hồng và khi chuyển điểm thưởng') + note + `<section class="wgrid one-s">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><span class="ico">${icon(W[k].icon)}</span><span class="amt">${wamt(k, b[k])}</span><span class="nm">${esc(W[k].name)}</span><small>${esc(wnote(k))}${held(k) ? `. Đang chờ rút ${wamt(k, held(k))}` : ''}</small>
+        <div class="wfoot"><div class="acts">${WACT[k].map(([a, l, ic]) => `<button class="btn btn-sm${GOLD.includes(a) ? ' btn-gold' : ''}" type="button" data-wa="${a}">${icon(ic)} ${l}</button>`).join('') || `<button class="btn btn-sm" type="button" data-cart>${icon('cart')} Dùng khi đặt hàng</button>`}</div>${histBtn(k)}</div></div>`).join('')}</section>
       <div class="card glow-cyan mt-2">${head('Giao dịch gần đây', 'hoa hồng bán hàng, thưởng giới thiệu CTV, nạp và rút tiền', `<a class="card-link" href="#giao-dich">Xem tất cả</a>`)}${txTable(recentOf(mine).slice(0, 8))}</div>`;
   }
   // lịch sử từng ví, mới nhất trước, kèm số dư sau giao dịch
@@ -451,7 +452,7 @@
     const draw = () => {
       const rows = mine.filter(w => (!txF.w || ADB.walletOf(w) === txF.w) && (!txF.t || w.type === txF.t));
       $('#txBody', box).innerHTML = txTable(rows);
-      $('#txSum', box).textContent = rows.length + ' giao dịch · cộng ' + ps(rows.filter(w => w.amount > 0 && w.status === 'done').reduce((s, w) => s + w.amount, 0)) + ' · trừ ' + ps(-rows.filter(w => w.amount < 0 && w.status !== 'rejected').reduce((s, w) => s + w.amount, 0));
+      const fm = n => txF.w ? wamt(txF.w, n) : money(n).replace('đ', ' (đ/PS)'); $('#txSum', box).textContent = rows.length + ' giao dịch · cộng ' + fm(rows.filter(w => w.amount > 0 && w.status === 'done').reduce((s, w) => s + w.amount, 0)) + ' · trừ ' + fm(-rows.filter(w => w.amount < 0 && w.status !== 'rejected').reduce((s, w) => s + w.amount, 0));
       return rows;
     };
     box.innerHTML = ph('Giao dịch của tôi', 'Mọi thay đổi trên ' + WK.length + ' ví') + note + `<div class="card glow-cyan">
@@ -462,7 +463,7 @@
     let rows = draw();
     $('#txW', box).addEventListener('change', e => { txF.w = e.target.value; rows = draw(); });
     $('#txT', box).addEventListener('change', e => { txF.t = e.target.value; rows = draw(); });
-    $('#txCsv', box).addEventListener('click', () => ADB.csv('giao-dich-' + (me.username || me.id), [['Ngày', 'Ví', 'Loại', 'Nội dung', 'Số điểm', 'Trạng thái'], ...rows.map(w => [w.date, W[ADB.walletOf(w)].name, ADB.walletType[w.type] || w.type, w.note || '', w.amount, (WST[w.status] || [w.status])[0]])]));
+    $('#txCsv', box).addEventListener('click', () => ADB.csv('giao-dich-' + (me.username || me.id), [['Ngày', 'Ví', 'Loại', 'Nội dung', 'Số tiền / điểm', 'Đơn vị', 'Trạng thái'], ...rows.map(w => [w.date, W[ADB.walletOf(w)].name, ADB.walletType[w.type] || w.type, w.note || '', w.amount, W[ADB.walletOf(w)].unit === 'vnd' ? 'đ' : 'PS', (WST[w.status] || [w.status])[0]])]));
   }
 
   /* ---------- HOA HỒNG ---------- */
@@ -474,36 +475,45 @@
     const KC = { ref: ['gold', 'gift'], direct: ['cyan', 'trend'], override: ['violet', 'users'] };
     const rows = C.filter(c => !comK || c.kind === comK);
     box.innerHTML = ph('Hoa hồng', `CTV ${P.ctvRate}%, đại lý ${P.agentRate}% đơn hàng của người mình giới thiệu; đại lý hưởng ${P.overrideRate}% thu nhập của đại lý tuyến dưới`) + `
-      <div class="grid g-3">${Object.keys(CK).map(k => `<div class="card stat glow-gold"><div class="stat-top"><span class="stat-ico ${KC[k][0]}">${icon(KC[k][1])}</span>${CK[k]}</div><div class="stat-val" style="font-size:clamp(17px,1.6vw,22px)">${ps(sum(k))}</div></div>`).join('')}</div>
+      <div class="grid g-3">${Object.keys(CK).map(k => `<div class="card stat glow-gold"><div class="stat-top"><span class="stat-ico ${KC[k][0]}">${icon(KC[k][1])}</span>${CK[k]}</div><div class="stat-val" style="font-size:clamp(17px,1.6vw,22px)">${k === 'override' ? ps(sum(k)) : money(sum(k))}</div></div>`).join('')}</div>
       <div class="card glow-mix mt-2">${head('Chi tiết hoa hồng', rows.length + ' khoản', `<div class="chips" id="comF">${[['', 'Tất cả'], ...Object.entries(CK)].map(([k, l]) => `<button class="chip${comK === k ? ' on' : ''}" type="button" data-k="${k}">${l}</button>`).join('')}</div>`)}
-        ${rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Từ thành viên</th><th>Cách tính</th><th>Số điểm</th><th>Trạng thái</th></tr></thead><tbody>${rows.slice(0, 200).map(c => { const f = ADB.user(d, c.from) || {}; return `<tr><td class="dim nowrap">${fdate(c.date)}</td><td class="nowrap">${esc(CK[c.kind] || c.kind || '')}<br><small class="dim">Đơn #${esc(c.order)}</small></td><td><b class="nowrap">${esc(f.name || '')}</b>${f.username ? `<br><small class="dim">@${esc(f.username)}</small>` : ''}</td><td class="dim nowrap" style="font-size:12.5px">${c.kind === 'ref' ? 'Thưởng cố định' : (c.rate || 0) + '% x ' + money(c.base || 0)}</td><td class="nowrap"><b class="gold">${ps(c.amount)}</b></td><td><span class="badge ${(CS[c.status] || [])[1] || ''}">${(CS[c.status] || [c.status])[0]}</span></td></tr>`; }).join('')}</tbody></table></div>`
+        ${rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Từ thành viên</th><th>Cách tính</th><th>Số tiền / điểm</th><th>Trạng thái</th></tr></thead><tbody>${rows.slice(0, 200).map(c => { const f = ADB.user(d, c.from) || {}; return `<tr><td class="dim nowrap">${fdate(c.date)}</td><td class="nowrap">${esc(CK[c.kind] || c.kind || '')}<br><small class="dim">Đơn #${esc(c.order)}</small></td><td><b class="nowrap">${esc(f.name || '')}</b>${f.username ? `<br><small class="dim">@${esc(f.username)}</small>` : ''}</td><td class="dim nowrap" style="font-size:12.5px">${c.kind === 'ref' ? 'Thưởng cố định' : (c.rate || 0) + '% x ' + money(c.base || 0)}</td><td class="nowrap"><b class="gold">${c.kind === 'override' ? ps(c.amount) : money(c.amount)}</b></td><td><span class="badge ${(CS[c.status] || [])[1] || ''}">${(CS[c.status] || [c.status])[0]}</span></td></tr>`; }).join('')}</tbody></table></div>`
         : `<div class="empty">${icon('gift')}Chưa có hoa hồng. Hoa hồng phát sinh khi người anh chị giới thiệu kích hoạt hoặc đặt hàng.</div>`}
         <p class="dim mt-2" style="font-size:12px">Hoa hồng đã trả được cộng vào ví tương ứng trong Ví của tôi.</p></div>`;
     $('#comF', box).addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; comK = b.dataset.k; pCom(box, ADB.load(), me); });
   }
 
-  /* ---------- NẠP ĐIỂM ---------- */
+  /* ---------- NẠP TIỀN ---------- */
   function pTopup(box, d, me, redo) {
-    const T = (d.topups || []).filter(t => t.user === me.id).sort((a, b) => b.date.localeCompare(a.date));
-    box.innerHTML = ph('Nạp điểm', 'Điểm nạp được duyệt sẽ vào ' + W.shop.name.toLowerCase()) + note + `<div class="grid g-main-r">
-      <div class="card glow-cyan">${head('Lịch sử nạp điểm', T.length + ' yêu cầu')}
-        ${T.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Số tiền</th><th>Hình thức</th><th>Trạng thái</th></tr></thead><tbody>${T.map(t => `<tr><td class="dim nowrap">${fdate(t.date)}</td><td class="gold nowrap"><b>${money(t.amount)}</b></td><td>${esc(t.method || '')}</td><td>${wB(t.status)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('plus')}Chưa có yêu cầu nạp điểm.</div>`}
+    const T = (d.topups || []).filter(t => t.user === me.id).sort((a, b) => b.date.localeCompare(a.date)), bal = ADB.balances(d, me.id).cash;
+    box.innerHTML = ph('Nạp tiền', 'Tiền nạp vào ' + W.cash.name.toLowerCase() + ', dùng mua hàng ngay hoặc đổi sang điểm PS (1đ = 1 PS)') + note + `<div class="grid g-main-r">
+      <div class="card glow-cyan">${head('Lịch sử nạp tiền', T.length + ' lần nạp')}
+        ${T.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Số tiền</th><th>Hình thức</th><th>Vào ví</th><th>Trạng thái</th></tr></thead><tbody>${T.map(t => `<tr><td class="dim nowrap">${fdate(t.date)}</td><td class="gold nowrap"><b>${money(t.amount)}</b></td><td>${esc(t.method || '')}${t.auto ? '<br><small class="green">Tự động xác nhận</small>' : ''}</td><td class="nowrap">${wdot(t.wallet || 'shop')}</td><td>${wB(t.status)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('plus')}Chưa nạp tiền lần nào.</div>`}
       </div>
-      <form class="card glow-gold" id="tpF" novalidate>${head('Yêu cầu nạp điểm', '1 đồng = 1 điểm vào ví mua hàng')}
-        <div class="field"><label for="tpA">Số tiền (đồng)</label><input class="input" id="tpA" name="amount" type="number" min="100000" step="50000" inputmode="numeric" required></div>
+      <form class="card glow-gold" id="tpF" novalidate>${head('Nạp tiền', 'Ví tiền mặt hiện có ' + money(bal))}
+        <div class="field"><label for="tpA">Số tiền (đồng)</label><input class="input" id="tpA" name="amount" type="number" min="10000" step="10000" inputmode="numeric" required></div>
         <div class="chips mt-1" id="tpQ">${[500000, 1000000, 2000000, 5000000].map(v => `<button class="chip" type="button" data-v="${v}">${short(v)}</button>`).join('')}</div>
-        <div class="field mt-2"><label for="tpM">Hình thức</label><select class="input" id="tpM" name="method">${['Chuyển khoản', 'Ví MoMo', 'Tiền mặt tại cửa hàng'].map(m => `<option>${m}</option>`).join('')}</select></div>
-        <div class="field mt-2"><label for="tpN">Ghi chú</label><input class="input" id="tpN" name="note" placeholder="Mã giao dịch chuyển khoản (nếu có)"></div>
+        <div class="field mt-2"><label for="tpM">Hình thức</label><select class="input" id="tpM" name="method">${['Chuyển khoản', 'Tiền mặt tại cửa hàng'].map(m => `<option>${m}</option>`).join('')}</select></div>
+        <div id="tpInfo" class="mt-2"></div>
         <p class="red mt-1" id="tpE" style="font-size:13px;min-height:18px"></p>
-        <button class="btn btn-gold btn-block" type="submit">Gửi yêu cầu nạp</button>
-        <p class="dim mt-1" style="font-size:12px">Chuyển khoản tới ${esc(SITE.bank.name)}, số tài khoản ${esc(SITE.bank.account)}, nội dung ghi ${esc(me.username || me.code || '')}.</p>
+        <button class="btn btn-gold btn-block" type="submit" id="tpS"></button>
       </form></div>`;
-    $('#tpQ', box).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) $('#tpA', box).value = b.dataset.v; });
+    const A = $('#tpA', box), M = $('#tpM', box);
+    const info = () => {
+      const bank = M.value === 'Chuyển khoản', a = Math.round(+A.value || 0);
+      $('#tpInfo', box).innerHTML = bank ? `<div class="box" style="padding:14px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)">${bankBox(me, a)}</div><p class="dim mt-1" style="font-size:12px">Ghi đúng nội dung để tiền tự vào ví. Bản chạy thử: bấm nút bên dưới để giả lập ngân hàng báo có.</p>`
+        : `<p class="dim" style="font-size:12.5px">Nộp tiền tại cửa hàng, kế toán xác nhận rồi tiền mới vào ví.</p>`;
+      $('#tpS', box).textContent = bank ? 'Tôi đã chuyển khoản' : 'Gửi yêu cầu nạp';
+    };
+    info(); A.addEventListener('input', info); M.addEventListener('change', info);
+    if (!box.dataset.depBound) box.dataset.depBound = 1, box.addEventListener('click', e => { const c = e.target.closest('[data-copy-dep]'); if (c) { navigator.clipboard && navigator.clipboard.writeText(c.dataset.copyDep).catch(() => {}); toast('Đã sao chép nội dung chuyển khoản'); } });
+    $('#tpQ', box).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { A.value = b.dataset.v; info(); } });
     $('#tpF', box).addEventListener('submit', e => {
-      e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), a = Math.round(+f.amount);
-      if (!a || a < 100000) return $('#tpE', box).textContent = 'Số tiền nạp tối thiểu 100.000đ.';
-      const dd = ADB.load(); (dd.topups = dd.topups || []).push({ id: ADB.uid('nd'), user: me.id, amount: a, points: a, method: f.method, status: 'pending', date: today(), note: f.note.trim() });
-      save(dd, 'Yêu cầu nạp điểm', `${me.name}: ${money(a)} qua ${f.method}`, 'Đã gửi yêu cầu nạp ' + money(a) + ', chờ công ty duyệt'); redo();
+      e.preventDefault(); const a = Math.round(+A.value || 0);
+      if (!a || a < 10000) return $('#tpE', box).textContent = 'Số tiền nạp tối thiểu 10.000đ.';
+      if (M.value === 'Chuyển khoản') { const r = depositNow(a); if (r.error) return $('#tpE', box).textContent = r.error; return redo(); }
+      const dd = ADB.load(), u = ADB.user(dd, me.id), r = ADB.deposit(dd, u, a, M.value, { status: 'pending' }); if (r.error) return $('#tpE', box).textContent = r.error;
+      save(dd, 'Yêu cầu nạp tiền', `${me.name}: ${money(a)} qua ${M.value}`, 'Đã gửi yêu cầu nạp ' + money(a) + ', chờ kế toán xác nhận'); redo();
     });
   }
 
@@ -601,13 +611,48 @@
     });
   }
 
+  /* ---------- nạp tiền vào ví tiền mặt ---------- */
+  // nội dung chuyển khoản để hệ thống nhận diện người nạp
+  const depCode = u => 'NAP ' + String(u.username || u.code || '').toUpperCase();
+  const bankBox = (u, a) => `<dl class="kv dep-bank"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd>${a ? `<dt>Số tiền</dt><dd><b>${money(a)}</b></dd>` : ''}<dt>Nội dung</dt><dd><b class="cyan">${esc(depCode(u))}</b> <button class="link-btn" type="button" data-copy-dep="${esc(depCode(u))}">Sao chép</button></dd></dl>`;
+  // bản chạy thử: ghi nhận ngay như khi ngân hàng báo có
+  function depositNow(amount) {
+    const dd = ADB.load(), u = ADB.user(dd, ME), r = ADB.deposit(dd, u, amount, 'Chuyển khoản', { status: 'done', auto: true, code: depCode(u) });
+    if (r.error) return r;
+    save(dd, 'Nạp tiền tự động', `@${u.username}: ${money(amount)} vào ví tiền mặt (nội dung ${depCode(u)})`, 'Đã nhận ' + money(amount) + ' vào ví tiền mặt'); return r;
+  }
+  function depositAct() {
+    const d = ADB.load(), me = ADB.user(d, ME);
+    const md = modal(`<form id="dpF" novalidate>
+      <div class="card-head"><div><h3>Nạp tiền vào ví tiền mặt</h3><div class="sub">Chuyển khoản đúng nội dung, tiền tự vào ví, mua hàng được ngay</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      <div class="field"><label for="dpA">Số tiền nạp (đồng)</label><input class="input" id="dpA" type="number" min="10000" step="10000" inputmode="numeric"></div>
+      <div class="chips mt-1" id="dpQ">${[500000, 1000000, 2000000, 5000000].map(v => `<button class="chip" type="button" data-v="${v}">${short(v)}</button>`).join('')}</div>
+      <div class="box mt-2" id="dpB" style="padding:14px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)">${bankBox(me)}</div>
+      <p class="dim mt-1" style="font-size:12px">Hệ thống thật đối soát sao kê ngân hàng và tự cộng tiền trong vài giây, không cần nhân viên duyệt. Bản chạy thử: bấm nút bên dưới để giả lập ngân hàng báo có.</p>
+      <p class="red mt-1" id="dpE" style="font-size:13px;min-height:18px"></p>
+      <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">${icon('check')} Tôi đã chuyển khoản</button></div></form>`);
+    const el = md.el, A = $('#dpA', el), redraw = () => { $('#dpB', el).innerHTML = bankBox(me, Math.round(+A.value || 0)); };
+    A.addEventListener('input', redraw);
+    $('#dpQ', el).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { A.value = b.dataset.v; redraw(); } });
+    el.addEventListener('click', e => { const c = e.target.closest('[data-copy-dep]'); if (c) { navigator.clipboard && navigator.clipboard.writeText(c.dataset.copyDep).catch(() => {}); toast('Đã sao chép nội dung chuyển khoản'); } });
+    $('#dpF', el).addEventListener('submit', e => {
+      e.preventDefault(); const a = Math.round(+A.value || 0);
+      if (!a || a < 10000) return $('#dpE', el).textContent = 'Số tiền nạp tối thiểu 10.000đ.';
+      const r = depositNow(a); if (r.error) return $('#dpE', el).textContent = r.error;
+      md.close(); render();
+    });
+    setTimeout(() => A.focus(), 60);
+  }
+
   /* ---------- thao tác ví (hộp thoại) ---------- */
   function walletAct(kind) {
+    if (kind === 'deposit') return depositAct();
     const d = ADB.load(), me = ADB.user(d, ME), P = ADB.plan(d), b = ADB.balances(d, me.id), min = d.settings.minWithdraw || 0, tx = P.taxRate;
     const cfg = {
       tocash: { t: 'Rút sang ví tiền mặt', from: 'sales', sub: `Trừ thuế thu nhập ${tx}%. Ví tiền mặt nhận số tiền thực rút, chuyển ngay.` },
       withdraw: { t: 'Rút về ngân hàng', from: 'cash', sub: `Từ ví tiền mặt, tối thiểu ${money(min)}. Thuế đã trừ khi rút sang ví tiền mặt, công ty chuyển khoản đủ số tiền sau khi duyệt.` },
       convert: { t: 'Chuyển điểm thưởng sang khả dụng', from: 'bonus', sub: `Trừ thuế ${tx}% khi chuyển.` },
+      topoints: { t: 'Đổi tiền mặt sang điểm PS', from: 'cash', sub: '1đ = 1 PS, không mất phí, không trừ thuế. Điểm vào ví điểm khả dụng.' },
       toshop: { t: 'Chuyển sang ví mua hàng', from: 'avail', sub: 'Không mất phí. Điểm mua hàng chỉ dùng thanh toán đơn trên web.' },
       transfer: { t: 'Chuyển điểm cho thành viên', from: 'avail', sub: 'Từ ví điểm khả dụng của anh chị sang ví điểm khả dụng của người nhận.' }
     }[kind];
@@ -616,7 +661,7 @@
       <div class="card-head"><div><h3>${cfg.t}</h3><div class="sub">${cfg.sub}</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
       <div class="row between wa-bal" style="--c:${W[cfg.from].color};gap:10px"><span class="dim">${esc(W[cfg.from].name)}</span><b class="nowrap">${wamt(cfg.from, max)}</b></div>
       ${kind === 'transfer' ? `<div class="field mt-2"><label for="waU">Tên truy cập người nhận</label><input class="input" id="waU" name="user" autocomplete="off" autocapitalize="off" placeholder="Ví dụ khach2"><div class="wa-prev" id="waP"></div></div>` : ''}
-      <div class="field mt-2"><label for="waA">${kind === 'withdraw' ? 'Số tiền rút về ngân hàng (đồng)' : kind === 'tocash' ? 'Số tiền rút (1 PS = 1đ)' : 'Số điểm'}</label><div class="row" style="gap:8px"><input class="input" id="waA" name="amount" type="number" min="1" step="1000" inputmode="numeric" style="flex:1;min-width:0"><button class="btn btn-sm" type="button" id="waMax">Tối đa</button></div></div>
+      <div class="field mt-2"><label for="waA">${kind === 'withdraw' ? 'Số tiền rút về ngân hàng (đồng)' : kind === 'tocash' ? 'Số tiền rút (đồng)' : kind === 'topoints' ? 'Số tiền đổi (đồng)' : 'Số điểm'}</label><div class="row" style="gap:8px"><input class="input" id="waA" name="amount" type="number" min="1" step="1000" inputmode="numeric" style="flex:1;min-width:0"><button class="btn btn-sm" type="button" id="waMax">Tối đa</button></div></div>
       ${kind === 'withdraw' ? `<div class="form-grid mt-2"><div class="field"><label for="waB">Ngân hàng</label><input class="input" id="waB" name="bank" placeholder="Ví dụ Vietcombank"></div><div class="field"><label for="waN">Số tài khoản, tên chủ tài khoản</label><input class="input" id="waN" name="account"></div></div>` : ''}
       ${kind === 'transfer' ? `<div class="field mt-2"><label for="waT">Lời nhắn (nếu có)</label><input class="input" id="waT" name="note" maxlength="80"></div>` : ''}
       <dl class="calc mt-2" id="waC"></dl>
@@ -629,7 +674,8 @@
       const a = Math.max(0, Math.round(+A.value || 0)), kv = r => r.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
       F.dataset.ok = ''; C.classList.remove('ok'); if (kind === 'transfer') S.textContent = 'Tiếp tục';
       if (!a) { C.innerHTML = ''; return; }
-      C.innerHTML = kind === 'tocash' ? kv([['Trừ ví hoa hồng bán hàng', ps(a)], [`Thuế thu nhập ${tx}%`, '<span class="red">-' + money(tax(a)) + '</span>'], ['Thực nhận vào ví tiền mặt', '<span class="green">' + money(a - tax(a)) + '</span>']])
+      C.innerHTML = kind === 'topoints' ? kv([['Trừ ví tiền mặt', money(a)], ['Vào ví điểm khả dụng', '<span class="green">' + ps(a) + '</span>'], ['Tiền mặt còn lại', money(max - a)]])
+        : kind === 'tocash' ? kv([['Trừ ví hoa hồng bán hàng', money(a)], [`Thuế thu nhập ${tx}%`, '<span class="red">-' + money(tax(a)) + '</span>'], ['Thực nhận vào ví tiền mặt', '<span class="green">' + money(a - tax(a)) + '</span>']])
         : kind === 'withdraw' ? kv([['Trừ ví tiền mặt', money(a)], ['Công ty chuyển khoản', '<span class="green">' + money(a) + '</span>'], ['Số dư còn lại', money(max - a)]])
         : kind === 'convert' ? kv([['Trừ ví điểm thưởng', ps(a)], [`Thuế ${tx}%`, '<span class="red">-' + ps(tax(a)) + '</span>'], ['Vào ví điểm khả dụng', '<span class="green">' + ps(a - tax(a)) + '</span>']])
         : kind === 'toshop' ? kv([['Trừ ví điểm khả dụng', ps(a)], ['Vào ví điểm mua hàng', '<span class="green">' + ps(a) + '</span>']])
@@ -654,7 +700,10 @@
         save(dd, 'Yêu cầu rút tiền', `@${u.username}: ${money(a)} từ ví tiền mặt về ${bank} ${account}`, 'Đã gửi yêu cầu rút ' + money(a) + ' về ngân hàng, chờ công ty duyệt');
       } else if (kind === 'tocash') {
         r = ADB.toCash(dd, u, a); if (r.error) return E.textContent = r.error;
-        save(dd, 'Rút sang ví tiền mặt', `@${u.username}: ${ps(a)}, thuế ${money(r.tax)}, thực nhận ${money(r.net)}`, 'Đã rút, ví tiền mặt nhận ' + money(r.net));
+        save(dd, 'Rút sang ví tiền mặt', `@${u.username}: ${money(a)}, thuế ${money(r.tax)}, thực nhận ${money(r.net)}`, 'Đã rút, ví tiền mặt nhận ' + money(r.net));
+      } else if (kind === 'topoints') {
+        r = ADB.cashToPoints(dd, u, a); if (r.error) return E.textContent = r.error;
+        save(dd, 'Đổi tiền mặt sang điểm PS', `@${u.username}: ${money(a)} thành ${ps(a)}`, 'Đã đổi, nhận ' + ps(a) + ' vào ví điểm khả dụng');
       } else if (kind === 'convert') {
         r = ADB.convert(dd, u, a); if (r.error) return E.textContent = r.error;
         save(dd, 'Chuyển điểm thưởng', `@${u.username}: ${ps(a)}, thuế ${ps(r.tax)}`, 'Đã chuyển, nhận ' + ps(r.net) + ' vào ví điểm khả dụng');

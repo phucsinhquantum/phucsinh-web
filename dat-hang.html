@@ -148,6 +148,11 @@
   const pay = { on: false, amount: 0 };
   const payMax = () => Math.min(shopBal(), cart.total() + ship);
   const payUsed = () => pay.on ? Math.max(0, Math.min(Math.round(+pay.amount || 0), payMax())) : 0;
+  // ví tiền mặt trả phần còn lại sau điểm mua hàng
+  const cashBal = () => { if (!u || !window.ADB) return 0; try { return ADB.balances(ADB.load(), u.id).cash || 0; } catch (e) { return 0; } };
+  const cpay = { on: false, amount: 0 };
+  const cashMax = () => Math.max(0, Math.min(cashBal(), cart.total() + ship - payUsed()));
+  const cashUsed = () => cpay.on ? Math.max(0, Math.min(Math.round(+cpay.amount || 0), cashMax())) : 0;
 
   $('#lookup').closest('.card').querySelector('.stat-ico').innerHTML = icon('search');
 
@@ -258,7 +263,7 @@
         <div class="row"><span class="muted">Tạm tính</span><span>${money(sub)}</span></div>
         <div class="row"><span class="muted">Phí giao hàng</span><span class="${ship ? '' : 'green'}">${ship ? money(ship) : 'Miễn phí'}</span></div>
         <div class="row grand"><span>Tổng thanh toán</span><b>${money(sub + ship)}</b></div>
-        ${payUsed() ? `<div class="row" data-pt-line><span class="muted">Trừ ví điểm mua hàng</span><span class="green">-${PS(payUsed())}</span></div><div class="row"><span class="muted">Còn phải thanh toán</span><b class="gold">${money(sub + ship - payUsed())}</b></div>` : ''}
+        ${payUsed() ? `<div class="row" data-pt-line><span class="muted">Trừ ví điểm mua hàng</span><span class="green">-${PS(payUsed())}</span></div>` : ''}${cashUsed() ? `<div class="row"><span class="muted">Trừ ví tiền mặt</span><span class="cyan">-${money(cashUsed())}</span></div>` : ''}${payUsed() || cashUsed() ? `<div class="row"><span class="muted">Còn phải thanh toán</span><b class="gold">${money(sub + ship - payUsed() - cashUsed())}</b></div>` : ''}
       </div>
       ${viewPoints()}
       <p class="dim mt-2" style="font-size:12px">Bấm xác nhận nghĩa là anh chị đồng ý với chính sách đổi trả và bảo hành của Phúc Sinh QuanTum. Nhân viên sẽ gọi xác nhận trước khi giao.</p>
@@ -266,15 +271,24 @@
     </div>`;
   }
 
-  function viewPoints() {
+  function viewPoints() { return viewShop() + viewCash(); }
+  function viewShop() {
     const bal = shopBal(), max = payMax(); if (!(bal > 0) || !(max > 0)) return '';
     if (pay.on && !(+pay.amount > 0)) pay.amount = max;
     return `<div class="box mt-2 dh-pts"><label class="check"><input type="checkbox" id="ptUse"${pay.on ? ' checked' : ''}> <span>Dùng điểm ví mua hàng (còn <b class="green">${PS(bal)}</b>)</span></label>
       ${pay.on ? `<div class="row mt-1" style="gap:10px;flex-wrap:wrap;align-items:center"><label for="ptAmt" class="muted" style="font-size:13px">Số điểm dùng</label><input class="input" id="ptAmt" type="number" min="1000" max="${max}" step="1000" value="${payUsed()}" style="max-width:180px;height:40px"><button class="link-btn" type="button" id="ptMax">Dùng tối đa ${PS(max)}</button></div>
-        <p class="dim mt-1" style="font-size:12px">${payUsed() >= cart.total() + ship ? 'Điểm đủ thanh toán toàn bộ đơn, đơn sẽ được ghi nhận đã thanh toán ngay.' : 'Phần còn lại anh chị thanh toán theo phương thức đã chọn.'}</p>` : ''}</div>`;
+        <p class="dim mt-1" style="font-size:12px">${payUsed() >= cart.total() + ship ? 'Điểm đủ thanh toán toàn bộ đơn, đơn sẽ được ghi nhận đã thanh toán ngay.' : 'Phần còn lại anh chị trả bằng ví tiền mặt hoặc phương thức đã chọn.'}</p>` : ''}</div>`;
+  }
+  function viewCash() {
+    const bal = cashBal(), max = cashMax(); if (!(bal > 0) || !(max > 0)) { cpay.on = false; return ''; }
+    if (cpay.on && !(+cpay.amount > 0)) cpay.amount = max;
+    const rest = cart.total() + ship - payUsed() - cashUsed();
+    return `<div class="box mt-2 dh-pts"><label class="check"><input type="checkbox" id="cpUse"${cpay.on ? ' checked' : ''}> <span>Trả bằng ví tiền mặt (còn <b class="cyan">${money(bal)}</b>)</span></label>
+      ${cpay.on ? `<div class="row mt-1" style="gap:10px;flex-wrap:wrap;align-items:center"><label for="cpAmt" class="muted" style="font-size:13px">Số tiền dùng</label><input class="input" id="cpAmt" type="number" min="1000" max="${max}" step="1000" value="${cashUsed()}" style="max-width:180px;height:40px"><button class="link-btn" type="button" id="cpMax">Dùng tối đa ${money(max)}</button></div>
+        <p class="dim mt-1" style="font-size:12px">${rest <= 0 ? 'Đủ thanh toán toàn bộ đơn, đơn sẽ được ghi nhận đã thanh toán ngay.' : 'Phần còn lại anh chị thanh toán theo phương thức đã chọn.'}</p>` : ''}</div>`;
   }
   function viewSuccess(o) {
-    const sp = o.shopPaid || 0, due = Math.max(0, o.total - sp), bank = o.pay === 'bank' && due > 0;
+    const sp = o.shopPaid || 0, cp = o.cashPaid || 0, due = Math.max(0, o.total - sp - cp), bank = o.pay === 'bank' && due > 0;
     return `<div class="card glow-mix success">
       <div class="ok-ico">${icon('check')}</div>
       <span class="eyebrow">Đặt hàng thành công</span>
@@ -284,10 +298,10 @@
       <div class="mt-2">${statusBadge(o.status)}</div>
       <div class="info">
         <div class="box" style="padding:16px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--line)">
-          <dl class="kv"><dt>Tổng đơn hàng</dt><dd><b class="${sp ? '' : 'gold'}" style="font-size:${sp ? 15 : 18}px">${money(o.total)}</b></dd>${sp ? `<dt>Đã dùng điểm</dt><dd class="green">${PS(sp)}</dd><dt>Còn phải trả</dt><dd><b class="gold" style="font-size:18px">${money(due)}</b></dd>` : ''}<dt>Giao đến</dt><dd>${esc(o.address)}</dd><dt>Thanh toán</dt><dd>${due === 0 ? 'Ví điểm mua hàng' : bank ? 'Chuyển khoản ngân hàng' : 'Khi nhận hàng (COD)'}</dd></dl>
+          <dl class="kv"><dt>Tổng đơn hàng</dt><dd><b class="${sp || cp ? '' : 'gold'}" style="font-size:${sp || cp ? 15 : 18}px">${money(o.total)}</b></dd>${sp ? `<dt>Đã dùng điểm</dt><dd class="green">${PS(sp)}</dd>` : ''}${cp ? `<dt>Ví tiền mặt</dt><dd class="cyan">${money(cp)}</dd>` : ''}${sp || cp ? `<dt>Còn phải trả</dt><dd><b class="gold" style="font-size:18px">${money(due)}</b></dd>` : ''}<dt>Giao đến</dt><dd>${esc(o.address)}</dd><dt>Thanh toán</dt><dd>${due === 0 ? (sp && cp ? 'Ví điểm mua hàng và ví tiền mặt' : cp ? 'Ví tiền mặt' : 'Ví điểm mua hàng') : bank ? 'Chuyển khoản ngân hàng' : 'Khi nhận hàng (COD)'}</dd></dl>
         </div>
         ${bank ? `<div class="bank mt-2"><p style="font-size:14px;margin-bottom:10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Số tiền</dt><dd>${money(due)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>`
-          : due === 0 ? `<p class="pts-note mt-2">${icon('check')}<span>Đơn đã thanh toán đủ bằng điểm. Ví mua hàng còn <b>${PS(shopBal())}</b>. Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận giao hàng.</span></p>`
+          : due === 0 ? `<p class="pts-note mt-2">${icon('check')}<span>Đơn đã thanh toán đủ bằng ví. ${sp ? `Ví mua hàng còn <b>${PS(shopBal())}</b>. ` : ''}${cp ? `Ví tiền mặt còn <b>${money(cashBal())}</b>. ` : ''} Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận giao hàng.</span></p>`
           : `<p class="pts-note mt-2">${icon('truck')}<span>Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận. Anh chị kiểm tra hàng rồi thanh toán ${money(due)} khi nhận.</span></p>`}
       </div>
       <div class="actions"><a class="btn btn-gold" href="thanh-vien.html">${icon('user')} Xem đơn hàng</a><a class="btn btn-outline-gold" href="san-pham.html">Tiếp tục mua sắm</a></div>
@@ -316,19 +330,20 @@
     if (e.target.closest('#clearCart')) { cart.clear(); toast('Đã xóa giỏ hàng'); return; }
     if (e.target.closest('#placeBtn')) {
       const b = $('#placeBtn'); b.disabled = true;
-      const want = payUsed(); // tính trước khi giỏ hàng được xóa
+      const want = payUsed(), wantCash = cashUsed(); // tính trước khi giỏ hàng được xóa
       const res = PSQ.placeOrder({ name: form.name, phone: normPhone(form.phone), email: form.email, address: `${form.address}, ${form.province}`, note: form.note, pay: form.pay });
       if (res.error) { b.disabled = false; toast(res.error); return; }
       placed = res.order;
-      if (want && u && window.ADB) {
+      if ((want || wantCash) && u && window.ADB) {
         const d = ADB.load(), o = d.orders.find(x => x.id === placed.id), me = ADB.user(d, u.id);
-        const used = o && me ? ADB.spendShop(d, me, o, want) : 0;
-        if (used) {
-          if (used >= o.total) { o.status = 'paid'; ADB.settleOrder(d, o); }
-          ADB.log(d, 'Thanh toán bằng điểm', `${o.id}: ${me.name} dùng ${PS(used)} ví mua hàng${used >= o.total ? ', đã thanh toán đủ' : ''}`);
+        const used = o && me && want ? ADB.spendShop(d, me, o, want) : 0, usedC = o && me && wantCash ? ADB.spendCash(d, me, o, wantCash) : 0;
+        if (used || usedC) {
+          const full = used + usedC >= o.total;
+          if (full) { o.status = 'paid'; ADB.settleOrder(d, o); }
+          ADB.log(d, 'Thanh toán bằng ví', `${o.id}: ${me.name}${used ? ` dùng ${PS(used)} ví mua hàng` : ''}${usedC ? ` trả ${money(usedC)} ví tiền mặt` : ''}${full ? ', đã thanh toán đủ' : ''}`);
           ADB.save(d); placed = o;
         }
-        pay.on = false; pay.amount = 0;
+        pay.on = false; pay.amount = 0; cpay.on = false; cpay.amount = 0;
       }
       render(true); toast('Đặt hàng thành công: ' + placed.id);
     }
@@ -338,8 +353,10 @@
     if (e.target.name === 'pay') { $('#bankBox').hidden = e.target.value !== 'bank'; form.pay = e.target.value; }
     if (e.target.id === 'ptUse') { pay.on = e.target.checked; pay.amount = pay.on ? payMax() : 0; render(); }
     if (e.target.id === 'ptAmt') { pay.amount = Math.max(0, Math.min(Math.round(+e.target.value || 0), payMax())); render(); }
+    if (e.target.id === 'cpUse') { cpay.on = e.target.checked; cpay.amount = cpay.on ? cashMax() : 0; render(); }
+    if (e.target.id === 'cpAmt') { cpay.amount = Math.max(0, Math.min(Math.round(+e.target.value || 0), cashMax())); render(); }
   });
-  $('#main').addEventListener('click', e => { if (e.target.closest('#ptMax')) { pay.amount = payMax(); render(); } });
+  $('#main').addEventListener('click', e => { if (e.target.closest('#ptMax')) { pay.amount = payMax(); render(); } if (e.target.closest('#cpMax')) { cpay.amount = cashMax(); render(); } });
   $('#main').addEventListener('input', e => { const f = e.target.closest('.field.bad'); if (f) { f.classList.remove('bad'); f.querySelector('.err').hidden = true; } });
   document.addEventListener('cart:change', () => {
     if (placed) return;

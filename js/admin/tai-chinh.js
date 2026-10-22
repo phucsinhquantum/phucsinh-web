@@ -262,25 +262,25 @@
       P.forEach(c => c.status = 'approved'); commit(dd, 'Duyệt hoa hồng hàng loạt', `${P.length} khoản, ${money(sm(P))}`, `Đã duyệt ${P.length} khoản hoa hồng`); M.commissions.render(el); });
   } };
 
-  /* ---------- Lịch sử nạp điểm ---------- */
+  /* ---------- Lịch sử nạp tiền ---------- */
   M.topups = { render(el) {
     const d = ADB.load(), T = (d.topups || []).slice().sort((a, b) => b.date.localeCompare(a.date));
     const by = s => T.filter(t => t.status === s), sm = a => a.reduce((s, t) => s + t.amount, 0);
     el.innerHTML = `${viewOnly()}<div class="grid g-3 keep-2">${stat('Chờ duyệt', sh(sm(by('pending'))), 'clock', 'gold', 'glow-gold', by('pending').length + ' yêu cầu')}${stat('Đã nạp', sh(sm(by('done'))), 'check', 'green', 'glow-cyan', by('done').length + ' lần')}${stat('Từ chối', sh(sm(by('rejected'))), 'close', 'red', 'glow-gold', by('rejected').length + ' lần')}</div>
-      <div class="card glow-cyan mt-2">${head('Lịch sử nạp điểm', '<span id="tcNn"></span>', csvBtn('tcNCsv'))}
+      <div class="card glow-cyan mt-2">${head('Lịch sử nạp tiền', '<span id="tcNn"></span>', csvBtn('tcNCsv'))}
         <div class="toolbar"><input class="input" id="tcNq" placeholder="Tìm thành viên" aria-label="Tìm thành viên"><select class="input" id="tcNs" aria-label="Trạng thái"><option value="">Mọi trạng thái</option>${Object.entries(WST).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select></div>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Thành viên</th><th>Số tiền</th><th>Điểm</th><th>Hình thức</th><th>Trạng thái</th>${can() ? '<th></th>' : ''}</tr></thead><tbody id="tcNl"></tbody></table></div></div>`;
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Thành viên</th><th>Số tiền</th><th>Vào ví</th><th>Hình thức</th><th>Trạng thái</th>${can() ? '<th></th>' : ''}</tr></thead><tbody id="tcNl"></tbody></table></div></div>`;
     const filt = () => { const q = $('#tcNq', el).value.trim().toLowerCase(), s = $('#tcNs', el).value; return T.filter(t => (!s || t.status === s) && match(d, t.user, q)); };
     const list = () => { const L = filt(); $('#tcNn', el).textContent = `${L.length} yêu cầu · ${money(sm(L))}`;
-      $('#tcNl', el).innerHTML = L.length ? L.map((t, i) => `<tr><td class="dim nowrap">${fdate(t.date)}</td><td>${who(d, t.user, i)}</td><td class="gold nowrap"><b>${money(t.amount)}</b></td><td class="cyan nowrap">${(t.points || t.amount).toLocaleString('vi-VN')}</td><td>${esc(t.method || '')}${t.note ? `<br><small class="dim">${esc(t.note)}</small>` : ''}</td><td>${wBadge(t.status)}</td>${can() ? `<td>${t.status === 'pending' ? `<div class="tc-act"><button class="btn btn-sm btn-gold" type="button" data-ok="${t.id}">Duyệt</button><button class="btn btn-sm btn-ghost" type="button" data-no="${t.id}">Từ chối</button></div>` : ''}</td>` : ''}</tr>`).join('') : empty(7, 'Không có yêu cầu phù hợp.'); };
+      $('#tcNl', el).innerHTML = L.length ? L.map((t, i) => `<tr><td class="dim nowrap">${fdate(t.date)}</td><td>${who(d, t.user, i)}</td><td class="gold nowrap"><b>${money(t.amount)}</b></td><td class="nowrap">${wTag(t.wallet || 'shop')}</td><td>${esc(t.method || '')}${t.auto ? '<br><small class="green">Tự động xác nhận</small>' : ''}${t.note ? `<br><small class="dim">${esc(t.note)}</small>` : ''}</td><td>${wBadge(t.status)}</td>${can() ? `<td>${t.status === 'pending' ? `<div class="tc-act"><button class="btn btn-sm btn-gold" type="button" data-ok="${t.id}">Duyệt</button><button class="btn btn-sm btn-ghost" type="button" data-no="${t.id}">Từ chối</button></div>` : ''}</td>` : ''}</tr>`).join('') : empty(7, 'Không có yêu cầu phù hợp.'); };
     list(); $('#tcNq', el).addEventListener('input', list); $('#tcNs', el).addEventListener('change', list);
-    $('#tcNCsv', el).addEventListener('click', () => ADB.csv('lich-su-nap-diem', [['Ngày', 'Mã TV', 'Thành viên', 'Số tiền', 'Điểm', 'Hình thức', 'Trạng thái', 'Ghi chú'], ...filt().map(t => [t.date, (user(d, t.user) || {}).code, uname(d, t.user), t.amount, t.points || t.amount, t.method, (WST[t.status] || [t.status])[0], t.note])]));
+    $('#tcNCsv', el).addEventListener('click', () => ADB.csv('lich-su-nap-tien', [['Ngày', 'Mã TV', 'Thành viên', 'Số tiền', 'Vào ví', 'Hình thức', 'Trạng thái', 'Ghi chú'], ...filt().map(t => [t.date, (user(d, t.user) || {}).code, uname(d, t.user), t.amount, (ADB.WALLETS[t.wallet || 'shop'] || {}).name, t.method, (WST[t.status] || [t.status])[0], t.note])]));
     if (!can()) return;
     $('#tcNl', el).addEventListener('click', e => { const ok = e.target.closest('[data-ok]'), no = e.target.closest('[data-no]'); if (!ok && !no) return;
       const dd = ADB.load(), t = dd.topups.find(x => x.id === (ok || no).dataset[ok ? 'ok' : 'no']); if (!t || t.status !== 'pending') return;
-      if (no && !confirm('Từ chối yêu cầu nạp điểm này?')) return;
+      if (no && !confirm('Từ chối yêu cầu nạp tiền này?')) return;
       t.status = ok ? 'done' : 'rejected';
-      if (ok) ADB.credit(dd, t.user, 'shop', 'topup', t.points || t.amount, 'Nạp điểm qua ' + (t.method || ''), t.id);
-      commit(dd, ok ? 'Duyệt nạp điểm' : 'Từ chối nạp điểm', `${uname(dd, t.user)}: ${money(t.amount)}`, ok ? `Đã cộng ${money(t.points || t.amount).replace('đ', ' PS')} vào ví mua hàng của ${uname(dd, t.user)}` : 'Đã từ chối yêu cầu nạp điểm'); M.topups.render(el); });
+      const tw = t.wallet || 'cash'; if (ok) ADB.credit(dd, t.user, tw, 'topup', t.amount, 'Nạp tiền qua ' + (t.method || ''), t.id);
+      commit(dd, ok ? 'Duyệt nạp tiền' : 'Từ chối nạp tiền', `${uname(dd, t.user)}: ${money(t.amount)}`, ok ? `Đã cộng ${money(t.amount)} vào ${ADB.WALLETS[tw].name.toLowerCase()} của ${uname(dd, t.user)}` : 'Đã từ chối yêu cầu nạp tiền'); M.topups.render(el); });
   } };
 })();

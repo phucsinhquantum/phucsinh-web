@@ -4,7 +4,7 @@
    Cần nạp sau js/data.js và js/app.js. */
 (function () {
   const { db, today } = PSQ;
-  const VERSION = 3;
+  const VERSION = 4;
 
   const DEFAULT_SETTINGS = {
     shopName: SITE.brand, hotline: SITE.phone, email: SITE.email, address: SITE.address,
@@ -149,6 +149,7 @@
     if (d.v >= VERSION) return false;
     if (!(d.v >= 2)) migrateV2(d);
     if (d.v < 3) migrateV3(d);
+    if (d.v < 4) migrateV4(d);
     d.v = VERSION; return true;
   }
 
@@ -223,12 +224,14 @@
     pkgCountsAs: 346000                            // phần của gói tính vào doanh số mua hàng (mốc đại lý)
   };
   const PKG_ID = 'goi-ctv';
+  // thứ tự hiển thị: hàng trên tiền mặt, điểm khả dụng; hàng dưới hoa hồng bán hàng, điểm thưởng, điểm mua hàng
+  // tiền (VNĐ): cash, sales · điểm (PS): avail, bonus, shop
   const WALLETS = {
-    sales: { name: 'Ví hoa hồng bán hàng', short: 'Hoa hồng bán hàng', color: '#f3c76b', icon: 'wallet', note: 'Rút sang ví tiền mặt, trừ thuế thu nhập 10%' },
-    avail: { name: 'Ví điểm khả dụng', short: 'Điểm khả dụng', color: '#4fe6df', icon: 'gem', note: 'Chuyển sang ví mua hàng hoặc cho thành viên khác' },
-    bonus: { name: 'Ví điểm thưởng', short: 'Điểm thưởng', color: '#b98cff', icon: 'gift', note: 'Từ thu nhập của đại lý tuyến dưới, chuyển sang khả dụng' },
-    shop: { name: 'Ví điểm mua hàng', short: 'Điểm mua hàng', color: '#45e08f', icon: 'bag', note: 'Dùng để thanh toán đơn hàng trên web' },
-    cash: { name: 'Ví tiền mặt', short: 'Tiền mặt', color: '#ff9f6b', icon: 'card', note: 'Tiền thực rút sau thuế, rút về tài khoản ngân hàng' }
+    cash: { name: 'Ví tiền mặt', short: 'Tiền mặt', color: '#ff9f6b', icon: 'card', unit: 'vnd', note: 'Nạp từ ngân hàng, mua hàng, đổi sang điểm PS hoặc rút về ngân hàng' },
+    avail: { name: 'Ví điểm khả dụng', short: 'Điểm khả dụng', color: '#4fe6df', icon: 'gem', unit: 'ps', note: 'Điểm đã trừ thuế, chuyển cho thành viên khác hoặc sang ví mua hàng' },
+    sales: { name: 'Ví hoa hồng bán hàng', short: 'Hoa hồng bán hàng', color: '#f3c76b', icon: 'wallet', unit: 'vnd', note: 'Hoa hồng bằng tiền, rút sang ví tiền mặt trừ thuế thu nhập 10%' },
+    bonus: { name: 'Ví điểm thưởng', short: 'Điểm thưởng', color: '#b98cff', icon: 'gift', unit: 'ps', note: 'Thu nhập từ đại lý tuyến dưới, chuyển sang ví khả dụng trừ thuế 10%' },
+    shop: { name: 'Ví điểm mua hàng', short: 'Điểm mua hàng', color: '#45e08f', icon: 'bag', unit: 'ps', note: 'Chỉ dùng để thanh toán đơn hàng, không chuyển sang ví khác' }
   };
   const TIERS = {
     khach: { name: 'Khách hàng', color: '#9aa7ab' },
@@ -236,7 +239,7 @@
     daily: { name: 'Đại lý', color: '#f3c76b' }
   };
   // ví mặc định cho giao dịch cũ chưa ghi ví
-  const legacyWallet = t => ({ commission: 'sales', referral: 'sales', withdraw: 'sales', topup: 'shop', spend: 'shop', package: 'shop' }[t] || 'avail');
+  const legacyWallet = t => ({ commission: 'sales', referral: 'sales', withdraw: 'sales', topup: 'cash', spend: 'shop', package: 'shop' }[t] || 'avail');
   const PAID = o => ['paid', 'ship', 'done'].includes(o.status);
   const plan = d => (d.settings.plan = Object.assign({}, PLAN, d.settings.plan || {}));
   const pct = (v, r) => Math.round(v * r / 100);
@@ -333,6 +336,15 @@
     void rnd;
   }
 
+  // v4: tiền nạp vào ví tiền mặt (trước đây vào ví mua hàng)
+  function migrateV4(d) {
+    (d.topups || []).forEach(t => { if (!t.wallet) t.wallet = 'cash'; });
+    const moved = {};
+    (d.wallet || []).forEach(w => { if (w.type === 'topup' && w.wallet === 'shop') { w.wallet = 'cash'; w.note = String(w.note || '').replace('Nạp điểm', 'Nạp tiền'); moved[w.user] = 1; } });
+    // nếu điểm mua hàng đã được tiêu vượt số còn lại thì trả khoản nạp về ví cũ để không âm
+    Object.keys(moved).forEach(id => { if (ADB.balances(d, id).shop < 0) d.wallet.forEach(w => { if (w.user === id && w.type === 'topup' && w.wallet === 'cash') w.wallet = 'shop'; }); });
+  }
+
   Object.assign(ADB, {
     PLAN, PKG_ID, WALLETS, TIERS, plan, settleOrder, addCommission, payCommission, credit, legacyWallet,
     tierOf(u) { return TIERS[(u && u.tier) || 'khach'] || TIERS.khach; },
@@ -411,6 +423,39 @@
       credit(d, u.id, 'shop', 'spend', -amount, 'Thanh toán đơn ' + order.id, order.id);
       order.shopPaid = amount; return amount;
     },
+    // nạp tiền từ ngân hàng vào ví tiền mặt. Chuyển khoản: hệ thống thật sẽ tự xác nhận khi ngân hàng báo có
+    // (bản chạy thử ghi nhận ngay); hình thức khác chờ kế toán duyệt
+    deposit(d, u, amount, method, opt = {}) {
+      amount = Math.round(+amount);
+      if (!(amount > 0)) return { error: 'Anh chị nhập số tiền cần nạp.' };
+      const t = { id: uid('nd'), user: u.id, wallet: 'cash', amount, points: amount, method: method || 'Chuyển khoản', status: opt.status || 'pending', date: opt.date || now(), note: opt.note || '', code: opt.code || '' };
+      if (t.status === 'done') { t.auto = !!opt.auto; credit(d, u.id, 'cash', 'topup', amount, 'Nạp tiền qua ' + t.method + (opt.auto ? ' (tự động xác nhận)' : ''), t.id, { date: t.date }); }
+      (d.topups = d.topups || []).push(t); return { topup: t };
+    },
+    // đổi tiền mặt sang điểm PS (1đ = 1 PS), vào ví điểm khả dụng, không trừ thuế
+    cashToPoints(d, u, amount) {
+      const b = ADB.balances(d, u.id).cash; amount = Math.round(+amount);
+      if (!(amount > 0)) return { error: 'Anh chị nhập số tiền cần đổi.' };
+      if (amount > b) return { error: 'Số dư ví tiền mặt không đủ (còn ' + PSQ.money(b) + ').' };
+      const ref = uid('cd');
+      credit(d, u.id, 'cash', 'topoints', -amount, 'Đổi sang điểm PS (1đ = 1 PS)', ref);
+      credit(d, u.id, 'avail', 'topoints', amount, 'Nhận từ ví tiền mặt (1đ = 1 PS)', ref);
+      return { ok: true };
+    },
+    // dùng ví tiền mặt để thanh toán đơn (sau phần điểm mua hàng)
+    spendCash(d, u, order, amount) {
+      const b = ADB.balances(d, u.id).cash; amount = Math.min(Math.round(+amount), b, order.total - (order.shopPaid || 0));
+      if (!(amount > 0)) return 0;
+      credit(d, u.id, 'cash', 'spend', -amount, 'Thanh toán đơn ' + order.id, order.id);
+      order.cashPaid = amount; return amount;
+    },
+    // đơn bị hủy: hoàn lại phần đã trả bằng ví (1 lần)
+    refundOrder(d, o) {
+      if (!o || o.refunded || !o.userId || !(o.shopPaid || o.cashPaid)) return 0;
+      credit(d, o.userId, 'shop', 'refund', o.shopPaid || 0, 'Hoàn điểm đơn hủy ' + o.id, o.id);
+      credit(d, o.userId, 'cash', 'refund', o.cashPaid || 0, 'Hoàn tiền đơn hủy ' + o.id, o.id);
+      o.refunded = true; return (o.shopPaid || 0) + (o.cashPaid || 0);
+    },
     // tạo đơn mua gói kích hoạt cộng tác viên
     buyPackage(d, u, pay) {
       const P = plan(d), num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
@@ -418,7 +463,7 @@
       d.orders.unshift(o); return o;
     }
   });
-  ADB.walletType = Object.assign(ADB.walletType, { commission: 'Hoa hồng bán hàng', referral: 'Thưởng giới thiệu CTV', override: 'Thu nhập từ đại lý tuyến dưới', package: 'Gói kích hoạt CTV', convert: 'Chuyển điểm thưởng', tocash: 'Rút sang ví tiền mặt', toshop: 'Chuyển sang ví mua hàng', transfer: 'Chuyển điểm', topup: 'Nạp điểm' });
+  ADB.walletType = Object.assign(ADB.walletType, { commission: 'Hoa hồng bán hàng', referral: 'Thưởng giới thiệu CTV', override: 'Thu nhập từ đại lý tuyến dưới', package: 'Gói kích hoạt CTV', convert: 'Chuyển điểm thưởng', tocash: 'Rút sang ví tiền mặt', toshop: 'Chuyển sang ví mua hàng', transfer: 'Chuyển điểm', topup: 'Nạp tiền', topoints: 'Đổi sang điểm PS', spend: 'Thanh toán đơn hàng', refund: 'Hoàn tiền đơn hủy' });
   ADB.commissionKind = { ref: 'Thưởng giới thiệu', direct: 'Hoa hồng bán hàng', override: 'Thu nhập từ đại lý', missed: 'Hoa hồng bỏ lỡ' };
   ADB.commissionStatus.missed = ['Bỏ lỡ', 'failed'];
 
