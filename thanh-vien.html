@@ -76,7 +76,7 @@
   @media (min-width: 700px) { .wcard .amt { white-space: nowrap; } }
   /* lưới 5 ví: 3 + 2 trên màn rộng, 2 cột trên điện thoại (ví cuối trải hết hàng) */
   .wgrid { display: grid; gap: 14px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .wgrid > * { grid-column: span 2; } .wgrid > :nth-child(n+4) { grid-column: span 3; }
+  .wgrid > * { grid-column: span 2; } .wgrid > :nth-child(-n+2) { grid-column: span 3; }
   .wgrid .wcard { display: flex; flex-direction: column; gap: 4px; }
   .wfoot { display: flex; align-items: flex-end; gap: 6px; margin-top: auto; padding-top: 10px; position: relative; z-index: 1; }
   .wfoot .acts { margin: 0 !important; flex: 1; min-width: 0; }
@@ -156,7 +156,7 @@
     .wtot { grid-template-columns: 1fr; } .wtot .spk { padding-right: 0; margin-top: 6px; }
     .pkg-split { grid-template-columns: 1fr; }
     .wgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .wgrid > *, .wgrid > :nth-child(n+4) { grid-column: auto; } .wgrid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .wgrid > *, .wgrid > :nth-child(-n+2) { grid-column: auto; } .wgrid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
     .wgrid.one-s { grid-template-columns: minmax(0, 1fr); } .wgrid.one-s > * { grid-column: auto !important; }
     .wh-sum { grid-template-columns: 1fr 1fr; } .wh-sum > :last-child { grid-column: 1 / -1; }
     /* lịch sử ví trên điện thoại: mỗi giao dịch một khối, không cuộn ngang */
@@ -185,7 +185,7 @@
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
   const view = $('#view');
   const refCode = (PSQ.qs('ref') || '').trim().toUpperCase().slice(0, 20);
-  const W = ADB.WALLETS, WK = Object.keys(W);
+  const W = ADB.WALLETS, WK = ['cash', 'sales', 'avail', 'bonus', 'shop'].filter(k => W[k]).concat(Object.keys(W).filter(k => !['cash', 'sales', 'avail', 'bonus', 'shop'].includes(k)));
   const ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
   const WST = { done: ['Hoàn tất', 'ok'], pending: ['Chờ duyệt', 'pending'], rejected: ['Từ chối', 'failed'] };
   const wB = s => `<span class="badge ${(WST[s] || [])[1] || ''}">${(WST[s] || [s])[0]}</span>`;
