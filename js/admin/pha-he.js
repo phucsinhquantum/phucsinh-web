@@ -1,4 +1,4 @@
-/* Quản trị: phả hệ giới thiệu (sơ đồ cây, chờ lên cây, cấp bậc lãnh đạo, quỹ tri ân) */
+/* Quản trị: phả hệ giới thiệu (sơ đồ cây, chờ lên cây, cấp bậc lãnh đạo) */
 (function () {
   const { $, $$, esc, money, short, initials, fdate, today, icon, toast, modal } = PSQ;
   window.ADMIN_MODULES = window.ADMIN_MODULES || {};
@@ -29,6 +29,7 @@
     .ph-kv small { display: block; font-size: 12px; color: var(--text-3); } .ph-kv b { font-size: 14px; }
     .ph-lv { display: flex; flex-wrap: wrap; gap: 6px; }
     @media (max-width: 699px) { .ph-tree ul { margin-left: 12px; padding-left: 10px; } .ph-tree ul > li::before { left: -10px; width: 8px; } .ph-tg { margin-right: 4px; } }
+    .ph-tier.sm { height: 18px; padding: 0 6px; font-size: 10.5px; vertical-align: 1px; }
     .ph-rank-in { height: 34px !important; font-size: 13px; min-width: 90px; }
     .ph-rank-in[name=name] { min-width: 160px; } .ph-rank-in[name=minSales] { min-width: 140px; }
     .ph-rank-in[type=color] { padding: 2px; width: 44px; min-width: 44px; }
@@ -41,6 +42,7 @@
   const placedList = d => members(d).filter(u => u.placed);
   const nameOf = (d, id) => { const u = id && ADB.user(d, id); return u ? `${u.name} (${u.code || ''})` : 'Không có'; };
   const who = (u, i) => `<div class="who"><span class="avatar ${AV[i % 3]}">${esc(initials(u.name))}</span><div><b>${esc(u.name)}</b><small>${esc(u.code || '')} · ${esc(u.phone || u.email || '')}</small></div></div>`;
+  const tierBadge = (u, sm) => { const k = ADB.tierOf(u); return `<span class="badge ph-tier${sm ? ' sm' : ''}" style="color:${k.color};border:1px solid ${k.color}55;background:${k.color}14">${esc(k.name)}</span>`; };
   const rankBadge = r => `<span class="badge" style="color:${esc(r.color)};border:1px solid ${esc(r.color)}55;background:${esc(r.color)}1a">${esc(r.name)}</span>`;
 
   /* ---------- chi tiết một thành viên ---------- */
@@ -49,7 +51,7 @@
     const L = ADB.leader(d, id), dl = ADB.downline(d, id), by = {};
     dl.forEach(x => by[x.level] = (by[x.level] || 0) + 1);
     const m = modal(`<div class="card-head"><div class="who"><span class="avatar lg g">${esc(initials(u.name))}</span><div><h3>${esc(u.name)}</h3><small class="dim">${esc(u.code || '')} · tham gia ${fdate(u.created)}</small></div></div><button class="icon-btn" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-      <div class="row wrap mt-1">${rankBadge(L.rank)}${u.status === 'locked' ? '<span class="badge failed">Đã khóa</span>' : ''}</div>
+      <div class="row wrap mt-1">${tierBadge(u)}${rankBadge(L.rank)}${u.status === 'locked' ? '<span class="badge failed">Đã khóa</span>' : ''}</div>
       <div class="ph-kv mt-2">
         <div><small>Người giới thiệu</small><b>${esc(nameOf(d, u.sponsor))}</b></div>
         <div><small>Tuyến trên trên cây</small><b>${esc(nameOf(d, u.parent))}</b></div>
@@ -75,7 +77,7 @@
         const u = t.user, L = ADB.leader(d, u.id), kids = t.kids, on = T.open.has(u.id);
         return `<li><button class="ph-tg" type="button" data-tg="${u.id}" ${kids.length ? '' : 'disabled'} aria-label="${on ? 'Thu gọn' : 'Mở rộng'}">${kids.length ? (on ? '−' : '+') : '·'}</button><span class="ph-node${T.hit === u.id ? ' hit' : ''}" style="--rk:${esc(L.rank.color)}" data-node="${u.id}" tabindex="0">
           <span class="avatar" style="color:${esc(L.rank.color)};border-color:${esc(L.rank.color)}66">${esc(initials(u.name))}</span>
-          <span><b>${esc(u.name)}</b><small>${esc(u.code || '')} · <span class="ph-rk">${esc(L.rank.name)}</span></small><small>F1: ${kids.length} · Nhóm: ${L.team} · DS nhóm ${short(L.sales)}</small></span></span>
+          <span><b>${esc(u.name)}</b><small>${esc(u.code || '')} · <span class="ph-rk">${esc(L.rank.name)}</span> ${tierBadge(u, 1)}</small><small>F1: ${kids.length} · Nhóm: ${L.team} · DS nhóm ${short(L.sales)}</small></span></span>
           ${kids.length && on ? `<ul>${kids.map(node).join('')}</ul>` : ''}</li>`;
       };
       const roots = T.focus ? [ADB.tree(d, T.focus)].filter(Boolean) : ADB.roots(d).map(r => ADB.tree(d, r.id));
@@ -215,54 +217,4 @@
     }
   };
 
-  /* ---------- QUỸ TRI ÂN ---------- */
-  const FV = { type: '', q: '' };
-  ADMIN_MODULES.fund = {
-    render(el) {
-      const d = ADB.load(), fund = (d.fund = d.fund || []), edit = can('finance');
-      const tin = fund.filter(f => f.type === 'in').reduce((s, f) => s + f.amount, 0), tout = fund.filter(f => f.type === 'out').reduce((s, f) => s + f.amount, 0);
-      const q = FV.q.toLowerCase(), list = fund.filter(f => (!FV.type || f.type === FV.type) && (!q || ((f.note || '') + ' ' + (f.who || '')).toLowerCase().includes(q))).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-      el.innerHTML = `<div class="grid g-3">
-          <div class="card glow-gold stat"><div class="stat-top"><span class="stat-ico green">${icon('plus')}</span>Tổng thu vào quỹ</div><div class="stat-val green">${money(tin)}</div><div class="stat-foot">${fund.filter(f => f.type === 'in').length} khoản · trích ${d.settings.fundRate}% doanh thu (mẫu)</div></div>
-          <div class="card glow-cyan stat"><div class="stat-top"><span class="stat-ico red">${icon('gift')}</span>Tổng chi tri ân</div><div class="stat-val red">${money(tout)}</div><div class="stat-foot">${fund.filter(f => f.type === 'out').length} khoản</div></div>
-          <div class="card glow-mix stat"><div class="stat-top"><span class="stat-ico gold">${icon('wallet')}</span>Số dư quỹ</div><div class="stat-val gold">${money(tin - tout)}</div><div class="stat-foot">Cập nhật ${fdate(today())}</div></div>
-        </div>
-        <div class="card glow-gold mt-2"><div class="card-head"><h3>Sổ quỹ tri ân</h3><span class="sub">${list.length} khoản</span></div>
-          <div class="toolbar"><input class="input" id="fdQ" placeholder="Tìm nội dung, người nhận" value="${esc(FV.q)}">
-            <select class="input" id="fdT"><option value="">Thu và chi</option><option value="in"${FV.type === 'in' ? ' selected' : ''}>Khoản thu</option><option value="out"${FV.type === 'out' ? ' selected' : ''}>Khoản chi</option></select>
-            <span style="margin-left:auto" class="row wrap">${edit ? `<button class="btn btn-sm btn-gold" type="button" id="fdAdd">${icon('plus')} Thêm khoản</button>` : ''}<button class="btn btn-sm btn-outline-gold" type="button" id="fdCsv">${icon('download')} Tải Excel (CSV)</button></span></div>
-          <div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Nội dung</th><th>Người nhận / nguồn</th><th>Số tiền</th>${edit ? '<th></th>' : ''}</tr></thead><tbody>
-          ${list.length ? list.map(f => `<tr><td class="dim nowrap">${fdate(f.date)}</td><td>${f.type === 'in' ? '<span class="badge ok">Thu</span>' : '<span class="badge failed">Chi</span>'}</td><td>${esc(f.note || '')}</td><td>${esc(f.who || '')}</td><td class="nowrap ${f.type === 'in' ? 'green' : 'red'}"><b>${f.type === 'in' ? '+' : '−'}${money(f.amount)}</b></td>${edit ? `<td><button class="icon-btn" type="button" data-fdel="${f.id}" aria-label="Xóa khoản">${icon('trash')}</button></td>` : ''}</tr>`).join('') : `<tr><td colspan="6"><div class="empty">${icon('gift')}Chưa có khoản nào.</div></td></tr>`}
-          </tbody></table></div></div>`;
-      const again = () => this.render(el);
-      const qi = $('#fdQ', el); qi.oninput = () => { FV.q = qi.value; again(); const n = $('#fdQ', el); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
-      $('#fdT', el).onchange = e => { FV.type = e.target.value; again(); };
-      $('#fdCsv', el).onclick = () => ADB.csv('quy-tri-an', [['Ngày', 'Loại', 'Nội dung', 'Người nhận / nguồn', 'Số tiền'], ...list.map(f => [f.date, f.type === 'in' ? 'Thu' : 'Chi', f.note, f.who, f.type === 'in' ? f.amount : -f.amount])]);
-      if (!edit) return;
-      $('#fdAdd', el).onclick = () => {
-        const m = modal(`<form id="fdF"><div class="card-head"><h3>Thêm khoản quỹ tri ân</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-          <div class="form-grid">
-            <div class="field"><label>Loại</label><select class="input" name="type"><option value="in">Thu vào quỹ</option><option value="out">Chi tri ân</option></select></div>
-            <div class="field"><label>Số tiền (đồng)</label><input class="input" name="amount" type="number" min="1000" step="1000" required></div>
-            <div class="field"><label>Ngày</label><input class="input" name="date" type="date" value="${today()}" required></div>
-            <div class="field"><label>Người nhận / nguồn</label><input class="input" name="who" placeholder="Ví dụ: khách hàng thân thiết"></div>
-            <div class="field full"><label>Nội dung</label><input class="input" name="note" required placeholder="Ví dụ: Quà tri ân dịp lễ"></div>
-          </div>
-          <div class="row mt-3" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu khoản</button></div></form>`);
-        $('#fdF', m.el).addEventListener('submit', e => {
-          e.preventDefault(); const f = new FormData(e.target), x = ADB.load();
-          const it = { id: ADB.uid('qt'), type: f.get('type'), amount: Math.round(+f.get('amount')), date: f.get('date'), note: f.get('note').trim(), who: f.get('who').trim() };
-          if (!(it.amount > 0)) return toast('Số tiền chưa hợp lệ');
-          (x.fund = x.fund || []).push(it);
-          ADB.log(x, 'Quỹ tri ân', `${it.type === 'in' ? 'Thu' : 'Chi'} ${money(it.amount)}: ${it.note}`); ADB.save(x);
-          m.close(); toast('Đã thêm khoản vào sổ quỹ'); again();
-        });
-      };
-      $$('[data-fdel]', el).forEach(b => b.onclick = () => {
-        if (!confirm('Xóa khoản này khỏi sổ quỹ?')) return;
-        const x = ADB.load(), f = x.fund.find(y => y.id === b.dataset.fdel); x.fund = x.fund.filter(y => y !== f);
-        ADB.log(x, 'Quỹ tri ân', `Xóa khoản ${money(f.amount)}: ${f.note}`); ADB.save(x); toast('Đã xóa khoản'); again();
-      });
-    }
-  };
 })();

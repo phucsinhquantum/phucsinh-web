@@ -127,8 +127,8 @@
     <section data-pane="members" hidden>
       <div class="grid g-4 keep-2" id="mstats"></div>
       <div class="card glow-cyan mt-2">
-        <div class="toolbar"><input class="input" id="mq" placeholder="Tìm tên, email, số điện thoại"><select class="input" id="mr"><option value="">Mọi vai trò</option><option value="member">Thành viên</option><option value="agent">Đại lý</option><option value="admin">Quản trị</option></select><span class="dim" id="mcount" style="font-size:13px"></span></div>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Điện thoại</th><th>Vai trò</th><th>Hạng</th><th>Chi tiêu</th><th>Điểm PS</th><th>Tham gia</th></tr></thead><tbody id="mlist"></tbody></table></div>
+        <div class="toolbar"><input class="input" id="mq" placeholder="Tìm tên, email, số điện thoại"><select class="input" id="mr"><option value="">Mọi vai trò</option><option value="member">Thành viên</option><option value="admin">Quản trị</option></select><select class="input" id="mt" aria-label="Lọc theo cấp bậc"><option value="">Mọi cấp bậc</option><option value="khach">Khách hàng</option><option value="ctv">Cộng tác viên</option><option value="daily">Đại lý</option></select><span class="dim" id="mcount" style="font-size:13px"></span></div>
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Tên truy cập</th><th>Điện thoại</th><th>Vai trò</th><th>Cấp bậc</th><th>Tổng mua</th><th>Tham gia</th></tr></thead><tbody id="mlist"></tbody></table></div>
       </div>
     </section>
 
@@ -208,7 +208,7 @@
   // [mã mục, tên, biểu tượng, quyền cần có]
   const NAV = [
     ['Tổng quan', [['overview', 'Bảng điều khiển', 'chart', 'dashboard'], ['videos', 'Video khách hàng', 'activity', 'content']]],
-    ['Phả hệ', [['tree', 'Sơ đồ phả hệ', 'users', 'tree'], ['pending', 'Chờ lên cây', 'clock', 'tree'], ['leaders', 'Cấp bậc lãnh đạo', 'star', 'tree'], ['fund', 'Quỹ tri ân', 'gift', 'finance']]],
+    ['Phả hệ', [['tree', 'Sơ đồ phả hệ', 'users', 'tree'], ['pending', 'Chờ lên cây', 'clock', 'tree'], ['leaders', 'Cấp bậc lãnh đạo', 'star', 'tree']]],
     ['Người dùng', [['members', 'Danh sách thành viên', 'users', 'members'], ['admins', 'Danh sách quản trị', 'shield', 'admins'], ['roles', 'Vai trò & phân quyền', 'lock', 'admins']]],
     ['Sản phẩm', [['categories', 'Danh mục sản phẩm', 'grid', 'products'], ['products', 'Quản lý sản phẩm', 'bag', 'products']]],
     ['Kiến thức trầm hương', [['postcats', 'Danh mục kiến thức', 'book', 'content'], ['posts', 'Bài viết kiến thức', 'edit', 'content']]],
@@ -273,7 +273,7 @@
     const weekly = Array.from({ length: 10 }, (_, i) => revDay.slice(i * 3, i * 3 + 3).reduce((a, b) => a + b, 0));
     const K = [
       ['Doanh thu', short(rev), 'wallet', 'gold', spark(weekly, '#f3c76b'), 'glow-gold'],
-      ['Thành viên mới', newMembers.toLocaleString('vi-VN'), 'users', 'violet', `<span class="dim" style="font-size:12px;font-weight:500">/ ${members.length} tổng</span>`, 'glow-cyan'],
+      ['Thành viên mới', newMembers.toLocaleString('vi-VN'), 'users', 'violet', `<span class="dim" style="font-size:12px;font-weight:500">/ ${members.length} tổng</span><div class="dim" style="font-size:12px;font-weight:500;margin-top:4px">CTV ${members.filter(u => u.tier === 'ctv').length} · Đại lý ${members.filter(u => u.tier === 'daily').length}</div>`, 'glow-cyan'],
       ['Đơn hàng', d.orders.length.toLocaleString('vi-VN'), 'bag', 'green', `<span class="badge pending">${d.orders.filter(o => o.status === 'pending').length} chờ</span>`, 'glow-cyan'],
       ['Tăng trưởng', `<span class="${growth >= 0 ? 'green' : 'red'}">${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%</span>`, 'trend', 'gold', '', 'glow-gold'],
       ['Tỷ lệ hoàn tất', doneRate.toFixed(1) + '%', 'activity', 'red', '', 'glow-cyan']
@@ -310,23 +310,37 @@
   /* ---------- đơn hàng ---------- */
   Object.entries(statusName).forEach(([k, v]) => $('#os').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`));
   function orders() {
-    const d = db.load(), q = $('#oq').value.trim().toLowerCase(), st = $('#os').value;
+    const d = ADB.load(), q = $('#oq').value.trim().toLowerCase(), st = $('#os').value;
     const list = d.orders.filter(o => (!st || o.status === st) && (!q || [o.id, o.name, o.phone, o.email].join(' ').toLowerCase().includes(q)));
     $('#ocount').textContent = list.length + ' đơn';
     $('#olist').innerHTML = list.length ? list.map((o, i) => `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(o.name)}</span><div><b>${esc(o.name)}</b><small>${esc(o.phone || '')}</small></div></div></td>
-      <td><b>#${o.id}</b></td><td class="dim" style="max-width:220px">${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="nowrap gold">${money(o.total)}</td>
+      <td><b>#${o.id}</b></td><td class="dim" style="max-width:220px">${isPkg(o) ? '<span class="badge violet">Gói CTV</span><br>' : ''}${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="nowrap gold">${money(o.total)}${o.shopPaid ? `<br><small class="green">Điểm: ${money(o.shopPaid).replace('đ', ' PS')}</small>` : ''}</td>
       <td>${o.pay === 'bank' ? 'Chuyển khoản' : 'Khi nhận hàng'}</td>
       <td><select class="input" data-status="${o.id}" aria-label="Trạng thái đơn ${o.id}">${Object.entries(statusName).map(([k, v]) => `<option value="${k}"${k === o.status ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
       <td class="dim nowrap">${fdate(o.date)}</td><td><button class="btn btn-sm" type="button" data-view="${o.id}">Xem</button></td></tr>`).join('')
       : `<tr><td colspan="8"><div class="empty">Không có đơn phù hợp.</div></td></tr>`;
   }
   $('#oq').addEventListener('input', orders); $('#os').addEventListener('change', orders);
-  $('#olist').addEventListener('change', e => { const s = e.target.closest('[data-status]'); if (!s) return; const d = db.load(); const o = d.orders.find(x => x.id === s.dataset.status); o.status = s.value; db.save(d); toast(`Đơn #${o.id}: ${statusName[o.status]}`); });
+  const isPkg = o => (o.items || []).some(x => x.id === ADB.PKG_ID);
+  $('#olist').addEventListener('change', e => {
+    const s = e.target.closest('[data-status]'); if (!s) return;
+    const d = ADB.load(), o = d.orders.find(x => x.id === s.dataset.status); if (!o) return;
+    const from = o.status, buyer = o.userId ? ADB.user(d, o.userId) : null, before = buyer ? (buyer.tier || 'khach') : null;
+    o.status = s.value;
+    const settled = ['paid', 'ship', 'done'].includes(o.status) && ADB.settleOrder(d, o);
+    const after = buyer ? (buyer.tier || 'khach') : null;
+    ADB.log(d, 'Cập nhật đơn hàng', `${o.id}: ${statusName[from] || from} → ${statusName[o.status]}${settled ? ' (đã ghi nhận hoa hồng, điểm)' : ''}`);
+    if (buyer && before !== after) ADB.log(d, after === 'daily' ? 'Lên đại lý' : 'Kích hoạt cộng tác viên', `${buyer.name} (@${buyer.username || ''}): ${ADB.TIERS[before].name} → ${ADB.TIERS[after].name}`);
+    ADB.save(d);
+    toast(`Đơn #${o.id}: ${statusName[o.status]}`);
+    if (buyer && before !== after) setTimeout(() => toast(after === 'daily' ? `${buyer.name} đã lên Đại lý` : `${buyer.name} đã được kích hoạt Cộng tác viên`), 350);
+    else if (settled && isPkg(o)) setTimeout(() => toast(`Đã cộng ${money(ADB.plan(d).pkgPoints).replace('đ', ' PS')} vào ví mua hàng của ${o.name}`), 350);
+  });
   $('#olist').addEventListener('click', e => {
     const b = e.target.closest('[data-view]'); if (!b) return;
-    const o = db.load().orders.find(x => x.id === b.dataset.view);
+    const o = ADB.load().orders.find(x => x.id === b.dataset.view);
     modal(`<div class="card-head"><h3>Đơn #${o.id}</h3>${statusBadge(o.status)}<button class="icon-btn" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-      <dl class="kv"><dt>Khách</dt><dd>${esc(o.name)}</dd><dt>Điện thoại</dt><dd>${esc(o.phone || '')}</dd><dt>Email</dt><dd>${esc(o.email || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Thanh toán</dt><dd>${o.pay === 'bank' ? 'Chuyển khoản' : 'Khi nhận hàng'}</dd><dt>Ngày</dt><dd>${fdate(o.date)}</dd>${o.note ? `<dt>Ghi chú</dt><dd>${esc(o.note)}</dd>` : ''}</dl>
+      <dl class="kv"><dt>Khách</dt><dd>${esc(o.name)}</dd><dt>Điện thoại</dt><dd>${esc(o.phone || '')}</dd><dt>Email</dt><dd>${esc(o.email || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Thanh toán</dt><dd>${o.pay === 'bank' ? 'Chuyển khoản' : 'Khi nhận hàng'}${o.shopPaid ? ` · ví mua hàng ${money(o.shopPaid).replace('đ', ' PS')}` : ''}</dd>${isPkg(o) ? '<dt>Loại đơn</dt><dd><span class="badge violet">Gói CTV</span></dd>' : ''}<dt>Ngày</dt><dd>${fdate(o.date)}</dd>${o.note ? `<dt>Ghi chú</dt><dd>${esc(o.note)}</dd>` : ''}</dl>
       <div class="divider"></div>${o.items.map(x => `<div class="row between" style="padding:6px 0"><span>${esc(x.name)} x${x.qty}</span><b>${money(x.price * x.qty)}</b></div>`).join('')}
       <div class="divider"></div><div class="row between"><span class="muted">Tổng</span><b class="gold" style="font-size:18px">${money(o.total)}</b></div>`);
   });
@@ -378,19 +392,19 @@
   });
 
   /* ---------- thành viên ---------- */
-  const roleName = { member: 'Thành viên', agent: 'Đại lý', admin: 'Quản trị' };
   function membersPane() {
-    const d = db.load(), q = $('#mq').value.trim().toLowerCase(), r = $('#mr').value;
-    const info = d.users.map(u => ({ u, m: memberInfo(u) }));
-    const cnt = id => info.filter(x => x.u.role !== 'admin' && x.m.rank && x.m.rank.id === id).length;
-    $('#mstats').innerHTML = RANKS.map((k, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat"><div class="stat-top"><span class="dot" style="color:${k.color}"></span>Hạng ${k.name}</div><div class="stat-val">${cnt(k.id)}</div></div>`).join('');
-    const list = info.filter(({ u }) => (!r || u.role === r) && (!q || [u.name, u.email, u.phone].join(' ').toLowerCase().includes(q)));
+    const d = ADB.load(), q = $('#mq').value.trim().toLowerCase(), r = $('#mr').value, t = $('#mt').value;
+    const mem = d.users.filter(u => u.role !== 'admin'), tierId = u => u.tier || 'khach';
+    $('#mstats').innerHTML = [['', 'Tổng thành viên', '#e8e2d4', mem.length]].concat(Object.entries(ADB.TIERS).map(([id, k]) => [id, k.name, k.color, mem.filter(u => tierId(u) === id).length]))
+      .map(([id, name, color, n], i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat"><div class="stat-top"><span class="dot" style="color:${color}"></span>${name}</div><div class="stat-val">${n.toLocaleString('vi-VN')}</div></div>`).join('');
+    const list = d.users.filter(u => (!r || (r === 'admin' ? u.role === 'admin' : u.role !== 'admin')) && (!t || (u.role !== 'admin' && tierId(u) === t)) && (!q || [u.name, u.email, u.phone, u.username, u.code].join(' ').toLowerCase().includes(q)));
     $('#mcount').textContent = list.length + ' tài khoản';
-    $('#mlist').innerHTML = list.map(({ u, m }, i) => `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(u.name)}</span><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small></div></div></td><td class="nowrap">${esc(u.phone || '')}</td>
-      <td><span class="badge ${u.role === 'admin' ? 'failed' : u.role === 'agent' ? 'violet' : 'ship'}">${roleName[u.role]}</span></td>
-      <td><span class="row" style="gap:6px"><span class="dot" style="color:${m.rank.color}"></span>${m.rank.name}</span></td><td class="nowrap">${money(m.spent)}</td><td class="cyan nowrap">${Math.max(0, m.points).toLocaleString('vi-VN')}</td><td class="dim nowrap">${fdate(u.created)}</td></tr>`).join('');
+    $('#mlist').innerHTML = list.length ? list.map((u, i) => { const k = ADB.tierOf(u); return `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(u.name)}</span><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small></div></div></td><td class="nowrap">${u.username ? '@' + esc(u.username) : ''}${u.code ? `<br><small class="dim">${esc(u.code)}</small>` : ''}</td><td class="nowrap">${esc(u.phone || '')}</td>
+      <td><span class="badge ${u.role === 'admin' ? 'failed' : 'ship'}">${u.role === 'admin' ? 'Quản trị' : 'Thành viên'}</span></td>
+      <td>${u.role === 'admin' ? '<span class="dim">-</span>' : `<span class="badge nowrap" style="color:${k.color};border-color:${k.color}55;background:${k.color}14">${esc(k.name)}</span>`}</td><td class="nowrap">${u.role === 'admin' ? '' : money(ADB.spent(d, u.id))}</td><td class="dim nowrap">${fdate(u.created)}</td></tr>`; }).join('')
+      : `<tr><td colspan="7"><div class="empty">Không có thành viên phù hợp.</div></td></tr>`;
   }
-  $('#mq').addEventListener('input', membersPane); $('#mr').addEventListener('change', membersPane);
+  $('#mq').addEventListener('input', membersPane); $('#mr').addEventListener('change', membersPane); $('#mt').addEventListener('change', membersPane);
 
   /* ---------- tin nhắn ---------- */
   function messagesPane() {

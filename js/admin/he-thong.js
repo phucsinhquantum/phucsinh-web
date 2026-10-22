@@ -13,9 +13,8 @@
       .ht-mail-b td { padding: 6px 0; border-bottom: 1px solid #e4dccb; } .ht-mail-b td:last-child { text-align: right; white-space: nowrap; }
       .ht-mail-f { padding: 12px 20px; background: #efe8d9; font-size: 12px; color: #6d5f4b; }
       .ht-btn { display: inline-block; background: #c99a3f; color: #fff; padding: 9px 18px; border-radius: 8px; font-weight: 600; }
-      .ht-levels { display: grid; gap: 8px; }
-      .ht-level { display: grid; grid-template-columns: 44px minmax(0, 1fr) 36px; gap: 8px; align-items: center; }
-      .ht-level b { color: var(--gold); }
+      .ht-unit { position: relative; } .ht-unit .input { padding-right: 34px; } .ht-unit span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 13px; pointer-events: none; }
+      .ht-help { display: block; font-size: 11.5px; margin-top: 4px; line-height: 1.45; }
       .ht-danger { border: 1px solid rgba(255, 107, 107, .35) !important; }
       .ht-sec { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); margin: 6px 0 -4px; }
       [data-pane="logs"] .tbl { min-width: 720px; } [data-pane="logs"] td:last-child { min-width: 240px; } [data-pane="mails"] .tbl { min-width: 860px; } [data-pane="mails"] td:nth-child(3) { min-width: 220px; } [data-pane="addresses"] .tbl { min-width: 820px; } [data-pane="addresses"] .who > div { min-width: 140px; } [data-pane="addresses"] td:nth-child(3) { min-width: 180px; }
@@ -221,11 +220,25 @@
   };
 
   /* ---------- thiết lập hệ thống ---------- */
+  // [khóa trong d.settings.plan, nhãn, kiểu, ghi chú]
+  const PLAN_FIELDS = [
+    ['pkgPrice', 'Giá gói kích hoạt CTV', 'money', 'Khách mua gói này để trở thành cộng tác viên.'],
+    ['pkgPoints', 'Điểm nhận khi kích hoạt', 'money', 'Cộng vào ví điểm mua hàng. Phần còn lại của giá gói là phí nền tảng.'],
+    ['refBonus', 'Thưởng giới thiệu CTV', 'money', 'Người giới thiệu (CTV hoặc đại lý) nhận khi người mới kích hoạt gói.'],
+    ['ctvRate', 'Hoa hồng của CTV', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp, trừ đơn đầu bằng điểm gói.'],
+    ['agentRate', 'Hoa hồng của đại lý', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp.'],
+    ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập của đại lý mình giới thiệu, tính dồn lên các đại lý tuyến trên.'],
+    ['overrideShop', 'Phần vào ví mua hàng', 'pct', 'Tỉ lệ của khoản thu nhập trên vào ví mua hàng, còn lại vào ví điểm thưởng.'],
+    ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng và khi chuyển điểm thưởng sang khả dụng.'],
+    ['agentThreshold', 'Mốc lên đại lý', 'money', 'Tổng tiền mua đã thanh toán cộng dồn để tự lên đại lý.'],
+    ['pkgCountsAs', 'Phần của gói tính vào doanh số mua hàng', 'money', 'Khi tính mốc lên đại lý, mỗi gói kích hoạt chỉ được tính số tiền này.']
+  ];
   ADMIN_MODULES.settings = {
     render(el) {
       const d = ADB.load(), S = Object.assign({}, ADB.DEFAULT_SETTINGS, d.settings || {}), edit = ADMIN.can('system');
-      let levels = (S.commission || []).slice();
+      const P = ADB.plan(d);
       const dis = edit ? '' : ' disabled';
+      const pf = (k, label, val, kind, help) => `<div class="field"><label for="hs-p_${k}">${label}</label><div class="ht-unit"><input class="input" id="hs-p_${k}" name="p_${k}" type="number" min="0"${kind === 'pct' ? ' max="100" step="0.5"' : ' step="1000"'} value="${esc(val)}"${dis}><span>${kind === 'pct' ? '%' : 'đ'}</span></div><small class="dim ht-help">${help}</small></div>`;
       const f = (name, label, val, type = 'text', extra = '') => `<div class="field"><label for="hs-${name}">${label}</label><input class="input" id="hs-${name}" name="${name}" type="${type}" value="${esc(val)}"${extra}${dis}></div>`;
       el.innerHTML = `<form class="card glow-gold" data-set novalidate>
         <div class="card-head"><div><h3>Thiết lập hệ thống</h3><div class="sub">Áp dụng cho đơn hàng, hoa hồng, ví và thư gửi khách</div></div></div>
@@ -234,13 +247,13 @@
           ${f('shopName', 'Tên cửa hàng', S.shopName)}${f('hotline', 'Hotline', S.hotline, 'tel')}
           ${f('email', 'Email liên hệ', S.email, 'email')}${f('mailSender', 'Người gửi thư tự động', S.mailSender)}
           <div class="field full"><label for="hs-address">Địa chỉ</label><input class="input" id="hs-address" name="address" value="${esc(S.address)}"${dis}></div>
-          <div class="ht-sec full mt-2">Điểm, hoa hồng và ví</div>
-          ${f('pointRate', 'Tích điểm PS (% giá trị đơn)', +(S.pointRate * 100).toFixed(2), 'number', ' min="0" max="100" step="0.5"')}
-          ${f('fundRate', 'Trích Quỹ tri ân (% doanh thu đơn hoàn thành)', S.fundRate, 'number', ' min="0" max="100" step="0.1"')}
+          <div class="ht-sec full mt-2">Kế hoạch trả thưởng</div>
+          <p class="dim full" style="font-size:12.5px;margin:0">1 điểm PS = 1 đồng. Thay đổi chỉ áp dụng cho đơn hàng ghi nhận sau khi lưu, không tính lại các khoản đã trả.</p>
+          ${PLAN_FIELDS.map(([k, label, kind, help]) => pf(k, label, P[k], kind, help)).join('')}
+          <div class="ht-sec full mt-2">Ví và điểm</div>
           ${f('minWithdraw', 'Rút tiền tối thiểu (đồng)', S.minWithdraw, 'number', ' min="0" step="10000"')}
+          ${f('pointRate', 'Tích điểm PS (% giá trị đơn)', +(S.pointRate * 100).toFixed(2), 'number', ' min="0" max="100" step="0.5"')}
           <label class="check" style="align-self:end;padding-bottom:10px"><input type="checkbox" name="autoPlace"${S.autoPlace ? ' checked' : ''}${dis}> Tự xếp thành viên mới lên cây theo người giới thiệu</label>
-          <div class="field full"><label>Hoa hồng theo tầng (% giá trị đơn)</label><div class="ht-levels" data-levels></div>
-            ${edit ? `<div class="row mt-1" style="gap:10px;flex-wrap:wrap"><button class="btn btn-sm btn-ghost" type="button" data-addlvl>${icon('plus')} Thêm tầng</button><span class="dim" data-lvlsum style="font-size:12px"></span></div>` : ''}</div>
         </div>
         <p class="red mt-2" data-err style="font-size:13px;min-height:1em"></p>
         ${edit ? `<div class="row" style="justify-content:flex-end"><button class="btn btn-gold" type="submit">${icon('check')} Lưu thiết lập</button></div>` : '<p class="dim" style="font-size:13px">Vai trò của anh chị chỉ được xem thiết lập.</p>'}
@@ -248,15 +261,7 @@
       ${edit ? `<div class="card ht-danger mt-2"><div class="card-head"><div><h3 class="red">Vùng nguy hiểm</h3><div class="sub">Khôi phục dữ liệu mẫu sẽ xóa đơn hàng, thành viên, ví, kho, nhật ký đang lưu trên trình duyệt này và tạo lại dữ liệu mẫu ban đầu.</div></div></div>
         <label class="check"><input type="checkbox" data-alsocontent> Khôi phục cả danh mục và bài viết kiến thức về mặc định</label>
         <div class="row mt-2"><button class="btn btn-outline-gold" type="button" data-reset style="border-color:rgba(255,107,107,.5);color:var(--red)">${icon('trash')} Khôi phục dữ liệu mẫu</button></div></div>` : ''}`;
-      const form = $('[data-set]', el), box = $('[data-levels]', el);
-      const drawLevels = () => {
-        box.innerHTML = levels.map((v, i) => `<div class="ht-level"><b>F${i + 1}</b><input class="input" type="number" min="0" max="100" step="0.5" value="${v}" data-lvl="${i}" aria-label="Hoa hồng F${i + 1}"${dis}>${edit && levels.length > 1 ? `<button class="icon-btn" type="button" data-rmlvl="${i}" aria-label="Bỏ tầng F${i + 1}">${icon('close')}</button>` : '<span></span>'}</div>`).join('');
-        const sum = $('[data-lvlsum]', el); if (sum) sum.textContent = `${levels.length} tầng, tổng ${+levels.reduce((s, v) => s + (+v || 0), 0).toFixed(2)}% mỗi đơn`;
-      };
-      drawLevels();
-      box.addEventListener('input', e => { const i = e.target.dataset.lvl; if (i != null) { levels[+i] = e.target.value; const sum = $('[data-lvlsum]', el); if (sum) sum.textContent = `${levels.length} tầng, tổng ${+levels.reduce((s, v) => s + (+v || 0), 0).toFixed(2)}% mỗi đơn`; } });
-      box.addEventListener('click', e => { const b = e.target.closest('[data-rmlvl]'); if (b) { levels.splice(+b.dataset.rmlvl, 1); drawLevels(); } });
-      const al = $('[data-addlvl]', el); if (al) al.addEventListener('click', () => { if (levels.length >= 10) { toast('Tối đa 10 tầng'); return; } levels.push(Math.max(0, (+levels[levels.length - 1] || 1) - 1)); drawLevels(); });
+      const form = $('[data-set]', el);
       form.addEventListener('submit', e => {
         e.preventDefault(); if (!edit) return;
         const err = $('[data-err]', el), v = n => form[n].value.trim(), fail = (msg, n) => { err.textContent = msg; if (n) form[n].focus(); };
@@ -264,20 +269,28 @@
         if (v('email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email'))) return fail('Email liên hệ chưa đúng.', 'email');
         if (v('hotline') && !/^[0-9 +.]{8,15}$/.test(v('hotline'))) return fail('Số hotline chưa đúng.', 'hotline');
         if (!v('mailSender')) return fail('Anh chị nhập người gửi thư tự động.', 'mailSender');
-        const pr = +v('pointRate'), fr = +v('fundRate'), mw = +v('minWithdraw');
+        const pr = +v('pointRate'), mw = +v('minWithdraw');
         if (v('pointRate') === '' || !(pr >= 0 && pr <= 100)) return fail('Tỉ lệ tích điểm phải từ 0 đến 100%.', 'pointRate');
-        if (v('fundRate') === '' || !(fr >= 0 && fr <= 100)) return fail('Tỉ lệ trích quỹ phải từ 0 đến 100%.', 'fundRate');
         if (v('minWithdraw') === '' || !(mw >= 0)) return fail('Mức rút tối thiểu không hợp lệ.', 'minWithdraw');
-        const com = levels.map(Number);
-        if (!com.length || com.some(x => !(x >= 0 && x <= 100) || levels.some(s => String(s).trim() === ''))) return fail('Mỗi tầng hoa hồng phải là số từ 0 đến 100%.');
-        if (com.reduce((s, x) => s + x, 0) > 50) return fail('Tổng hoa hồng các tầng đang vượt 50% giá trị đơn. Anh chị kiểm tra lại.');
+        const plan = {};
+        for (const [k, label, kind] of PLAN_FIELDS) {
+          const n = +v('p_' + k);
+          if (v('p_' + k) === '' || !isFinite(n)) return fail(`Anh chị nhập ${label.toLowerCase()}.`, 'p_' + k);
+          if (kind === 'pct' && !(n >= 0 && n <= 100)) return fail(`${label} phải từ 0 đến 100%.`, 'p_' + k);
+          if (kind === 'money' && !(n >= 0)) return fail(`${label} không được âm.`, 'p_' + k);
+          plan[k] = kind === 'pct' ? Math.round(n * 100) / 100 : Math.round(n);
+        }
+        if (plan.pkgCountsAs > plan.pkgPrice) return fail('Phần của gói tính vào doanh số không được lớn hơn giá gói.', 'p_pkgCountsAs');
+        if (plan.pkgPoints > plan.pkgPrice) return fail('Điểm nhận khi kích hoạt không được lớn hơn giá gói.', 'p_pkgPoints');
+        if (plan.ctvRate > plan.agentRate) return fail('Hoa hồng của cộng tác viên đang cao hơn của đại lý. Anh chị kiểm tra lại.', 'p_ctvRate');
         err.textContent = '';
         const d2 = ADB.load();
         d2.settings = Object.assign({}, ADB.DEFAULT_SETTINGS, d2.settings || {}, {
           shopName: v('shopName'), hotline: v('hotline'), email: v('email'), address: v('address'), mailSender: v('mailSender'),
-          pointRate: Math.round(pr * 100) / 10000, fundRate: fr, minWithdraw: Math.round(mw), autoPlace: form.autoPlace.checked, commission: com
+          pointRate: Math.round(pr * 100) / 10000, minWithdraw: Math.round(mw), autoPlace: form.autoPlace.checked,
+          plan: Object.assign({}, ADB.PLAN, (d2.settings || {}).plan || {}, plan)
         });
-        ADB.log(d2, 'Thiết lập hệ thống', `Hoa hồng ${com.map((x, i) => 'F' + (i + 1) + ' ' + x + '%').join(', ')}; tích điểm ${pr}%; quỹ ${fr}%; rút tối thiểu ${money(mw)}`); ADB.save(d2);
+        ADB.log(d2, 'Thiết lập hệ thống', `Gói ${money(plan.pkgPrice)} (${money(plan.pkgPoints)} PS); giới thiệu ${money(plan.refBonus)}; CTV ${plan.ctvRate}%, đại lý ${plan.agentRate}%, thu nhập đại lý ${plan.overrideRate}% (${plan.overrideShop}% vào ví mua hàng); thuế ${plan.taxRate}%; lên đại lý ${money(plan.agentThreshold)}; gói tính vào doanh số ${money(plan.pkgCountsAs)}; rút tối thiểu ${money(mw)}`); ADB.save(d2);
         toast('Đã lưu thiết lập hệ thống');
       });
       const rb = $('[data-reset]', el);

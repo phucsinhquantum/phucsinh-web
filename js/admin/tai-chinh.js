@@ -13,6 +13,8 @@
     .tc-sum { font-size: 13px; color: var(--text-2); }
     .tc-date { min-width: 0 !important; flex: none !important; width: 150px !important; }
     :is([data-pane="wallet"], [data-pane="transactions"], [data-pane="commissions"], [data-pane="topups"]) .tbl .who b { white-space: nowrap; }
+    .tc-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+    .tc-strip > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .tc-strip b { font-size: 17px; } .tc-strip small { font-size: 12px; }
     .tc-pos { color: var(--green); } .tc-neg { color: var(--red); }
     @media (max-width: 699px) { .tc-date { width: calc(50% - 5px) !important; } }
   </style>`);
@@ -45,7 +47,9 @@
     const from = period === 'year' ? now.getFullYear() + '-01-01' : ADB.daysAgo(+period), to = today();
     const inR = x => x.date && x.date.slice(0, 10) >= from && x.date.slice(0, 10) <= to;
     const orders = d.orders.filter(o => o.status !== 'failed' && inR(o)), rec = (d.receipts || []).filter(inR), exp = (d.expenses || []).filter(inR);
-    const com = (d.commissions || []).filter(c => (c.status === 'approved' || c.status === 'paid') && inR(c));
+    const com = (d.commissions || []).filter(c => c.status === 'paid' && ['ref', 'direct', 'override'].includes(c.kind || 'direct') && inR(c));
+    const P = ADB.plan(d), pkgs = d.orders.filter(o => ['paid', 'ship', 'done'].includes(o.status) && inR(o) && (o.items || []).some(x => x.id === ADB.PKG_ID));
+    const fee = pkgs.length * (P.pkgPrice - P.pkgPoints), ck = k => com.filter(c => (c.kind || 'direct') === k).reduce((s, c) => s + c.amount, 0);
     const sum = (a, f = x => x.total) => a.reduce((s, x) => s + (f(x) || 0), 0);
     const rev = sum(orders), cogs = sum(rec), ex = sum(exp, x => x.amount), cm = sum(com, x => x.amount), profit = rev - cogs - ex - cm;
     el.innerHTML = `<div class="row between wrap" style="gap:10px;margin-bottom:14px"><div class="chips" id="tcPer">${[['30', '30 ngày'], ['90', '90 ngày'], ['year', 'Năm nay']].map(([k, l]) => `<button class="chip${k === period ? ' on' : ''}" type="button" data-p="${k}">${l}</button>`).join('')}</div><span class="tc-note">Từ ${fdate(from)} đến ${fdate(to)} (số liệu ước tính, chạy thử)</span></div>
@@ -53,9 +57,12 @@
         ${stat('Doanh thu', sh(rev), 'wallet', 'gold', 'glow-gold', orders.length + ' đơn không hủy')}
         ${stat('Giá vốn nhập kho', sh(cogs), 'truck', 'cyan', 'glow-cyan', rec.length + ' phiếu nhập')}
         ${stat('Chi phí', sh(ex), 'card', 'red', 'glow-gold', exp.length + ' khoản chi')}
-        ${stat('Hoa hồng', sh(cm), 'award', 'violet', 'glow-cyan', 'đã duyệt và đã trả')}
+        ${stat('Hoa hồng', sh(cm), 'award', 'violet', 'glow-cyan', 'đã trả vào ví thành viên')}
         ${stat('Lợi nhuận ước tính', `<span class="${profit < 0 ? 'red' : 'green'}">${sh(profit)}</span>`, 'trend', 'green', 'glow-gold', rev ? 'Biên ' + Math.round(profit / rev * 100) + '%' : '')}
       </div>
+      <div class="card glow-mix mt-2 tc-strip"><div><span class="tc-note">Phí nền tảng thu được</span><b class="gold">${money(fee)}</b><small class="dim">${pkgs.length} gói CTV đã thanh toán × ${money(P.pkgPrice - P.pkgPoints)}</small></div>
+        <div><span class="tc-note">Điểm gói đã cấp</span><b class="green">${money(pkgs.length * P.pkgPoints).replace('đ', ' PS')}</b><small class="dim">vào ví mua hàng</small></div>
+        <div><span class="tc-note">Thưởng giới thiệu</span><b>${money(ck('ref'))}</b></div><div><span class="tc-note">Hoa hồng bán hàng</span><b>${money(ck('direct'))}</b></div><div><span class="tc-note">Thu nhập từ đại lý</span><b>${money(ck('override'))}</b></div></div>
       <div class="grid g-main-r mt-2">
         <div class="card glow-cyan">${head('Doanh thu và chi phí', 'chi phí gồm giá vốn, chi phí, hoa hồng', `<span class="row" style="gap:12px;font-size:12px"><span class="row" style="gap:6px"><span class="dot" style="color:#f3c76b"></span>Doanh thu</span><span class="row" style="gap:6px"><span class="dot" style="color:#4fe6df"></span>Tổng chi</span></span>`)}<div id="tcArea"></div></div>
         <div class="card glow-gold">${head('Cơ cấu chi phí', 'theo nhóm')}<div id="tcDonut"></div><div class="legend mt-2" id="tcLeg"></div></div>
@@ -84,51 +91,59 @@
   } };
 
   /* ---------- Đối soát ví & dòng tiền ---------- */
+  const WK = Object.keys(ADB.WALLETS);
+  const wTag = k => { const w = ADB.WALLETS[k] || { short: k, color: '#9aa7ab' }; return `<span class="badge nowrap" style="color:${w.color};border-color:${w.color}55;background:${w.color}14">${esc(w.short)}</span>`; };
+  const taxOf = (d, w) => { const a = -w.amount, t = w.tax != null ? w.tax : Math.round(a * ADB.plan(d).taxRate / 100); return { a, t, net: w.net != null ? w.net : a - t }; };
   M.wallet = { render(el) {
-    const d = ADB.load(), W = d.wallet || [], mem = d.users.filter(u => u.role !== 'admin');
-    const done = W.filter(w => w.status === 'done'), tsum = t => done.filter(w => w.type === t).reduce((s, w) => s + w.amount, 0);
+    const d = ADB.load(), W = d.wallet || [], mem = d.users.filter(u => u.role !== 'admin'), P = ADB.plan(d);
     const pend = W.filter(w => w.type === 'withdraw' && w.status === 'pending');
-    const totalBal = mem.reduce((s, u) => s + ADB.balance(d, u.id), 0);
+    const bal = {}; mem.forEach(u => bal[u.id] = ADB.balances(d, u.id));
+    const tot = k => mem.reduce((s, u) => s + bal[u.id][k], 0);
+    const pendSum = pend.reduce((s, w) => s + taxOf(d, w).a, 0);
     el.innerHTML = `${viewOnly()}<div class="grid g-5">
-        ${stat('Tổng số dư ví', sh(totalBal), 'wallet', 'gold', 'glow-gold', 'của ' + mem.length + ' thành viên')}
-        ${stat('Nạp điểm vào', sh(tsum('topup')), 'plus', 'cyan', 'glow-cyan')}
-        ${stat('Hoa hồng vào ví', sh(tsum('commission') + tsum('bonus')), 'award', 'violet', 'glow-gold', 'gồm thưởng')}
-        ${stat('Đã rút và dùng điểm', sh(-(tsum('withdraw') + tsum('spend'))), 'arrow', 'red', 'glow-cyan')}
-        ${stat('Đang chờ rút', sh(-pend.reduce((s, w) => s + w.amount, 0)), 'clock', 'gold', 'glow-gold', pend.length + ' yêu cầu')}
+        ${WK.map((k, i) => stat(ADB.WALLETS[k].name, `<span style="color:${ADB.WALLETS[k].color}">${sh(tot(k))}</span>`, ADB.WALLETS[k].icon, ['gold', 'cyan', 'violet', 'green'][i], i % 2 ? 'glow-cyan' : 'glow-gold', esc(ADB.WALLETS[k].note))).join('')}
+        ${stat('Đang chờ rút', sh(pendSum), 'clock', 'red', 'glow-gold', pend.length + ' yêu cầu, đã tạm giữ trong ví')}
       </div>
-      <div class="card glow-gold mt-2">${head('Yêu cầu rút tiền chờ duyệt', pend.length + ' yêu cầu', can() ? `<button class="btn btn-sm btn-gold" type="button" id="tcAdj">${icon('plus')} Điều chỉnh ví</button>` : '')}
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Số tiền</th><th>Số dư hiện có</th><th>Ghi chú</th><th>Ngày</th><th></th></tr></thead><tbody>
-        ${pend.length ? pend.map((w, i) => { const b = ADB.balance(d, w.user); return `<tr><td>${who(d, w.user, i)}</td><td>${amt(w.amount)}</td><td class="nowrap ${b + w.amount < 0 ? 'red' : ''}">${money(b)}</td><td class="dim">${esc(w.note || '')}</td><td class="dim nowrap">${fdate(w.date)}</td><td>${can() ? `<div class="tc-act"><button class="btn btn-sm btn-gold" type="button" data-ok="${w.id}">Duyệt</button><button class="btn btn-sm btn-ghost" type="button" data-no="${w.id}">Từ chối</button></div>` : wBadge(w.status)}</td></tr>`; }).join('') : empty(6, 'Không có yêu cầu rút tiền đang chờ.')}
+      <div class="card glow-gold mt-2">${head('Yêu cầu rút tiền chờ duyệt', `${pend.length} yêu cầu · thuế ${P.taxRate}% trừ khi rút ví hoa hồng bán hàng`, can() ? `<button class="btn btn-sm btn-gold" type="button" id="tcAdj">${icon('plus')} Điều chỉnh ví</button>` : '')}
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Số tiền rút</th><th>Thuế ${P.taxRate}%</th><th>Thực nhận</th><th>Ngân hàng</th><th>Còn lại trong ví</th><th>Ngày</th><th></th></tr></thead><tbody id="tcWp">
+        ${pend.length ? pend.map((w, i) => { const x = taxOf(d, w), b = (bal[w.user] || ADB.balances(d, w.user)).sales, bk = w.bank || {}; return `<tr><td>${who(d, w.user, i)}</td><td class="nowrap"><b>${money(x.a)}</b></td><td class="nowrap red">-${money(x.t)}</td><td class="nowrap green"><b>${money(x.net)}</b></td><td class="nowrap">${bk.bank ? `${esc(bk.bank)}<br><small class="dim">${esc(bk.account || '')}${bk.holder ? ' · ' + esc(bk.holder) : ''}</small>` : '<span class="dim">Chưa có</span>'}</td><td class="nowrap ${b < 0 ? 'red' : ''}">${money(b)}</td><td class="dim nowrap">${fdate(w.date)}</td><td>${can() ? `<div class="tc-act"><button class="btn btn-sm btn-gold" type="button" data-ok="${w.id}">Duyệt</button><button class="btn btn-sm btn-ghost" type="button" data-no="${w.id}">Từ chối</button></div>` : wBadge(w.status)}</td></tr>`; }).join('') : empty(8, 'Không có yêu cầu rút tiền đang chờ.')}
         </tbody></table></div></div>
-      <div class="card glow-cyan mt-2">${head('Số dư theo thành viên', 'chỉ tính giao dịch đã hoàn tất', csvBtn('tcWCsv'))}
+      <div class="card glow-cyan mt-2">${head('Số dư 4 ví theo thành viên', 'khoản rút đang chờ đã được trừ tạm', csvBtn('tcWCsv'))}
         <div class="toolbar"><input class="input" id="tcWq" placeholder="Tìm tên, email, mã thành viên" aria-label="Tìm thành viên"></div>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Số dư</th><th>Tổng vào</th><th>Tổng ra</th><th>Chờ rút</th><th>Giao dịch</th></tr></thead><tbody id="tcWl"></tbody></table></div></div>`;
-    const rowsOf = q => mem.filter(u => match(d, u.id, q)).map(u => { const mine = W.filter(w => w.user === u.id), dn = mine.filter(w => w.status === 'done');
-      return { u, bal: ADB.balance(d, u.id), inn: dn.filter(w => w.amount > 0).reduce((s, w) => s + w.amount, 0), out: -dn.filter(w => w.amount < 0).reduce((s, w) => s + w.amount, 0), pw: -mine.filter(w => w.type === 'withdraw' && w.status === 'pending').reduce((s, w) => s + w.amount, 0), n: mine.length }; })
-      .filter(r => r.n).sort((a, b) => b.bal - a.bal);
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th>${WK.map(k => `<th class="nowrap">${esc(ADB.WALLETS[k].short)}</th>`).join('')}<th>Chờ rút</th><th>Giao dịch</th></tr></thead><tbody id="tcWl"></tbody></table></div></div>`;
+    const rowsOf = q => mem.filter(u => match(d, u.id, q)).map(u => { const mine = W.filter(w => w.user === u.id), b = bal[u.id];
+      return { u, b, sum: WK.reduce((s, k) => s + b[k], 0), pw: -mine.filter(w => w.type === 'withdraw' && w.status === 'pending').reduce((s, w) => s + w.amount, 0), n: mine.length }; })
+      .filter(r => r.n).sort((a, b) => b.sum - a.sum);
     const list = () => { const rs = rowsOf($('#tcWq', el).value.trim().toLowerCase());
-      $('#tcWl', el).innerHTML = rs.length ? rs.map((r, i) => `<tr><td>${who(d, r.u.id, i)}</td><td class="gold nowrap"><b>${money(r.bal)}</b></td><td class="nowrap tc-pos">${money(r.inn)}</td><td class="nowrap tc-neg">${money(r.out)}</td><td class="nowrap">${r.pw ? `<span class="badge pending">${money(r.pw)}</span>` : '<span class="dim">0đ</span>'}</td><td>${r.n}</td></tr>`).join('') : empty(6, 'Không có thành viên phù hợp.'); };
+      $('#tcWl', el).innerHTML = rs.length ? rs.map((r, i) => `<tr><td>${who(d, r.u.id, i)}</td>${WK.map(k => `<td class="nowrap" style="${r.b[k] ? 'color:' + ADB.WALLETS[k].color : ''}">${r.b[k] ? '<b>' + money(r.b[k]) + '</b>' : '<span class="dim">0đ</span>'}</td>`).join('')}<td class="nowrap">${r.pw ? `<span class="badge pending">${money(r.pw)}</span>` : '<span class="dim">0đ</span>'}</td><td>${r.n}</td></tr>`).join('') : empty(7, 'Không có thành viên phù hợp.'); };
     list(); $('#tcWq', el).addEventListener('input', list);
-    $('#tcWCsv', el).addEventListener('click', () => ADB.csv('doi-soat-vi', [['Mã', 'Thành viên', 'Email', 'Số dư', 'Tổng vào', 'Tổng ra', 'Chờ rút', 'Số giao dịch'], ...rowsOf('').map(r => [r.u.code, r.u.name, r.u.email, r.bal, r.inn, r.out, r.pw, r.n])]));
-    el.querySelector('tbody').addEventListener('click', e => {
+    $('#tcWCsv', el).addEventListener('click', () => ADB.csv('doi-soat-vi', [['Mã', 'Thành viên', 'Tên truy cập', 'Email', ...WK.map(k => ADB.WALLETS[k].name), 'Chờ rút', 'Số giao dịch'], ...rowsOf('').map(r => [r.u.code, r.u.name, r.u.username, r.u.email, ...WK.map(k => r.b[k]), r.pw, r.n])]));
+    $('#tcWp', el).addEventListener('click', e => {
       const ok = e.target.closest('[data-ok]'), no = e.target.closest('[data-no]'); if (!ok && !no || !can()) return;
-      const dd = ADB.load(), w = dd.wallet.find(x => x.id === (ok || no).dataset[ok ? 'ok' : 'no']); if (!w) return;
-      if (ok && ADB.balance(dd, w.user) + w.amount < 0 && !confirm('Số dư hiện có không đủ cho yêu cầu này. Vẫn duyệt?')) return;
+      const dd = ADB.load(), w = dd.wallet.find(x => x.id === (ok || no).dataset[ok ? 'ok' : 'no']); if (!w || w.status !== 'pending') return;
+      if (ok && ADB.balances(dd, w.user).sales < 0 && !confirm('Ví hoa hồng bán hàng không đủ cho yêu cầu này. Vẫn duyệt?')) return;
+      if (no && !confirm('Từ chối yêu cầu rút tiền này? Số tiền sẽ trả lại ví hoa hồng bán hàng.')) return;
+      const x = taxOf(dd, w); if (w.tax == null) w.tax = x.t; if (w.net == null) w.net = x.net;
       w.status = ok ? 'done' : 'rejected'; w.done = today();
-      commit(dd, ok ? 'Duyệt rút tiền' : 'Từ chối rút tiền', `${uname(dd, w.user)}: ${money(-w.amount)}`, ok ? 'Đã duyệt yêu cầu rút ' + money(-w.amount) : 'Đã từ chối yêu cầu rút tiền'); M.wallet.render(el);
+      commit(dd, ok ? 'Duyệt rút tiền' : 'Từ chối rút tiền', `${uname(dd, w.user)}: ${money(x.a)}${ok ? `, thuế ${money(x.t)}, chuyển khoản ${money(x.net)}` : ''}`, ok ? `Đã duyệt. Chuyển khoản ${money(x.net)} cho ${uname(dd, w.user)}` : 'Đã từ chối, tiền đã trả lại ví'); M.wallet.render(el);
     });
     if (can()) $('#tcAdj', el).addEventListener('click', () => {
       const md = modal(`<form id="tcAf"><div class="card-head"><h3>Điều chỉnh ví thành viên</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-        <div class="form-grid"><div class="field full"><label>Thành viên</label><select class="input" name="user" required>${mem.map(u => `<option value="${u.id}">${esc(u.name)} (${esc(u.code || '')}) · ${money(ADB.balance(d, u.id))}</option>`).join('')}</select></div>
+        <div class="form-grid"><div class="field full"><label>Thành viên</label><select class="input" name="user" required>${mem.map(u => `<option value="${u.id}">${esc(u.name)} (@${esc(u.username || u.code || '')})</option>`).join('')}</select></div>
+        <div class="field"><label>Ví</label><select class="input" name="wallet">${WK.map(k => `<option value="${k}">${esc(ADB.WALLETS[k].name)}</option>`).join('')}</select></div>
         <div class="field"><label>Loại</label><select class="input" name="type"><option value="adjust">Điều chỉnh</option><option value="bonus">Thưởng</option></select></div>
-        <div class="field"><label>Số tiền (âm để trừ)</label><input class="input" name="amount" type="number" step="1000" required placeholder="vd 200000 hoặc -50000"></div>
+        <div class="field full"><label>Số tiền hoặc điểm (âm để trừ)</label><input class="input" name="amount" type="number" step="1000" required placeholder="vd 200000 hoặc -50000"><small class="tc-note" id="tcAb"></small></div>
         <div class="field full"><label>Ghi chú</label><input class="input" name="note" required placeholder="Lý do điều chỉnh"></div></div>
         <p class="red mt-1" id="tcAe" style="font-size:13px;min-height:18px"></p>
         <div class="row mt-2" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu</button></div></form>`);
-      $('#tcAf', md.el).addEventListener('submit', e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), a = Math.round(+f.amount);
+      const f0 = $('#tcAf', md.el), showBal = () => { const b = ADB.balances(d, f0.user.value); $('#tcAb', md.el).textContent = 'Số dư hiện tại: ' + money(b[f0.wallet.value]); };
+      f0.user.addEventListener('change', showBal); f0.wallet.addEventListener('change', showBal); showBal();
+      f0.addEventListener('submit', e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), a = Math.round(+f.amount);
         if (!a) return $('#tcAe', md.el).textContent = 'Anh chị nhập số tiền khác 0.';
-        const dd = ADB.load(); dd.wallet.push({ id: ADB.uid('gd'), user: f.user, type: f.type, amount: a, ref: '', date: today(), note: f.note.trim(), status: 'done' });
-        commit(dd, 'Điều chỉnh ví', `${uname(dd, f.user)}: ${a > 0 ? '+' : ''}${money(a)} (${f.note.trim()})`, 'Đã điều chỉnh ví ' + uname(dd, f.user)); md.close(); M.wallet.render(el); });
+        const dd = ADB.load();
+        if (ADB.balances(dd, f.user)[f.wallet] + a < 0) return $('#tcAe', md.el).textContent = 'Số dư ví không đủ để trừ khoản này.';
+        ADB.credit(dd, f.user, f.wallet, f.type, a, f.note.trim(), '');
+        commit(dd, 'Điều chỉnh ví', `${uname(dd, f.user)} · ${ADB.WALLETS[f.wallet].name}: ${a > 0 ? '+' : ''}${money(a)} (${f.note.trim()})`, 'Đã điều chỉnh ví ' + uname(dd, f.user)); md.close(); M.wallet.render(el); });
     });
   } };
 
@@ -181,44 +196,62 @@
     const d = ADB.load(), W = (d.wallet || []).slice().sort((a, b) => b.date.localeCompare(a.date));
     el.innerHTML = `<div class="card glow-cyan">${head('Lịch sử giao dịch ví', '<span id="tcTn"></span>', csvBtn('tcTCsv'))}
       <div class="toolbar"><input class="input" id="tcTq" placeholder="Tìm thành viên" aria-label="Tìm thành viên">
-        <select class="input" id="tcTt" aria-label="Loại giao dịch"><option value="">Tất cả loại</option>${Object.entries(ADB.walletType).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+        <select class="input" id="tcTw" aria-label="Ví"><option value="">Tất cả ví</option>${WK.map(k => `<option value="${k}">${esc(ADB.WALLETS[k].name)}</option>`).join('')}</select>
+        <select class="input" id="tcTt" aria-label="Loại giao dịch"><option value="">Tất cả loại</option>${Object.entries(ADB.walletType).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select>
         <select class="input" id="tcTs" aria-label="Trạng thái"><option value="">Mọi trạng thái</option>${Object.entries(WST).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select>
         <input class="input tc-date" id="tcTf" type="date" aria-label="Từ ngày"><input class="input tc-date" id="tcTe" type="date" aria-label="Đến ngày"></div>
-      <div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Thành viên</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody id="tcTl"></tbody></table></div></div>`;
-    const filt = () => { const q = $('#tcTq', el).value.trim().toLowerCase(), t = $('#tcTt', el).value, s = $('#tcTs', el).value, f = $('#tcTf', el).value, e = $('#tcTe', el).value;
-      return W.filter(w => (!t || w.type === t) && (!s || w.status === s) && (!f || w.date >= f) && (!e || w.date.slice(0, 10) <= e) && match(d, w.user, q)); };
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Thành viên</th><th>Ví</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody id="tcTl"></tbody></table></div></div>`;
+    const filt = () => { const q = $('#tcTq', el).value.trim().toLowerCase(), wl = $('#tcTw', el).value, t = $('#tcTt', el).value, s = $('#tcTs', el).value, f = $('#tcTf', el).value, e = $('#tcTe', el).value;
+      return W.filter(w => (!wl || ADB.walletOf(w) === wl) && (!t || w.type === t) && (!s || w.status === s) && (!f || w.date >= f) && (!e || w.date.slice(0, 10) <= e) && match(d, w.user, q)); };
     const list = () => { const L = filt(); $('#tcTn', el).textContent = `${L.length} giao dịch · tổng ${money(L.filter(w => w.status === 'done').reduce((s, w) => s + w.amount, 0))} (đã hoàn tất)`;
-      $('#tcTl', el).innerHTML = L.length ? L.slice(0, 300).map((w, i) => `<tr><td class="dim nowrap">${fdate(w.date)}</td><td>${who(d, w.user, i)}</td><td><span class="badge ${w.amount < 0 ? 'violet' : 'ship'}">${ADB.walletType[w.type] || w.type}</span></td><td class="dim" style="min-width:180px">${esc(w.note || '')}</td><td>${amt(w.amount)}</td><td>${wBadge(w.status)}</td></tr>`).join('') : empty(6, 'Không có giao dịch phù hợp.'); };
+      $('#tcTl', el).innerHTML = L.length ? L.slice(0, 300).map((w, i) => `<tr><td class="dim nowrap">${fdate(w.date)}</td><td>${who(d, w.user, i)}</td><td>${wTag(ADB.walletOf(w))}</td><td><span class="badge ${w.amount < 0 ? 'violet' : 'ship'} nowrap">${esc(ADB.walletType[w.type] || w.type)}</span></td><td class="dim" style="min-width:180px">${esc(w.note || '')}</td><td>${amt(w.amount)}</td><td>${wBadge(w.status)}</td></tr>`).join('') : empty(7, 'Không có giao dịch phù hợp.'); };
     list(); $$('.toolbar .input', el).forEach(i => i.addEventListener(i.tagName === 'SELECT' || i.type === 'date' ? 'change' : 'input', list));
-    $('#tcTCsv', el).addEventListener('click', () => ADB.csv('lich-su-giao-dich', [['Ngày', 'Mã TV', 'Thành viên', 'Loại', 'Nội dung', 'Số tiền', 'Trạng thái'], ...filt().map(w => [w.date, (user(d, w.user) || {}).code, uname(d, w.user), ADB.walletType[w.type] || w.type, w.note, w.amount, (WST[w.status] || [w.status])[0]])]));
+    $('#tcTCsv', el).addEventListener('click', () => ADB.csv('lich-su-giao-dich', [['Ngày', 'Mã TV', 'Thành viên', 'Ví', 'Loại', 'Nội dung', 'Số tiền', 'Trạng thái'], ...filt().map(w => [w.date, (user(d, w.user) || {}).code, uname(d, w.user), (ADB.WALLETS[ADB.walletOf(w)] || {}).name, ADB.walletType[w.type] || w.type, w.note, w.amount, (WST[w.status] || [w.status])[0]])]));
   } };
 
   /* ---------- Lịch sử hoa hồng ---------- */
+  const kindOf = c => c.kind || (c.status === 'missed' ? 'missed' : 'direct');
+  const kindName = c => ADB.commissionKind[kindOf(c)] || ('F' + (c.level || 1));
+  const KC = { ref: 'gold', direct: 'ship', override: 'violet', missed: 'failed' };
   M.commissions = { render(el) {
     const d = ADB.load(), C = (d.commissions || []).slice().sort((a, b) => b.date.localeCompare(a.date)), CS = ADB.commissionStatus;
     const by = s => C.filter(c => c.status === s), sm = a => a.reduce((s, c) => s + c.amount, 0);
-    const levels = [...new Set(C.map(c => c.level))].sort();
-    el.innerHTML = `${viewOnly()}<div class="grid g-4 keep-2">${Object.entries(CS).map(([k, v], i) => stat(v[0], sh(sm(by(k))), ['clock', 'check', 'wallet', 'close'][i], ['gold', 'cyan', 'green', 'red'][i], i % 2 ? 'glow-cyan' : 'glow-gold', by(k).length + ' khoản')).join('')}</div>
+    const paid = C.filter(c => c.status === 'paid' && kindOf(c) !== 'missed');
+    const pk = k => sm(paid.filter(c => kindOf(c) === k));
+    el.innerHTML = `${viewOnly()}<div class="grid g-5">
+        ${stat('Đã trả', sh(sm(paid)), 'wallet', 'green', 'glow-gold', `${paid.length} khoản`)}
+        ${stat('Thưởng giới thiệu', sh(pk('ref')), 'gift', 'gold', 'glow-cyan', 'vào ví hoa hồng bán hàng')}
+        ${stat('Hoa hồng bán hàng', sh(pk('direct')), 'award', 'cyan', 'glow-gold', 'vào ví hoa hồng bán hàng')}
+        ${stat('Thu nhập từ đại lý', sh(pk('override')), 'users', 'violet', 'glow-cyan', 'vào ví điểm thưởng và ví mua hàng')}
+        ${stat('Bỏ lỡ', `<span class="dim">${sh(sm(by('missed')))}</span>`, 'close', 'red', 'glow-gold', 'không cộng vào ví, không tính chi')}
+      </div>
       <div class="card glow-mix mt-2">${head('Lịch sử hoa hồng', '<span id="tcCn"></span>', (can() && by('pending').length ? `<button class="btn btn-sm btn-gold" type="button" id="tcCall">${icon('check')} Duyệt tất cả đang chờ</button>` : '') + csvBtn('tcCCsv'))}
         <div class="toolbar"><input class="input" id="tcCq" placeholder="Tìm người nhận, mã đơn" aria-label="Tìm">
-          <select class="input" id="tcCs" aria-label="Trạng thái"><option value="">Mọi trạng thái</option>${Object.entries(CS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select>
-          <select class="input" id="tcCl" aria-label="Tầng"><option value="">Mọi tầng</option>${levels.map(l => `<option value="${l}">F${l}</option>`).join('')}</select></div>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Người nhận</th><th>Từ đơn</th><th>Tầng</th><th>Số tiền</th><th>Trạng thái</th>${can() ? '<th></th>' : ''}</tr></thead><tbody id="tcCt"></tbody></table></div></div>`;
-    const filt = () => { const q = $('#tcCq', el).value.trim().toLowerCase(), s = $('#tcCs', el).value, l = $('#tcCl', el).value;
-      return C.filter(c => (!s || c.status === s) && (!l || String(c.level) === l) && (!q || match(d, c.user, q) || String(c.order).toLowerCase().includes(q))); };
-    const list = () => { const L = filt(); $('#tcCn', el).textContent = `${L.length} khoản · ${money(sm(L))}`;
-      $('#tcCt', el).innerHTML = L.length ? L.slice(0, 300).map((c, i) => `<tr><td class="dim nowrap">${fdate(c.date)}</td><td>${who(d, c.user, i)}</td><td><b>#${esc(c.order)}</b><br><small class="dim">${esc(uname(d, c.from))}</small></td><td><span class="badge violet">F${c.level} · ${c.rate}%</span></td><td class="gold nowrap"><b>${money(c.amount)}</b></td><td>${cBadge(c.status)}</td>${can() ? `<td><div class="tc-act">${c.status === 'pending' ? `<button class="btn btn-sm btn-gold" type="button" data-a="approve" data-id="${c.id}">Duyệt</button>` : ''}${c.status === 'approved' ? `<button class="btn btn-sm btn-gold" type="button" data-a="pay" data-id="${c.id}">Trả</button>` : ''}${c.status === 'pending' || c.status === 'approved' ? `<button class="btn btn-sm btn-ghost" type="button" data-a="cancel" data-id="${c.id}">Hủy</button>` : ''}</div></td>` : ''}</tr>`).join('') : empty(7, 'Không có hoa hồng phù hợp.'); };
+          <select class="input" id="tcCk" aria-label="Loại hoa hồng"><option value="">Mọi loại</option>${Object.entries(ADB.commissionKind).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select>
+          <select class="input" id="tcCs" aria-label="Trạng thái"><option value="">Mọi trạng thái</option>${Object.entries(CS).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select></div>
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Người nhận</th><th>Từ đơn</th><th>Loại</th><th>Tính trên</th><th>Số tiền</th><th>Trạng thái</th>${can() ? '<th></th>' : ''}</tr></thead><tbody id="tcCt"></tbody></table></div>
+        <p class="tc-note mt-1">Hoa hồng bỏ lỡ là phần người giới thiệu chưa nhận được vì chưa kích hoạt cộng tác viên hoặc chưa lên đại lý. Chỉ để tham khảo, không cộng vào ví.</p></div>`;
+    const filt = () => { const q = $('#tcCq', el).value.trim().toLowerCase(), s = $('#tcCs', el).value, k = $('#tcCk', el).value;
+      return C.filter(c => (!s || c.status === s) && (!k || kindOf(c) === k) && (!q || match(d, c.user, q) || String(c.order).toLowerCase().includes(q))); };
+    const list = () => { const L = filt(), real = L.filter(c => kindOf(c) !== 'missed' && c.status !== 'missed'), miss = L.filter(c => kindOf(c) === 'missed' || c.status === 'missed');
+      $('#tcCn', el).textContent = `${L.length} khoản · đã trả ${money(sm(real.filter(c => c.status === 'paid')))}${miss.length ? ' · bỏ lỡ ' + money(sm(miss)) : ''}`;
+      $('#tcCt', el).innerHTML = L.length ? L.slice(0, 300).map((c, i) => { const m = kindOf(c) === 'missed' || c.status === 'missed', k = kindOf(c);
+        return `<tr${m ? ' style="opacity:.62"' : ''}><td class="dim nowrap">${fdate(c.date)}</td><td>${who(d, c.user, i)}</td><td><b>#${esc(c.order)}</b><br><small class="dim">${esc(uname(d, c.from))}</small></td>
+        <td><span class="badge ${KC[k] || 'violet'} nowrap">${esc(kindName(c))}${c.rate ? ' · ' + c.rate + '%' : ''}</span>${m && c.note ? `<br><small class="dim">${esc(c.note)}</small>` : ''}</td>
+        <td class="nowrap dim">${c.base ? money(c.base) : ''}</td>
+        <td class="nowrap">${m ? `<s class="dim">${money(c.amount)}</s>` : `<b class="gold">${money(c.amount)}</b>`}</td><td>${m ? '<span class="badge failed">Bỏ lỡ</span>' : cBadge(c.status)}</td>
+        ${can() ? `<td><div class="tc-act">${c.status === 'pending' ? `<button class="btn btn-sm" type="button" data-a="approve" data-id="${c.id}">Duyệt</button>` : ''}${!m && (c.status === 'pending' || c.status === 'approved') ? `<button class="btn btn-sm btn-gold" type="button" data-a="pay" data-id="${c.id}">Trả</button><button class="btn btn-sm btn-ghost" type="button" data-a="cancel" data-id="${c.id}">Hủy</button>` : ''}</div></td>` : ''}</tr>`; }).join('') : empty(8, 'Không có hoa hồng phù hợp.'); };
     list(); $$('.toolbar .input', el).forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', list));
-    $('#tcCCsv', el).addEventListener('click', () => ADB.csv('lich-su-hoa-hong', [['Ngày', 'Mã TV', 'Người nhận', 'Đơn', 'Người mua', 'Tầng', 'Tỉ lệ %', 'Số tiền', 'Trạng thái'], ...filt().map(c => [c.date, (user(d, c.user) || {}).code, uname(d, c.user), c.order, uname(d, c.from), 'F' + c.level, c.rate, c.amount, CS[c.status][0]])]));
+    $('#tcCCsv', el).addEventListener('click', () => ADB.csv('lich-su-hoa-hong', [['Ngày', 'Mã TV', 'Người nhận', 'Đơn', 'Nguồn', 'Loại', 'Tỉ lệ %', 'Tính trên', 'Số tiền', 'Trạng thái'], ...filt().map(c => [c.date, (user(d, c.user) || {}).code, uname(d, c.user), c.order, uname(d, c.from), kindName(c), c.rate, c.base || '', c.amount, (CS[c.status] || [c.status])[0]])]));
     if (!can()) return;
     $('#tcCt', el).addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return;
-      const dd = ADB.load(), c = dd.commissions.find(x => x.id === b.dataset.id), a = b.dataset.a; if (!c) return;
+      const dd = ADB.load(), c = dd.commissions.find(x => x.id === b.dataset.id), a = b.dataset.a; if (!c || c.status === 'paid' || c.status === 'missed') return;
       if (a === 'cancel' && !confirm('Hủy khoản hoa hồng này?')) return;
       if (a === 'approve') c.status = 'approved';
-      if (a === 'pay') { c.status = 'paid'; dd.wallet.push({ id: ADB.uid('gd'), user: c.user, type: 'commission', amount: c.amount, ref: c.order, date: today(), note: `Hoa hồng F${c.level} từ đơn ${c.order}`, status: 'done' }); }
+      if (a === 'pay') ADB.payCommission(dd, c);
       if (a === 'cancel') c.status = 'cancel';
       const label = { approve: 'Duyệt hoa hồng', pay: 'Trả hoa hồng', cancel: 'Hủy hoa hồng' }[a];
-      commit(dd, label, `${uname(dd, c.user)}: ${money(c.amount)} (đơn ${c.order})`, a === 'pay' ? 'Đã trả hoa hồng vào ví ' + uname(dd, c.user) : label + ': ' + money(c.amount)); M.commissions.render(el); });
+      commit(dd, label, `${uname(dd, c.user)}: ${money(c.amount)} ${kindName(c).toLowerCase()} (đơn ${c.order})`, a === 'pay' ? 'Đã trả hoa hồng vào ví ' + uname(dd, c.user) : label + ': ' + money(c.amount)); M.commissions.render(el); });
     const all = $('#tcCall', el); if (all) all.addEventListener('click', () => { const dd = ADB.load(), P = dd.commissions.filter(c => c.status === 'pending');
       if (!confirm(`Duyệt ${P.length} khoản hoa hồng đang chờ (${money(sm(P))})?`)) return;
       P.forEach(c => c.status = 'approved'); commit(dd, 'Duyệt hoa hồng hàng loạt', `${P.length} khoản, ${money(sm(P))}`, `Đã duyệt ${P.length} khoản hoa hồng`); M.commissions.render(el); });
@@ -242,7 +275,7 @@
       const dd = ADB.load(), t = dd.topups.find(x => x.id === (ok || no).dataset[ok ? 'ok' : 'no']); if (!t || t.status !== 'pending') return;
       if (no && !confirm('Từ chối yêu cầu nạp điểm này?')) return;
       t.status = ok ? 'done' : 'rejected';
-      if (ok) (dd.wallet = dd.wallet || []).push({ id: ADB.uid('gd'), user: t.user, type: 'topup', amount: t.amount, ref: t.id, date: today(), note: 'Nạp điểm qua ' + (t.method || ''), status: 'done' });
-      commit(dd, ok ? 'Duyệt nạp điểm' : 'Từ chối nạp điểm', `${uname(dd, t.user)}: ${money(t.amount)}`, ok ? `Đã duyệt nạp ${money(t.amount)} cho ${uname(dd, t.user)}` : 'Đã từ chối yêu cầu nạp điểm'); M.topups.render(el); });
+      if (ok) ADB.credit(dd, t.user, 'shop', 'topup', t.points || t.amount, 'Nạp điểm qua ' + (t.method || ''), t.id);
+      commit(dd, ok ? 'Duyệt nạp điểm' : 'Từ chối nạp điểm', `${uname(dd, t.user)}: ${money(t.amount)}`, ok ? `Đã cộng ${money(t.points || t.amount).replace('đ', ' PS')} vào ví mua hàng của ${uname(dd, t.user)}` : 'Đã từ chối yêu cầu nạp điểm'); M.topups.render(el); });
   } };
 })();

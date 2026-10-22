@@ -355,8 +355,8 @@
           <nav class="nav nav-cats">${CATEGORIES.slice(0, 4).map((c, i) => `<a href="san-pham.html?cat=${c.id}"><span class="dot" style="color:${['#4fe6df', '#b98cff', '#45e08f', '#f3c76b'][i]}"></span><span>${esc(c.name)}</span></a>`).join('')}</nav>
           <div class="side-promo"><div class="card glow-cyan" style="padding:16px">
             <div class="row" style="gap:8px;font-weight:600">${icon('sparkle', 'gold')}<span>Thành viên PSQ</span></div>
-            <p class="dim" style="font-size:12px;margin:6px 0 12px">Tích điểm PS trên mỗi đơn, lên hạng nhận ưu đãi riêng.</p>
-            <a class="btn btn-grad btn-sm btn-block" href="thanh-vien.html">${u ? 'Xem điểm của tôi' : 'Đăng ký thành viên'}</a>
+            <p class="dim" style="font-size:12px;margin:6px 0 12px">Kích hoạt cộng tác viên, lên đại lý để nhận hoa hồng và điểm thưởng.</p>
+            <a class="btn btn-grad btn-sm btn-block" href="thanh-vien.html">${u ? 'Vào tài khoản' : 'Đăng ký thành viên'}</a>
           </div></div>
           <a class="side-user" href="thanh-vien.html">
             <span class="avatar">${u ? esc(initials(u.name)) : icon('user')}</span>
