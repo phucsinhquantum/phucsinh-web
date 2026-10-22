@@ -72,6 +72,16 @@
   .wcard .ico { position: absolute; right: 14px; top: 14px; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
   .wcard .ico svg { width: 16px; height: 16px; }
   .wcard .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .act-alert { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; margin-bottom: 14px; border: 1px solid rgba(255, 159, 107, .45); background: rgba(255, 159, 107, .08); font-size: 13.5px; line-height: 1.5; }
+  .act-alert.warn { border-color: rgba(243, 199, 107, .45); background: rgba(243, 199, 107, .07); }
+  .act-alert > svg { flex: none; width: 20px; height: 20px; color: #ff9f6b; margin-top: 2px; } .act-alert.warn > svg { color: var(--gold); }
+  .act-alert ul { margin: 6px 0 0; padding-left: 18px; } .act-alert a { white-space: nowrap; }
+  .act-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .act-list li { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, .18); }
+  .act-list li > i { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 700; }
+  .act-list li.ok > i { background: rgba(69, 224, 143, .15); color: #45e08f; } .act-list li.no > i { background: rgba(255, 107, 107, .15); color: #ff6b6b; }
+  .act-list li > div { display: grid; gap: 2px; min-width: 0; } .act-list small { color: var(--text-3); font-size: 12.5px; }
+  .act-list li > .badge { margin-left: auto; flex: none; }
   .wcard .spk { height: 36px; margin-top: 6px; } .wcard .spk svg { width: 100%; height: 36px; display: block; }
   @media (min-width: 700px) { .wcard .amt { white-space: nowrap; } }
   /* lưới 5 ví: 3 + 2 trên màn rộng, 2 cột trên điện thoại (ví cuối trải hết hàng) */
@@ -280,13 +290,34 @@
     if (!list(menu).includes(r)) { const o = document.createElement('option'); o.value = r; o.textContent = 'Kích hoạt CTV'; o.selected = true; $('#tvPick').prepend(o); }
     const box = $('#tvPane'); box.innerHTML = '';
     PANES[r](box, d, me, render);
+    const al = actAlert(d, me); if (al) box.insertAdjacentHTML('afterbegin', al);
   }
   const list = menu => menu.flatMap(g => g[1].map(x => x[0]));
+
+  /* ---------- điều kiện nhận thu nhập từ đại lý tuyến dưới ---------- */
+  const MODE_NOTE = { hold: n => `Chưa đủ điều kiện thì khoản 40% được giữ lại tối đa ${n} ngày, đủ điều kiện trong thời gian này sẽ tự vào ví.`, lose: () => 'Chưa đủ điều kiện thì khoản 40% phát sinh trong thời gian đó không được nhận.', up: () => 'Chưa đủ điều kiện thì khoản 40% chuyển cho đại lý đủ điều kiện ở tuyến trên.' };
+  const actItem = (x, P) => `<li class="${x.ok ? 'ok' : 'no'}"><i>${x.ok ? '✓' : '!'}</i><div><b>${esc(x.label)}${x === 'buy' ? '' : ''}</b><small>${x.ok ? `Gần nhất ${fdate(x.last)} · ${x.count} đơn trong ${P.activeDays} ngày` : `Chưa có trong ${P.activeDays} ngày gần nhất`}</small></div>${x.ok ? `<span class="badge ${x.left <= 7 ? 'pending' : 'paid'}">Còn ${x.left} ngày</span>` : '<span class="badge failed">Thiếu</span>'}</li>`;
+  function actCard(d, me) {
+    const a = ADB.activity(d, me.id), P = ADB.plan(d), e = ADB.earnings(d, me.id);
+    const min = [P.activeMinBuy ? `đơn tự mua từ ${money(P.activeMinBuy)}` : '', P.activeMinSell ? `đơn bán từ ${money(P.activeMinSell)}` : ''].filter(Boolean).join(', ');
+    return `<div class="card ${a.ok ? 'glow-cyan' : 'glow-gold'} mt-2" id="dieu-kien">${head('Điều kiện nhận thu nhập từ đại lý tuyến dưới', a.ok ? `Đang đủ điều kiện · còn ${a.left} ngày` : `Còn thiếu ${a.missing.length} điều kiện`)}
+      <ul class="act-list">${actItem(a.buy, P)}${actItem(a.sell, P)}</ul>
+      ${e.held ? `<p class="mt-2" style="font-size:13.5px">Đang giữ chờ <b class="gold">${ps(e.held)}</b>. <a class="cyan" href="#hoa-hong">Xem chi tiết</a></p>` : ''}
+      <p class="dim mt-2" style="font-size:12.5px">Trong ${P.activeDays} ngày gần nhất, đại lý cần có cả đơn tự mua và đơn bán (người mình giới thiệu trực tiếp mua) đã thanh toán${min ? ` (${min})` : ''}. ${MODE_NOTE[P.overrideMode] ? MODE_NOTE[P.overrideMode](P.holdDays) : ''} Hoa hồng bán hàng ${P.agentRate}% không bị ảnh hưởng.</p></div>`;
+  }
+  // cảnh báo đầu trang khi thiếu điều kiện hoặc sắp hết hạn
+  function actAlert(d, me) {
+    if ((me.tier || '') !== 'daily') return '';
+    const a = ADB.activity(d, me.id), e = ADB.earnings(d, me.id);
+    if (a.ok && a.left > 7) return '';
+    if (a.ok) return `<div class="act-alert warn">${icon('clock')}<div>Còn <b>${a.left} ngày</b> là hết điều kiện nhận thu nhập từ đại lý tuyến dưới. Anh chị cần thêm: <ul>${[a.buy, a.sell].filter(x => x.left === a.left).map(x => `<li>${esc(x.label)}</li>`).join('')}</ul><a class="gold" href="#tong-quan" data-goact>Xem điều kiện</a></div></div>`;
+    return `<div class="act-alert">${icon('info')}<div><b>Anh chị chưa đủ điều kiện nhận thu nhập từ đại lý tuyến dưới.</b>${e.held ? ` Đang giữ chờ ${ps(e.held)}.` : ''} Còn thiếu:<ul>${a.missing.map(x => `<li>${esc(x.label)} trong ${a.days} ngày gần nhất</li>`).join('')}</ul><a class="gold" href="san-pham.html">Mua hàng</a> · <a class="gold" href="#tong-quan" data-goact>Xem điều kiện</a></div></div>`;
+  }
 
   /* ---------- TỔNG QUAN ---------- */
   function pOverview(box, d, me) {
     const P = ADB.plan(d), b = ADB.balances(d, me.id), e = ADB.earnings(d, me.id), tier = me.tier || 'khach';
-    const C = (d.commissions || []).filter(c => c.user === me.id && c.kind !== 'missed');
+    const C = (d.commissions || []).filter(c => c.user === me.id && c.kind !== 'missed' && !['hold', 'missed', 'cancel'].includes(c.status));
     const months = [...Array(6)].map((_, i) => { const t = new Date(); t.setDate(1); t.setMonth(t.getMonth() - 5 + i); return t.toISOString().slice(0, 7); });
     const mv = months.map(m => C.filter(c => (c.date || '').startsWith(m)).reduce((s, c) => s + c.amount, 0));
     const spent = ADB.spent(d, me.id);
@@ -302,6 +333,7 @@
         ${isKhach(me) ? `<div style="grid-column:1 / -1;min-width:0"><div class="ref-mini" style="margin:0"><input class="input" id="ovRef" value="${esc(refLinkOf(me))}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" data-copy="ovRef">${icon('check')} Sao chép</button></div>${khachNote()}</div>` : ''}
       </section>
 
+      ${(me.tier || '') === 'daily' ? actCard(d, me) : ''}
       <section class="wgrid mt-2">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><a class="wlink" href="#vi" aria-label="${esc(W[k].name)}: ${wamt(k, b[k])}"></a><span class="ico">${icon(W[k].icon)}</span><span class="amt">${wamt(k, b[k])}</span><span class="nm">${esc(W[k].name)}</span><small class="hide-s">${esc(wnote(k))}</small><div class="wfoot">${histBtn(k)}</div></div>`).join('')}</section>
 
       <a class="wcard wtot mt-2" href="#hoa-hong" style="--c:#f3c76b"><span class="ico">${icon('trend')}</span><span style="display:grid;gap:4px;min-width:0"><span class="amt">${money(e.total)}</span><span class="nm">Tổng hoa hồng</span><small>${C.length} khoản đã ghi nhận · biểu đồ 6 tháng gần đây</small></span><span class="spk">${PSQ.spark(mv, '#f3c76b')}</span></a>
@@ -471,7 +503,7 @@
   function pCom(box, d, me) {
     const C = (d.commissions || []).filter(c => c.user === me.id && c.kind !== 'missed').sort((a, b) => (b.date || '').localeCompare(a.date || '')), CS = ADB.commissionStatus, P = ADB.plan(d);
     const CK = { ref: 'Thưởng giới thiệu', direct: 'Hoa hồng bán hàng', override: 'Thu nhập từ đại lý tuyến dưới' };
-    const sum = k => C.filter(c => c.kind === k).reduce((s, c) => s + c.amount, 0);
+    const sum = k => C.filter(c => c.kind === k && !['hold', 'missed', 'cancel'].includes(c.status)).reduce((s, c) => s + c.amount, 0);
     const KC = { ref: ['gold', 'gift'], direct: ['cyan', 'trend'], override: ['violet', 'users'] };
     const rows = C.filter(c => !comK || c.kind === comK);
     box.innerHTML = ph('Hoa hồng', `CTV ${P.ctvRate}%, đại lý ${P.agentRate}% đơn hàng của người mình giới thiệu; đại lý hưởng ${P.overrideRate}% thu nhập của đại lý tuyến dưới`) + `

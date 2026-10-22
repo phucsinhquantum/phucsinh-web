@@ -218,6 +218,17 @@
   const kindOf = c => c.kind || (c.status === 'missed' ? 'missed' : 'direct');
   const kindName = c => ADB.commissionKind[kindOf(c)] || ('F' + (c.level || 1));
   const KC = { ref: 'gold', direct: 'ship', override: 'violet', missed: 'failed' };
+  // đại lý chưa đủ điều kiện nhận thu nhập từ đại lý tuyến dưới (tự mua và có đơn bán trong N ngày)
+  function agentAct(d) {
+    const P = ADB.plan(d), A = d.users.filter(u => u.role !== 'admin' && u.tier === 'daily').map(u => ({ u, a: ADB.activity(d, u.id), held: (d.commissions || []).filter(c => c.user === u.id && c.status === 'hold').reduce((s, c) => s + c.amount, 0) }));
+    const bad = A.filter(x => !x.a.ok || x.a.left <= 7).sort((x, y) => (x.a.ok - y.a.ok) || (x.a.left - y.a.left));
+    const cell = p => p.ok ? `<span class="green nowrap">${fdate(p.last)}</span><br><small class="dim">còn ${p.left} ngày</small>` : '<span class="badge failed">Thiếu</span>';
+    const MODE = { hold: `giữ chờ tối đa ${P.holdDays} ngày`, lose: 'không nhận', up: 'chuyển lên đại lý tuyến trên' };
+    return `<div class="card glow-gold mt-2">${head('Điều kiện nhận thu nhập từ đại lý tuyến dưới', `${A.length - A.filter(x => !x.a.ok).length}/${A.length} đại lý đủ điều kiện · trong ${P.activeDays} ngày phải có đơn tự mua và đơn bán · chưa đủ thì ${MODE[P.overrideMode] || ''}`)}
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>Đại lý</th><th>Tự mua gần nhất</th><th>Đơn bán gần nhất</th>${P.overrideMode === 'hold' ? '<th>Đang giữ chờ</th>' : ''}<th>Tình trạng</th></tr></thead><tbody>
+      ${bad.length ? bad.map((x, i) => `<tr><td>${who(d, x.u.id, i)}</td><td>${cell(x.a.buy)}</td><td>${cell(x.a.sell)}</td>${P.overrideMode === 'hold' ? `<td class="nowrap ${x.held ? 'gold' : 'dim'}">${x.held ? money(x.held).replace('đ', ' PS') : '0 PS'}</td>` : ''}<td>${x.a.ok ? `<span class="badge pending">Sắp hết hạn</span>` : '<span class="badge failed">Chưa đủ</span>'}</td></tr>`).join('') : empty(P.overrideMode === 'hold' ? 5 : 4, 'Mọi đại lý đều đang đủ điều kiện.')}
+      </tbody></table></div><p class="tc-note mt-1">Danh sách gồm đại lý chưa đủ điều kiện và đại lý còn dưới 7 ngày. Đổi điều kiện ở Thiết lập hệ thống.</p></div>`;
+  }
   M.commissions = { render(el) {
     const d = ADB.load(), C = (d.commissions || []).slice().sort((a, b) => b.date.localeCompare(a.date)), CS = ADB.commissionStatus;
     const by = s => C.filter(c => c.status === s), sm = a => a.reduce((s, c) => s + c.amount, 0);
@@ -230,6 +241,7 @@
         ${stat('Thu nhập từ đại lý', sh(pk('override')), 'users', 'violet', 'glow-cyan', 'vào ví điểm thưởng và ví mua hàng')}
         ${stat('Bỏ lỡ', `<span class="dim">${sh(sm(by('missed')))}</span>`, 'close', 'red', 'glow-gold', 'không cộng vào ví, không tính chi')}
       </div>
+      ${agentAct(d)}
       <div class="card glow-mix mt-2">${head('Lịch sử hoa hồng', '<span id="tcCn"></span>', (can() && by('pending').length ? `<button class="btn btn-sm btn-gold" type="button" id="tcCall">${icon('check')} Duyệt tất cả đang chờ</button>` : '') + csvBtn('tcCCsv'))}
         <div class="toolbar"><input class="input" id="tcCq" placeholder="Tìm người nhận, mã đơn" aria-label="Tìm">
           <select class="input" id="tcCk" aria-label="Loại hoa hồng"><option value="">Mọi loại</option>${Object.entries(ADB.commissionKind).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select>

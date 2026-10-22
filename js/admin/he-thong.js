@@ -231,14 +231,19 @@
     ['overrideShop', 'Phần vào ví mua hàng', 'pct', 'Tỉ lệ của khoản thu nhập trên vào ví mua hàng, còn lại vào ví điểm thưởng.'],
     ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng và khi chuyển điểm thưởng sang khả dụng.'],
     ['agentThreshold', 'Mốc lên đại lý', 'money', 'Tổng tiền mua đã thanh toán cộng dồn để tự lên đại lý.'],
-    ['pkgCountsAs', 'Phần của gói tính vào doanh số mua hàng', 'money', 'Khi tính mốc lên đại lý, mỗi gói kích hoạt chỉ được tính số tiền này.']
+    ['pkgCountsAs', 'Phần của gói tính vào doanh số mua hàng', 'money', 'Khi tính mốc lên đại lý, mỗi gói kích hoạt chỉ được tính số tiền này.'],
+    ['activeDays', 'Chu kỳ xét điều kiện đại lý', 'days', 'Trong số ngày này, đại lý phải có đơn tự mua và đơn bán mới nhận thu nhập từ đại lý tuyến dưới.'],
+    ['activeMinBuy', 'Đơn tự mua tối thiểu', 'money', 'Giá trị tối thiểu của đơn tự mua để tính là đủ điều kiện. 0 là đơn nào cũng tính.'],
+    ['activeMinSell', 'Đơn bán tối thiểu', 'money', 'Giá trị tối thiểu của đơn do người mình giới thiệu trực tiếp mua. 0 là đơn nào cũng tính.'],
+    ['holdDays', 'Thời gian giữ chờ', 'days', 'Áp dụng khi chọn giữ chờ: quá số ngày này mà chưa đủ điều kiện thì khoản đó bị hủy.']
   ];
+  const MODES = [['hold', 'Giữ chờ, đủ điều kiện thì nhận'], ['lose', 'Không nhận (ghi bỏ lỡ)'], ['up', 'Chuyển cho đại lý đủ điều kiện ở tuyến trên']];
   ADMIN_MODULES.settings = {
     render(el) {
       const d = ADB.load(), S = Object.assign({}, ADB.DEFAULT_SETTINGS, d.settings || {}), edit = ADMIN.can('system');
       const P = ADB.plan(d);
       const dis = edit ? '' : ' disabled';
-      const pf = (k, label, val, kind, help) => `<div class="field"><label for="hs-p_${k}">${label}</label><div class="ht-unit"><input class="input" id="hs-p_${k}" name="p_${k}" type="number" min="0"${kind === 'pct' ? ' max="100" step="0.5"' : ' step="1000"'} value="${esc(val)}"${dis}><span>${kind === 'pct' ? '%' : 'đ'}</span></div><small class="dim ht-help">${help}</small></div>`;
+      const pf = (k, label, val, kind, help) => `<div class="field"><label for="hs-p_${k}">${label}</label><div class="ht-unit"><input class="input" id="hs-p_${k}" name="p_${k}" type="number" min="0"${kind === 'pct' ? ' max="100" step="0.5"' : kind === 'days' ? ' max="365" step="1"' : ' step="1000"'} value="${esc(val)}"${dis}><span>${kind === 'pct' ? '%' : kind === 'days' ? 'ngày' : 'đ'}</span></div><small class="dim ht-help">${help}</small></div>`;
       const f = (name, label, val, type = 'text', extra = '') => `<div class="field"><label for="hs-${name}">${label}</label><input class="input" id="hs-${name}" name="${name}" type="${type}" value="${esc(val)}"${extra}${dis}></div>`;
       el.innerHTML = `<form class="card glow-gold" data-set novalidate>
         <div class="card-head"><div><h3>Thiết lập hệ thống</h3><div class="sub">Áp dụng cho đơn hàng, hoa hồng, ví và thư gửi khách</div></div></div>
@@ -250,9 +255,9 @@
           <div class="ht-sec full mt-2">Kế hoạch trả thưởng</div>
           <p class="dim full" style="font-size:12.5px;margin:0">1 điểm PS = 1 đồng. Thay đổi chỉ áp dụng cho đơn hàng ghi nhận sau khi lưu, không tính lại các khoản đã trả.</p>
           ${PLAN_FIELDS.map(([k, label, kind, help]) => pf(k, label, P[k], kind, help)).join('')}
+          <div class="field"><label for="hs-p_overrideMode">Đại lý chưa đủ điều kiện</label><select class="input" id="hs-p_overrideMode" name="p_overrideMode"${dis}>${MODES.map(([k, l]) => `<option value="${k}"${P.overrideMode === k ? ' selected' : ''}>${l}</option>`).join('')}</select><small class="dim ht-help">Cách xử lý khoản thu nhập từ đại lý tuyến dưới khi đại lý chưa đủ điều kiện.</small></div>
           <div class="ht-sec full mt-2">Ví và điểm</div>
           ${f('minWithdraw', 'Rút tiền tối thiểu (đồng)', S.minWithdraw, 'number', ' min="0" step="10000"')}
-          ${f('pointRate', 'Tích điểm PS (% giá trị đơn)', +(S.pointRate * 100).toFixed(2), 'number', ' min="0" max="100" step="0.5"')}
           <label class="check" style="align-self:end;padding-bottom:10px"><input type="checkbox" name="autoPlace"${S.autoPlace ? ' checked' : ''}${dis}> Tự xếp thành viên mới lên cây theo người giới thiệu</label>
         </div>
         <p class="red mt-2" data-err style="font-size:13px;min-height:1em"></p>
@@ -269,8 +274,7 @@
         if (v('email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email'))) return fail('Email liên hệ chưa đúng.', 'email');
         if (v('hotline') && !/^[0-9 +.]{8,15}$/.test(v('hotline'))) return fail('Số hotline chưa đúng.', 'hotline');
         if (!v('mailSender')) return fail('Anh chị nhập người gửi thư tự động.', 'mailSender');
-        const pr = +v('pointRate'), mw = +v('minWithdraw');
-        if (v('pointRate') === '' || !(pr >= 0 && pr <= 100)) return fail('Tỉ lệ tích điểm phải từ 0 đến 100%.', 'pointRate');
+        const mw = +v('minWithdraw');
         if (v('minWithdraw') === '' || !(mw >= 0)) return fail('Mức rút tối thiểu không hợp lệ.', 'minWithdraw');
         const plan = {};
         for (const [k, label, kind] of PLAN_FIELDS) {
@@ -278,16 +282,18 @@
           if (v('p_' + k) === '' || !isFinite(n)) return fail(`Anh chị nhập ${label.toLowerCase()}.`, 'p_' + k);
           if (kind === 'pct' && !(n >= 0 && n <= 100)) return fail(`${label} phải từ 0 đến 100%.`, 'p_' + k);
           if (kind === 'money' && !(n >= 0)) return fail(`${label} không được âm.`, 'p_' + k);
+          if (kind === 'days' && !(n >= 1 && n <= 365)) return fail(`${label} phải từ 1 đến 365 ngày.`, 'p_' + k);
           plan[k] = kind === 'pct' ? Math.round(n * 100) / 100 : Math.round(n);
         }
         if (plan.pkgCountsAs > plan.pkgPrice) return fail('Phần của gói tính vào doanh số không được lớn hơn giá gói.', 'p_pkgCountsAs');
         if (plan.pkgPoints > plan.pkgPrice) return fail('Điểm nhận khi kích hoạt không được lớn hơn giá gói.', 'p_pkgPoints');
         if (plan.ctvRate > plan.agentRate) return fail('Hoa hồng của cộng tác viên đang cao hơn của đại lý. Anh chị kiểm tra lại.', 'p_ctvRate');
+        plan.overrideMode = form.p_overrideMode.value;
         err.textContent = '';
         const d2 = ADB.load();
         d2.settings = Object.assign({}, ADB.DEFAULT_SETTINGS, d2.settings || {}, {
           shopName: v('shopName'), hotline: v('hotline'), email: v('email'), address: v('address'), mailSender: v('mailSender'),
-          pointRate: Math.round(pr * 100) / 10000, minWithdraw: Math.round(mw), autoPlace: form.autoPlace.checked,
+          minWithdraw: Math.round(mw), autoPlace: form.autoPlace.checked,
           plan: Object.assign({}, ADB.PLAN, (d2.settings || {}).plan || {}, plan)
         });
         ADB.log(d2, 'Thiết lập hệ thống', `Gói ${money(plan.pkgPrice)} (${money(plan.pkgPoints)} PS); giới thiệu ${money(plan.refBonus)}; CTV ${plan.ctvRate}%, đại lý ${plan.agentRate}%, thu nhập đại lý ${plan.overrideRate}% (${plan.overrideShop}% vào ví mua hàng); thuế ${plan.taxRate}%; lên đại lý ${money(plan.agentThreshold)}; gói tính vào doanh số ${money(plan.pkgCountsAs)}; rút tối thiểu ${money(mw)}`); ADB.save(d2);
