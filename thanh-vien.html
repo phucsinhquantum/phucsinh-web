@@ -2,7 +2,11 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<style>html{background:#06080a}</style>
+<style>html{background:#06080a}  .tier-perks { list-style: none; padding: 0; margin: 2px 0 0; display: grid; gap: 3px; font-size: 13px; color: var(--text-2); }
+  .tier-perks li { position: relative; padding-left: 16px; }
+  .tier-perks li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--c); box-shadow: 0 0 6px var(--c); }
+  .rank-line .rank-gem { align-self: start; margin-top: 2px; }
+</style>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Thành viên · Phúc Sinh QuanTum</title>
 <meta name="description" content="Tài khoản thành viên Phúc Sinh QuanTum: ví điểm PS, cấp bậc cộng tác viên và đại lý, hoa hồng, đơn hàng.">
@@ -320,12 +324,12 @@
     return `<div class="step" style="--c:${ADB.TIERS.ctv.color}"><span class="sdot">${icon(ctvDone ? 'check' : 'star')}</span>
         <div class="row between wrap" style="gap:6px"><b>Cộng tác viên</b>${ctvDone ? `<span class="badge ok">Đã đạt${me.activated ? ' ' + fdate(me.activated) : ''}</span>` : o ? '<span class="badge pending">Chờ xác nhận thanh toán</span>' : `<a class="btn btn-sm btn-gold" href="#kich-hoat">Kích hoạt</a>`}</div>
         <span class="dim" style="font-size:13px">Kích hoạt gói ${money(P.pkgPrice)}</span>
-        <ul><li>Nhận ${ps(P.pkgPoints)} vào ví mua hàng</li><li>Thưởng ${money(P.refBonus)} khi người mình giới thiệu kích hoạt CTV</li><li>Hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu</li></ul></div>
+        <ul><li>Nhận ${ps(P.pkgPoints)} vào ví mua hàng</li><li>Khóa học xây kênh và bán hàng online trị giá 5.000.000đ</li><li>Công cụ làm video hàng loạt và livestream đa nền tảng trị giá 15.000.000đ</li><li>Thưởng ${money(P.refBonus)} khi người mình giới thiệu kích hoạt CTV</li><li>Hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu</li></ul></div>
       <div class="step" style="--c:${ADB.TIERS.daily.color}"><span class="sdot">${icon(agDone ? 'check' : 'award')}</span>
         <div class="row between wrap" style="gap:6px"><b>Đại lý</b>${agDone ? `<span class="badge ok">Đã đạt${me.agentSince ? ' ' + fdate(me.agentSince) : ''}</span>` : `<span class="dim nowrap" style="font-size:12.5px">${pctOf(Math.min(spent, P.agentThreshold), P.agentThreshold)}%</span>`}</div>
         <div><div class="progress mt-1"><i style="width:${Math.max(2, Math.min(100, pctOf(spent, P.agentThreshold)))}%"></i></div>
           <span class="dim" style="font-size:13px">Tổng mua ${money(spent)} / ${money(P.agentThreshold)}${agDone ? '' : ', còn ' + money(left)}. Gói kích hoạt được tính ${money(P.pkgCountsAs != null ? P.pkgCountsAs : P.pkgPoints)}.</span></div>
-        <ul><li>Hoa hồng ${P.agentRate}% đơn hàng của người mình giới thiệu</li><li>Hưởng ${P.overrideRate}% thu nhập của đại lý tuyến dưới (vào ví điểm thưởng và ví mua hàng)</li></ul></div>`;
+        <ul><li>Gian hàng online trị giá 10.000.000đ</li><li>Khóa học cao cấp cầm tay chỉ việc trị giá 15.000.000đ</li><li>Bộ công cụ tạo video hàng loạt và livestream đa nền tảng trị giá 30.000.000đ</li><li>Hoa hồng ${P.agentRate}% đơn hàng của người mình giới thiệu</li><li>Hưởng ${P.overrideRate}% thu nhập của đại lý tuyến dưới (vào ví điểm thưởng và ví mua hàng)</li></ul></div>`;
   }
 
   /* ---------- KÍCH HOẠT CTV ---------- */
@@ -339,7 +343,7 @@
       <div class="ref-code" style="letter-spacing:.04em">${money(P.pkgPrice)}</div>
       <div class="pkg-split mt-2"><div><span class="dim" style="font-size:12.5px">Vào ví mua hàng</span><b class="green">${ps(P.pkgPoints)}</b><span class="dim" style="font-size:12.5px">Dùng mua sản phẩm trên web</span></div>
         <div><span class="dim" style="font-size:12.5px">Phí nền tảng</span><b class="gold">${money(P.pkgPrice - P.pkgPoints)}</b>
-          <ul class="pkg-list"><li>Gian hàng online riêng</li><li>Fanpage và kênh bán hàng</li><li>Khóa học xây kênh và bán hàng online</li><li>Tài liệu sản phẩm, hình ảnh</li></ul></div></div>
+          <ul class="pkg-list"><li>Khóa học xây kênh và bán hàng online trị giá 5.000.000đ</li><li>Tặng công cụ làm video hàng loạt và livestream đa nền tảng trị giá 15.000.000đ</li></ul></div></div>
       <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${money(P.refBonus)} khi người đó kích hoạt CTV. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn kích hoạt #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
         <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>
@@ -678,7 +682,11 @@
   /* ---------- chưa đăng nhập ---------- */
   function guest(mode = 'login') {
     const d = ADB.load(), P = ADB.plan(d), T = ADB.TIERS;
-    const tiers = [['khach', 'user', 'Đăng ký tài khoản miễn phí, mua hàng như khách.'], ['ctv', 'star', `Kích hoạt gói ${money(P.pkgPrice)}: nhận ${ps(P.pkgPoints)} vào ví mua hàng, hoa hồng ${P.ctvRate}%.`], ['daily', 'award', `Tổng mua cộng dồn ${money(P.agentThreshold)}: hoa hồng ${P.agentRate}%.`]];
+    const tiers = [
+      ['khach', 'user', 'Đăng ký tài khoản miễn phí', ['Mua hàng điền mã giảm giá để nhận chiết khấu']],
+      ['ctv', 'star', `Đăng ký gói ${money(P.pkgPrice)}`, [`Nhận ${ps(P.pkgPoints)} vào tài khoản mua hàng`, 'Nhận ngay khóa học xây kênh và bán hàng online trị giá 5.000.000đ', 'Tặng công cụ làm video hàng loạt và livestream đa nền tảng trị giá 15.000.000đ', `Bán hàng nhận hoa hồng ${P.ctvRate}%`]],
+      ['daily', 'award', `Tổng mua cộng dồn ${money(P.agentThreshold)}`, ['Nhận ngay gian hàng online trị giá 10.000.000đ', 'Khóa học cao cấp cầm tay chỉ việc trị giá 15.000.000đ', 'Bộ công cụ tạo video hàng loạt và livestream đa nền tảng trị giá 30.000.000đ', `Bán hàng nhận hoa hồng ${P.agentRate}%`]]
+    ];
     view.innerHTML = `<div class="auth-wrap">
       <div class="card glow-mix auth-art"><div class="hero-bg"></div>
         <span class="eyebrow">Thành viên Phúc Sinh QuanTum</span>
@@ -703,7 +711,7 @@
         </form>
         <div class="divider"></div>
         <h3 style="font-size:15px">Cấp bậc thành viên</h3>
-        <div class="mt-1">${tiers.map(([k, ic, t]) => `<div class="rank-line"><span class="rank-gem" style="color:${T[k].color}">${icon(ic)}</span><b style="color:${T[k].color}">${esc(T[k].name)}</b><span class="dim" style="font-size:13px">${esc(t)}</span></div>`).join('')}</div>
+        <div class="mt-1">${tiers.map(([k, ic, t, perks]) => `<div class="rank-line"><span class="rank-gem" style="color:${T[k].color}">${icon(ic)}</span><b style="color:${T[k].color}">${esc(T[k].name)} <small class="dim" style="font-weight:500;font-size:12.5px">· ${esc(t)}</small></b><ul class="tier-perks" style="--c:${T[k].color}">${perks.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>
       </div>
     </div>`;
     $('#atabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) guest(b.dataset.m); });
