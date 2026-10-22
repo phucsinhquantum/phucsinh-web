@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Phúc Sinh QuanTum · Tinh hoa trầm hương Việt</title>
+<meta name="description" content="Phúc Sinh QuanTum: trầm hương tự nhiên tuyển chọn, vòng trầm, chuỗi hạt, vật phẩm phong thủy, chương trình thành viên tích điểm.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/intro.css">
+<script src="js/intro.js"></script>
+</head>
+<body data-page="home">
+<div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
+
+  <!-- Video trải nghiệm khách hàng. Chưa có video nào thì hiện khung giới thiệu bên dưới. -->
+  <section class="vids card glow-mix reveal" id="vids" hidden></section>
+
+  <section class="hero card glow-mix reveal" id="hero">
+    <div class="hero-bg" style="background-image:url(img/intro/phuc-sinh-canh-nen-ngay.jpg)"></div>
+    <span class="eyebrow">Trầm hương lượng tử · Phúc Sinh QuanTum</span>
+    <h1 class="mt-2">Có những giá trị chỉ mở ra <em>khi ta chậm lại.</em></h1>
+    <p class="lead">Trầm hương tự nhiên tuyển chọn, chế tác thủ công, có hồ sơ nguồn gốc cho từng sản phẩm. Thành viên tích điểm PS trên mỗi đơn hàng.</p>
+    <div class="actions">
+      <a class="btn btn-gold btn-lg" href="san-pham.html">Khám phá sản phẩm <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
+      <a class="btn btn-outline-gold btn-lg" href="bai-viet.html?id=tram-huong-luong-tu-la-gi">Trầm hương lượng tử là gì?</a>
+    </div>
+  </section>
+
+  <section class="grid g-4 keep-2 mt-3" id="stats"></section>
+
+  <div class="section-title"><div><span class="eyebrow">Bộ sưu tập</span><h2>Danh mục sản phẩm</h2></div>
+    <div class="cat-nav" id="catNav" hidden><button type="button" data-dir="-1" aria-label="Danh mục trước"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg></button><button type="button" data-dir="1" aria-label="Danh mục sau"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></button></div>
+    <a class="card-link" href="san-pham.html">Xem tất cả</a></div>
+  <section class="cat-row" id="cats"></section>
+
+  <div class="section-title"><div><span class="eyebrow">Được chọn nhiều</span><h2>Sản phẩm bán chạy</h2></div><a class="card-link" href="san-pham.html">Xem tất cả</a></div>
+  <section class="p-grid" id="best"></section>
+
+  <section class="grid g-main mt-4">
+    <div class="card glow-gold reveal">
+      <div class="card-head"><h3>Hạng thành viên</h3><span class="sub">theo tổng chi tiêu</span></div>
+      <div id="rankDonut"></div>
+      <div class="legend mt-2" id="rankLegend"></div>
+    </div>
+    <div class="card glow-cyan reveal">
+      <div class="card-head" style="flex-wrap:wrap"><div><h3>Hành trình cùng khách hàng</h3><div class="sub">Khách hàng mỗi tháng · 12 tháng gần nhất (số liệu mẫu)</div></div>
+        <span class="row" style="margin-left:auto;gap:14px;font-size:12px"><span class="row" style="gap:6px"><span class="dot" style="color:#f3c76b"></span>Khách mới</span><span class="row" style="gap:6px"><span class="dot" style="color:#4fe6df"></span>Quay lại</span></span></div>
+      <div id="journey"></div>
+    </div>
+  </section>
+
+  <section class="grid g-main-r mt-3">
+    <div class="card glow-mix reveal">
+      <div class="card-head"><div><span class="eyebrow">Kiến thức</span><h3 class="mt-1">Mới trên góc trầm hương</h3></div><a class="card-link" href="kien-thuc.html">Xem tất cả</a></div>
+      <div class="grid g-3" id="posts"></div>
+    </div>
+    <div class="card reveal">
+      <div class="card-head"><h3>Khách hàng nói gì</h3></div>
+      <div class="feed" id="reviews"></div>
+    </div>
+  </section>
+
+  <section class="card glow-gold mt-3 reveal" style="padding:clamp(22px,4vw,40px)">
+    <div class="grid g-main-r" style="align-items:center">
+      <div><span class="eyebrow">Chương trình thành viên</span>
+        <h2 class="display mt-1" style="font-size:clamp(28px,3.4vw,42px)">Tích điểm PS, lên hạng, nhận ưu đãi riêng</h2>
+        <p class="muted mt-1">Mỗi đơn hàng được cộng 10% giá trị thành điểm PS. Thành viên hạng Vàng trở lên được quà sinh nhật, thay dây miễn phí và tư vấn riêng.</p></div>
+      <div class="row wrap" style="justify-content:flex-end"><a class="btn btn-grad btn-lg" href="thanh-vien.html">Đăng ký miễn phí</a><a class="btn btn-ghost btn-lg" href="lien-he.html">Tư vấn</a></div>
+    </div>
+  </section>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, $$, esc, icon, productCard, area, donut } = PSQ;
+  const ico = ['', 'gold', 'violet', 'green'];
+  $('#stats').innerHTML = STATS.map((s, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat reveal"><div class="stat-top"><span class="stat-ico ${ico[i]}">${icon(s.icon)}</span>${esc(s.label)}</div><div class="stat-val">${esc(s.value)}</div></div>`).join('');
+  $('#cats').innerHTML = CATEGORIES.map((c, i) => {
+    const n = PRODUCTS.filter(p => p.cat === c.id).length, p = PRODUCTS.find(x => x.cat === c.id);
+    return `<a class="card ${['glow-cyan', 'glow-gold', 'glow-mix'][i % 3]} cat-item" href="san-pham.html?cat=${c.id}"><div class="p-img">${p ? PSQ.art(p) : ''}</div><div class="cat-name"><h3>${esc(c.name)}</h3><span>${n} sản phẩm</span></div></a>`;
+  }).join('');
+  // nút trượt chỉ hiện khi danh mục nhiều hơn số ô nhìn thấy
+  const row = $('#cats'), nav = $('#catNav');
+  const navCheck = () => { nav.hidden = row.scrollWidth <= row.clientWidth + 4; };
+  navCheck(); addEventListener('resize', navCheck);
+  nav.addEventListener('click', e => { const b = e.target.closest('button'); if (b) row.scrollBy({ left: +b.dataset.dir * row.clientWidth * 0.8, behavior: 'smooth' }); });
+
+  /* ---------- video trải nghiệm khách hàng ---------- */
+  const V = PSQ.videos, vids = V.list(), box = $('#vids');
+  const isAdmin = (PSQ.auth.user && PSQ.auth.user() || {}).role === 'admin';
+  const play = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  if (vids.length || isAdmin) {
+    $('#hero').hidden = true; box.hidden = false;
+    const head = `<div class="vids-head"><div><span class="eyebrow">Trải nghiệm thật</span><h2 class="mt-1">Khách hàng kể về trầm hương Phúc Sinh</h2></div>${isAdmin ? '<a class="btn btn-sm btn-outline-gold" href="quan-tri.html#videos" style="margin-left:auto">Quản lý video</a>' : ''}</div>`;
+    if (!vids.length) {
+      box.innerHTML = head + `<div class="empty">${icon('activity')}Chưa có video nào. Vào Quản trị, thẻ Video khách hàng, dán link YouTube để hiển thị ở đây. Khi chưa có video, khách sẽ thấy khung giới thiệu như cũ.</div>`;
+    } else {
+      // mở file trực tiếp trên máy thì YouTube không cho phát nhúng, nên mở sang YouTube
+      const local = location.protocol === 'file:';
+      const main = (v, auto) => `<div class="vid-main" id="vmain">${auto && !local ? `<iframe src="${V.embed(v.id)}" title="${esc(v.title || 'Video khách hàng')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>` : `<img src="${V.thumb(v.id)}" alt=""><button class="vid-play" type="button" data-play="${v.id}" aria-label="Phát video"><span class="ring">${play}</span><span class="vid-cap"><b>${esc(v.title || 'Video trải nghiệm khách hàng')}</b><small>${esc(v.name || '')}</small></span></button>`}</div>
+        <div class="row between mt-1" style="gap:8px"><span class="dim" style="font-size:13px">${esc(v.title || '')}${v.name ? ' · ' + esc(v.name) : ''}</span><a class="vid-yt cyan" href="${V.watch(v.id)}" target="_blank" rel="noopener">Xem trên YouTube</a></div>`;
+      const list = vids.length > 1 ? `<div class="vid-list" id="vlist">${vids.map((v, i) => `<button class="vid-item${i ? '' : ' on'}" type="button" data-i="${i}"><span class="th"><img src="${V.thumb(v.id)}" alt="" loading="lazy"></span><span><b>${esc(v.title || 'Video trải nghiệm khách hàng')}</b><small>${esc(v.name || '')}</small></span></button>`).join('')}</div>` : '';
+      box.innerHTML = head + `<div class="vids-body${vids.length > 1 ? '' : ' single'}"><div id="vwrap">${main(vids[0])}</div>${list}</div>`;
+      const show = (i, auto) => { $('#vwrap').innerHTML = main(vids[i], auto); $$('#vlist .vid-item').forEach(b => b.classList.toggle('on', +b.dataset.i === i)); cur = i; };
+      let cur = 0;
+      box.addEventListener('click', e => {
+        const it = e.target.closest('.vid-item'); if (it) { show(+it.dataset.i, true); if (local) open(V.watch(vids[+it.dataset.i].id), '_blank'); return; }
+        const pl = e.target.closest('[data-play]'); if (pl) { if (local) open(V.watch(pl.dataset.play), '_blank'); else show(cur, true); }
+      });
+    }
+  }
+  $('#best').innerHTML = [...PRODUCTS].sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0)).slice(0, 8).map(productCard).join('');
+  const months = ['T11', 'T12', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10'];
+  const draw = () => area($('#journey'), { labels: months, height: 250, mark: 9, fmt: v => Math.round(v).toLocaleString('vi-VN'),
+    series: [{ name: 'Khách mới', color: '#f3c76b', dots: true, values: [320, 380, 360, 470, 450, 560, 520, 610, 640, 780, 700, 760] },
+             { name: 'Quay lại', color: '#4fe6df', values: [180, 200, 230, 240, 260, 280, 300, 330, 340, 360, 390, 420] }] });
+  draw(); let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(draw, 200); });
+  const seg = [{ name: 'Đồng', value: 52, color: '#c98b5a' }, { name: 'Bạc', value: 28, color: '#b98cff' }, { name: 'Vàng', value: 14, color: '#f3c76b' }, { name: 'Kim cương', value: 6, color: '#4fe6df' }];
+  donut($('#rankDonut'), { segments: seg, center: '12.000+', sub: 'thành viên' });
+  $('#rankLegend').innerHTML = seg.map(s => `<div class="legend-row"><span class="dot" style="color:${s.color}"></span><span>${s.name}</span><span>${s.value}%</span></div>`).join('');
+  $('#posts').innerHTML = POSTS.slice(0, 3).map(p => `<a class="card post-card" href="bai-viet.html?id=${p.id}" style="box-shadow:none"><div class="post-cover" style="background-image:url(${p.cover})"></div><div class="post-body"><div class="post-meta"><span class="badge gold">${esc(POST_CATS.find(c => c.id === p.cat).name)}</span></div><h3>${esc(p.title)}</h3><div class="post-meta">${p.date} · ${p.read} phút đọc</div></div></a>`).join('');
+  $('#reviews').innerHTML = REVIEWS.map((r, i) => `<div class="feed-item"><span class="avatar ${['', 'v', 'g'][i % 3]}">${PSQ.initials(r.name)}</span><div><b>${esc(r.name)} <span class="gold" style="font-size:12px">★★★★★</span></b><small>${esc(r.place)}</small><p class="muted mt-1" style="font-size:14px">${esc(r.text)}</p></div></div>`).join('');
+  PSQ.reveal();
+})();
+</script>
+</body>
+</html>

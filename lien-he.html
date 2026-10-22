@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Liên hệ · Phúc Sinh QuanTum</title>
+<meta name="description" content="Liên hệ Phúc Sinh QuanTum: điện thoại, Zalo, email, địa chỉ cửa hàng, gửi yêu cầu tư vấn và chính sách đổi trả, bảo hành, giao hàng, thanh toán.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .c-card { display: grid; gap: 12px; align-content: start; transition: transform .3s; }
+  a.c-card:hover { transform: translateY(-3px); }
+  .c-card .stat-ico { width: 44px; height: 44px; border-radius: 12px; }
+  .c-card .stat-ico svg { width: 22px; height: 22px; }
+  .c-card small { font-size: 12px; color: var(--text-3); letter-spacing: .04em; }
+  .c-card b { display: block; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+  .c-card .go { font-size: 12px; color: var(--cyan); }
+  @media (min-width: 700px) { .c-card { grid-template-rows: auto auto auto 1fr; } .c-card .go { align-self: end; } }
+  .form-card { padding: clamp(20px, 3vw, 32px); }
+  .field .err { font-size: 12px; color: var(--red); min-height: 0; }
+  .field.bad .input { border-color: rgba(255, 107, 107, .65); box-shadow: 0 0 0 3px rgba(255, 107, 107, .1); }
+  .req { color: var(--gold); }
+  .done { text-align: center; display: grid; justify-items: center; gap: 12px; padding: 30px 10px; }
+  .done .stat-ico { width: 64px; height: 64px; border-radius: 50%; box-shadow: 0 0 30px -6px rgba(69, 224, 143, .6); }
+  .done .stat-ico svg { width: 30px; height: 30px; }
+  .map-ph { position: relative; min-height: 240px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line-2);
+    background:
+      radial-gradient(circle at 55% 48%, rgba(243, 199, 107, .22), transparent 32%),
+      linear-gradient(115deg, transparent 46%, rgba(79, 230, 223, .22) 47%, rgba(79, 230, 223, .22) 48.5%, transparent 49.5%),
+      linear-gradient(20deg, transparent 62%, rgba(255, 255, 255, .08) 63%, rgba(255, 255, 255, .08) 64%, transparent 65%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 32px),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 32px),
+      #0a1013; display: grid; place-items: center; }
+  .map-ph .pin { width: 52px; height: 52px; display: grid; place-items: center; color: var(--gold); filter: drop-shadow(0 0 12px var(--gold-glow)); animation: bob 2.4s ease-in-out infinite; }
+  .map-ph .pin svg { width: 44px; height: 44px; }
+  .map-ph .lbl { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(6, 8, 10, .8); border: 1px solid var(--line-2); font-size: 13px; color: var(--text-2); }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+  .map-frame { width: 100%; height: 280px; border: 0; border-radius: 14px; display: block; filter: grayscale(.3) contrast(1.05); }
+  .socials { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .socials a { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .2); font-size: 14px; transition: border-color .2s, color .2s; }
+  .socials a:hover { border-color: rgba(243, 199, 107, .5); color: var(--gold); }
+  .socials svg { color: var(--gold); }
+  .policy { display: grid; gap: 12px; align-content: start; }
+  .policy .stat-ico { width: 44px; height: 44px; border-radius: 12px; }
+  .policy .stat-ico svg { width: 22px; height: 22px; }
+  .policy h3 { font-size: 16px; }
+  .policy ul { margin: 0; padding-left: 18px; font-size: 14px; color: var(--text-2); display: grid; gap: 6px; }
+  #formWrap { scroll-margin-top: calc(var(--top-h) + 10px); }
+  #chinh-sach { scroll-margin-top: calc(var(--top-h) + 10px); }
+  @media (max-width: 1099px) { .side-col { grid-template-columns: 1fr 1fr; align-items: start; } }
+  @media (max-width: 699px) {
+    .contact-cards { grid-template-columns: 1fr !important; gap: 10px; }
+    .contact-cards > * { grid-column: auto !important; }
+    .c-card { grid-template-columns: auto 1fr; align-items: center; gap: 4px 14px; }
+    .c-card .stat-ico { grid-row: span 3; }
+    .side-col { grid-template-columns: 1fr; }
+    #cform .btn-lg { width: 100%; }
+    .pol-title { flex-wrap: wrap; }
+    .pol-title .sub { flex-basis: 100%; margin-left: 0 !important; }
+  }
+</style>
+</head>
+<body data-page="contact">
+<div id="page" data-title="Liên hệ" data-crumb="Liên hệ">
+
+  <section class="hero page-hero card glow-mix reveal">
+    <div class="hero-bg" style="background-image:url(img/intro/canh-3-cong-sang.jpg)"></div>
+    <span class="eyebrow">Luôn sẵn lòng lắng nghe</span>
+    <h1 class="mt-2">Trò chuyện cùng <em>Phúc Sinh QuanTum</em></h1>
+    <p class="lead">Tư vấn chọn trầm, hỏi về đơn hàng, bảo hành hay hợp tác đại lý, anh chị cứ nhắn, chúng tôi phản hồi trong giờ làm việc.</p>
+  </section>
+
+  <section class="grid g-5 contact-cards mt-3" id="info"></section>
+
+  <section class="grid g-main-r mt-3">
+    <div class="card glow-gold form-card reveal" id="formWrap">
+      <div class="card-head"><div><span class="eyebrow">Gửi lời nhắn</span><h3 class="mt-1" style="font-size:20px">Để lại thông tin, chúng tôi gọi lại cho anh chị</h3></div></div>
+      <form class="form-grid" id="cform" novalidate>
+        <div class="field"><label for="f-name">Họ và tên <span class="req">*</span></label><input class="input" id="f-name" name="name" autocomplete="name" placeholder="Nguyễn Văn A"><span class="err"></span></div>
+        <div class="field"><label for="f-phone">Số điện thoại <span class="req">*</span></label><input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0900 000 000"><span class="err"></span></div>
+        <div class="field"><label for="f-email">Email</label><input class="input" id="f-email" name="email" type="email" autocomplete="email" placeholder="ten@email.com"><span class="err"></span></div>
+        <div class="field"><label for="f-topic">Chủ đề</label>
+          <select class="input" id="f-topic" name="topic">
+            <option>Tư vấn chọn sản phẩm</option><option>Đơn hàng và giao hàng</option><option>Bảo hành, đổi trả</option><option>Chương trình thành viên</option><option>Hợp tác đại lý</option><option>Khác</option>
+          </select><span class="err"></span></div>
+        <div class="field full"><label for="f-text">Nội dung <span class="req">*</span></label><textarea class="input" id="f-text" name="text" rows="5" placeholder="Anh chị cần tư vấn điều gì?"></textarea><span class="err"></span></div>
+        <div class="full row wrap between">
+          <span class="dim" style="font-size:12px">Thông tin chỉ dùng để liên hệ lại, không chia sẻ cho bên thứ ba.</span>
+          <button class="btn btn-gold btn-lg" type="submit">Gửi lời nhắn</button>
+        </div>
+      </form>
+    </div>
+
+    <aside class="stack side-col">
+      <div class="card glow-cyan reveal">
+        <div class="card-head"><h3>Cửa hàng</h3><a class="card-link" id="mapLink" target="_blank" rel="noopener">Mở Google Maps</a></div>
+        <div id="map"></div>
+      </div>
+      <div class="card reveal">
+        <div class="card-head"><h3>Kết nối với PSQ</h3><span class="sub">(mẫu)</span></div>
+        <div class="socials" id="socials"></div>
+      </div>
+    </aside>
+  </section>
+
+  <section id="chinh-sach">
+    <div class="section-title pol-title"><div><span class="eyebrow">Mua sắm an tâm</span><h2>Chính sách</h2></div><span class="sub dim" style="margin-left:auto;font-size:12px">Nội dung mẫu, cần thay theo chính sách thật</span></div>
+    <div class="grid g-4" id="policies"></div>
+  </section>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, $$, esc, icon, toast, db } = PSQ;
+  const S = SITE;
+  const tel = S.phone.replace(/\s/g, '');
+  const info = [
+    { ico: 'phone', c: 'gold', k: 'Điện thoại', v: S.phone, href: 'tel:' + tel, go: 'Gọi ngay' },
+    { ico: 'zalo', c: '', k: 'Zalo', v: S.zalo, href: 'https://zalo.me/' + S.zalo, go: 'Nhắn Zalo', ext: 1 },
+    { ico: 'mail', c: 'violet', k: 'Email', v: S.email, href: 'mailto:' + S.email, go: 'Gửi email' },
+    { ico: 'pin', c: 'green', k: 'Địa chỉ', v: S.address, href: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(S.address), go: 'Chỉ đường', ext: 1 },
+    { ico: 'clock', c: 'gold', k: 'Giờ mở cửa', v: S.hours }
+  ];
+  $('#info').innerHTML = info.map((x, i) => {
+    const tag = x.href ? 'a' : 'div';
+    const attr = x.href ? ` href="${esc(x.href)}"${x.ext ? ' target="_blank" rel="noopener"' : ''}` : '';
+    return `<${tag} class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} c-card reveal"${attr}><span class="stat-ico ${x.c}">${icon(x.ico)}</span><small>${x.k}</small><b>${esc(x.v)}</b>${x.go ? `<span class="go">${x.go} ›</span>` : '<span class="go" style="color:var(--text-3)">Kể cả ngày lễ (mẫu)</span>'}</${tag}>`;
+  }).join('');
+
+  // bản đồ
+  const mapsUrl = info[3].href;
+  $('#mapLink').href = mapsUrl;
+  $('#map').innerHTML = S.mapEmbed
+    ? `<iframe class="map-frame" src="${esc(S.mapEmbed)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Bản đồ cửa hàng" allowfullscreen></iframe>`
+    : `<a class="map-ph" href="${esc(mapsUrl)}" target="_blank" rel="noopener" aria-label="Mở bản đồ"><span class="pin">${icon('pin')}</span><span class="lbl">${icon('map')} ${esc(S.address)}</span></a>`;
+
+  // mạng xã hội: thêm SITE.social = { facebook, youtube, tiktok } trong data.js để có link thật
+  const so = S.social || {};
+  const socials = [
+    { ico: 'facebook', n: 'Facebook', u: so.facebook },
+    { ico: 'zalo', n: 'Zalo OA', u: so.zalo || 'https://zalo.me/' + S.zalo },
+    { ico: 'youtube', n: 'YouTube', u: so.youtube },
+    { ico: 'tiktok', n: 'TikTok', u: so.tiktok }
+  ];
+  $('#socials').innerHTML = socials.map(s => `<a href="${esc(s.u || '#')}"${s.u ? ' target="_blank" rel="noopener"' : ' data-soon'}>${icon(s.ico)}<span>${s.n}</span></a>`).join('');
+  $('#socials').addEventListener('click', e => { if (e.target.closest('[data-soon]')) { e.preventDefault(); toast('Trang này sắp ra mắt, anh chị theo dõi Zalo nhé.'); } });
+
+  // chính sách (mẫu)
+  const pol = [
+    { ico: 'back', c: 'gold', t: 'Đổi trả trong 7 ngày', d: ['Đổi trả trong 7 ngày nếu sản phẩm lỗi do sản xuất hoặc giao sai mẫu.', 'Sản phẩm còn nguyên tem, hộp và giấy kiểm định.', 'Miễn phí vận chuyển khi lỗi từ phía PSQ.'] },
+    { ico: 'shield', c: '', t: 'Bảo hành', d: ['Bảo hành dây và khóa trong 12 tháng.', 'Thay dây miễn phí cho thành viên.', 'Đánh bóng, vệ sinh hạt trầm theo yêu cầu.'] },
+    { ico: 'truck', c: 'violet', t: 'Giao hàng', d: [S.shipFee ? 'Phí giao hàng theo khu vực.' : 'Miễn phí giao hàng toàn quốc.', 'Nội thành 1 đến 2 ngày, tỉnh khác 2 đến 5 ngày.', 'Được kiểm tra hàng trước khi thanh toán.'] },
+    { ico: 'wallet', c: 'green', t: 'Thanh toán', d: ['Thanh toán khi nhận hàng (COD).', 'Chuyển khoản ngân hàng hoặc quét mã QR.', 'Xuất hóa đơn theo yêu cầu.'] }
+  ];
+  $('#policies').innerHTML = pol.map((p, i) => `<div class="card ${['glow-gold', 'glow-cyan', 'glow-mix', 'glow-cyan'][i]} policy reveal"><span class="stat-ico ${p.c}">${icon(p.ico)}</span><h3>${p.t} <span class="dim" style="font-weight:400;font-size:12px">(mẫu)</span></h3><ul>${p.d.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
+
+  // biểu mẫu liên hệ
+  const form = $('#cform');
+  const setErr = (name, msg) => { const f = form.elements[name].closest('.field'); f.classList.toggle('bad', !!msg); $('.err', f).textContent = msg || ''; };
+  const topicQ = PSQ.qs('topic'); if (topicQ) { const o = [...form.topic.options].find(o => o.text === topicQ); if (o) o.selected = true; }
+  form.addEventListener('input', e => { if (e.target.name) setErr(e.target.name, ''); });
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = k => form.elements[k].value.trim();
+    const errs = {};
+    if (v('name').length < 2) errs.name = 'Anh chị nhập họ tên giúp chúng tôi.';
+    if (!/^(\+?84|0)\d{8,10}$/.test(v('phone').replace(/[\s.-]/g, ''))) errs.phone = 'Số điện thoại chưa đúng (ví dụ 0901 234 567).';
+    if (v('email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email'))) errs.email = 'Email chưa đúng định dạng.';
+    if (v('text').length < 5) errs.text = 'Anh chị nhập nội dung cần tư vấn.';
+    ['name', 'phone', 'email', 'text'].forEach(k => setErr(k, errs[k]));
+    const first = Object.keys(errs)[0];
+    if (first) { form.elements[first].focus(); toast('Anh chị kiểm tra lại các ô được đánh dấu.'); return; }
+    const d = db.load(); d.messages = d.messages || [];
+    const msg = { id: 'm' + Date.now(), name: v('name'), phone: v('phone'), email: v('email'), topic: form.topic.value, text: v('text'), date: new Date().toISOString(), status: 'new' };
+    d.messages.unshift(msg); db.save(d);
+    toast('Đã gửi lời nhắn. Cảm ơn anh chị!');
+    const wrap = $('#formWrap');
+    wrap.innerHTML = `<div class="done"><span class="stat-ico green">${icon('check')}</span><h3 class="display" style="font-size:30px">Cảm ơn ${esc(msg.name)}!</h3>
+      <p class="muted" style="max-width:46ch">Chúng tôi đã nhận lời nhắn về “${esc(msg.topic)}” và sẽ gọi lại số ${esc(msg.phone)} trong giờ làm việc (${esc(S.hours)}).</p>
+      <div class="row wrap" style="justify-content:center"><button class="btn btn-outline-gold" type="button" id="again">Gửi lời nhắn khác</button><a class="btn btn-ghost" href="https://zalo.me/${esc(S.zalo)}" target="_blank" rel="noopener">${icon('zalo')} Nhắn Zalo ngay</a></div></div>`;
+    $('#again').onclick = () => location.reload();
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  PSQ.reveal();
+})();
+</script>
+</body>
+</html>

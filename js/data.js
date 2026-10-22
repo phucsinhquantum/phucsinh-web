@@ -1,0 +1,162 @@
+/* =========================================================
+   DỮ LIỆU WEB APP PHÚC SINH QUANTUM — sửa nội dung tại đây
+   - Ảnh sản phẩm: để trống image: '' sẽ hiện hình vẽ mẫu (art).
+     Muốn dùng ảnh thật: chép ảnh vào img/san-pham/ rồi ghi
+     image: 'img/san-pham/ten-anh.jpg'
+   - Chữ có ghi (mẫu) là nội dung giữ chỗ, anh thay bằng nội dung thật.
+   ========================================================= */
+window.SITE = {
+  brand: 'Phúc Sinh QuanTum',
+  short: 'PSQ',
+  slogan: 'Tinh hoa trầm hương Việt',
+  logo: 'img/intro/logo-psq.png',
+  phone: '0900 000 000',           // TODO: số điện thoại thật
+  zalo: '0900000000',
+  email: 'lienhe@tenmien.vn',
+  address: 'Số nhà, đường, phường, tỉnh/thành phố (mẫu)',
+  hours: 'Thứ 2 đến Chủ nhật, 8:00 đến 20:00',
+  website: 'tenmien.vn',
+  social: { facebook: '', youtube: '', tiktok: '', zalo: '' },   // link mạng xã hội thật (để trống = "sắp ra mắt")
+  mapEmbed: '',                    // dán link nhúng Google Maps (https://www.google.com/maps/embed?...)
+  bank: { name: 'Ngân hàng (mẫu)', account: '0000 0000 0000', owner: 'CONG TY PHUC SINH QUANTUM' },
+  shipFee: 0,                      // phí giao hàng (0 = miễn phí)
+  pointRate: 0.1,                  // 10% giá trị đơn được cộng điểm PS
+  // tài khoản quản trị dùng thử (chỉ lưu trên trình duyệt, cần máy chủ thật trước khi chạy chính thức)
+  demoAdmin: { email: 'admin@psq.vn', pass: 'psq2026' }
+};
+
+window.CATEGORIES = [
+  { id: 'vong-tay', name: 'Vòng tay trầm hương', icon: 'ring' },
+  { id: 'tram-tho', name: 'Trầm hương thô', icon: 'gem' },
+  { id: 'day-chuyen', name: 'Dây chuyền trầm hương', icon: 'beads' },
+  { id: 'tuong', name: 'Tượng trầm hương', icon: 'award' },
+  { id: 'tra', name: 'Trà trầm hương', icon: 'leaf' },
+  { id: 'luu-niem', name: 'Hàng lưu niệm', icon: 'gift' }
+];
+
+// Sản phẩm theo catalogue Phúc Sinh QuanTum (15/10/2026). Ảnh trong img/san-pham/. art: hình vẽ dự phòng khi thiếu ảnh.
+window.PRODUCTS = [
+  {"id": "vong-6-8li-tre-em", "cat": "vong-tay", "name": "Vòng trầm hương lượng tử dòng trẻ em", "price": 3990000, "art": "bracelet", "image": "img/san-pham/sp-00.jpg", "spec": "6-8 li, 17 hạt/vòng", "material": "Trầm hương tự nhiên", "tone": 0, "hot": true, "desc": "6-8 li, 17 hạt/vòng. Có thể mix mặt Phật, hoa sen, thánh giá, tỳ hưu,... hoặc đá phong thủy theo mệnh."},
+  {"id": "vong-10li-hoc-sinh", "cat": "vong-tay", "name": "Vòng trầm hương lượng tử dòng học sinh", "price": 6800000, "art": "bracelet", "image": "img/san-pham/sp-01.jpg", "spec": "10 li, 17 hạt/vòng", "material": "Trầm hương tự nhiên", "tone": 1, "desc": "10 li, 17 hạt/vòng. Có thể mix mặt Phật, hoa sen, thánh giá, tỳ hưu,... hoặc đá phong thủy theo mệnh."},
+  {"id": "vong-12li-nu-doanh-nhan", "cat": "vong-tay", "name": "Vòng trầm hương lượng tử dòng nữ doanh nhân", "price": 9900000, "art": "bracelet", "image": "img/san-pham/sp-02.jpg", "spec": "12 li, 14-16 hạt/vòng", "material": "Trầm hương tự nhiên", "tone": 2, "hot": true, "desc": "12 li, 14-16 hạt/vòng. Có thể mix mặt Phật, hoa sen, thánh giá, tỳ hưu,... hoặc đá phong thủy theo mệnh."},
+  {"id": "vong-14li-nam-doanh-nhan", "cat": "vong-tay", "name": "Vòng trầm hương lượng tử dòng nam doanh nhân", "price": 13900000, "art": "bracelet", "image": "img/san-pham/sp-03.jpg", "spec": "14 li, 14 hạt/vòng", "material": "Trầm hương tự nhiên", "tone": 3, "hot": true, "desc": "14 li, 14 hạt/vòng. Có thể mix mặt Phật, hoa sen, thánh giá, tỳ hưu,... hoặc đá phong thủy theo mệnh."},
+  {"id": "vong-16li-cao-cap", "cat": "vong-tay", "name": "Vòng trầm hương lượng tử dòng cao cấp", "price": 16800000, "art": "bracelet", "image": "img/san-pham/sp-04.jpg", "spec": "16 li, 13 hạt/vòng", "material": "Trầm hương tự nhiên", "tone": 4, "desc": "16 li, 13 hạt/vòng. Có thể mix mặt Phật, hoa sen, thánh giá, tỳ hưu,... hoặc đá phong thủy theo mệnh."},
+  {"id": "vong-108-hat", "cat": "vong-tay", "name": "Vòng trầm hương lượng tử 108 hạt", "price": 16800000, "art": "mala", "image": "img/san-pham/sp-05.jpg", "spec": "Hạt 6 li, 8 li hoặc 10 li, 108 hạt", "material": "Trầm hương tự nhiên", "tone": 0, "hot": true, "desc": "Hạt 6 li, 8 li hoặc 10 li, 108 hạt. Có thể mix mặt Phật, hoa sen, thánh giá, tỳ hưu,... hoặc đá phong thủy theo mệnh."},
+  {"id": "vong-lu-thong", "cat": "vong-tay", "name": "Vòng trầm hương lượng tử lu thống", "price": 16800000, "art": "bracelet", "image": "img/san-pham/sp-06.jpg", "spec": "10-12 li, 14-16 hạt", "material": "Trầm hương tự nhiên", "tone": 1, "desc": "10-12 li, 14-16 hạt. Có thể mix mặt Phật, hoa sen, thánh giá, tỳ hưu,... hoặc đá phong thủy theo mệnh."},
+  {"id": "vong-nhat-ky-nhi-bong", "cat": "vong-tay", "name": "Vòng trầm hương lượng tử \"Nhất kỳ nhì bông\"", "price": 16800000, "art": "bracelet", "image": "img/san-pham/sp-07.jpg", "spec": "14 li, 14 hạt", "material": "Trầm hương tự nhiên", "tone": 2, "desc": "14 li, 14 hạt. Có thể mix mặt Phật, hoa sen, thánh giá, tỳ hưu,... hoặc đá phong thủy theo mệnh."},
+  {"id": "dau-an-tram-tho-1", "cat": "tram-tho", "name": "Dấu ấn trầm thô trầm hương lượng tử (mẫu 1)", "price": 16800000, "art": "bracelet", "image": "img/san-pham/sp-08.jpg", "spec": "Mẫu mã lạ mắt", "material": "Trầm hương thô tự nhiên", "tone": 3, "hot": true, "desc": "Mẫu mã lạ mắt."},
+  {"id": "dau-an-tram-tho-2", "cat": "tram-tho", "name": "Dấu ấn trầm thô trầm hương lượng tử (mẫu 2)", "price": 16800000, "art": "bracelet", "image": "img/san-pham/sp-09.jpg", "spec": "Mẫu mã lạ mắt", "material": "Trầm hương thô tự nhiên", "tone": 4, "desc": "Mẫu mã lạ mắt."},
+  {"id": "dau-an-tram-tho-3", "cat": "tram-tho", "name": "Dấu ấn trầm thô trầm hương lượng tử (mẫu 3)", "price": 18800000, "art": "bracelet", "image": "img/san-pham/sp-10.jpg", "spec": "Mẫu mã lạ mắt", "material": "Trầm hương thô tự nhiên", "tone": 0, "desc": "Mẫu mã lạ mắt."},
+  {"id": "dau-an-tram-tho-4", "cat": "tram-tho", "name": "Dấu ấn trầm thô trầm hương lượng tử (mẫu 4)", "price": 16800000, "art": "bracelet", "image": "img/san-pham/sp-11.jpg", "spec": "Mẫu mã lạ mắt", "material": "Trầm hương thô tự nhiên", "tone": 1, "desc": "Mẫu mã lạ mắt."},
+  {"id": "dau-an-tram-tho-mau-truc", "cat": "tram-tho", "name": "Dấu ấn trầm thô trầm hương lượng tử mẫu trúc", "price": 16800000, "art": "bracelet", "image": "img/san-pham/sp-12.jpg", "spec": "Mẫu đẹp", "material": "Trầm hương thô tự nhiên", "tone": 2, "desc": "Mẫu đẹp."},
+  {"id": "day-co-mat-tu-tho", "cat": "day-chuyen", "name": "Dây đeo cổ trầm hương lượng tử mẫu mắt tử thô", "price": 22000000, "art": "necklace", "image": "img/san-pham/sp-13.jpg", "spec": "Mẫu lạ mắt", "material": "Trầm hương tự nhiên", "tone": 3, "hot": true, "desc": "Mẫu lạ mắt."},
+  {"id": "day-co-mat-tram-tho-1", "cat": "day-chuyen", "name": "Dây đeo cổ trầm hương lượng tử mặt trầm thô (mẫu 1)", "price": 16800000, "art": "necklace", "image": "img/san-pham/sp-14.jpg", "spec": "Mẫu lạ, nhìn đẹp và phong cách", "material": "Trầm hương tự nhiên", "tone": 4, "desc": "Mẫu lạ, nhìn đẹp và phong cách."},
+  {"id": "day-co-mat-tram-tho-2", "cat": "day-chuyen", "name": "Dây đeo cổ trầm hương lượng tử mặt trầm thô (mẫu 2)", "price": 16800000, "art": "necklace", "image": "img/san-pham/sp-15.jpg", "spec": "Mẫu lạ mắt, nhìn đẹp và phong cách", "material": "Trầm hương tự nhiên", "tone": 0, "desc": "Mẫu lạ mắt, nhìn đẹp và phong cách."},
+  {"id": "day-co-mat-thanh-gia", "cat": "day-chuyen", "name": "Dây đeo cổ trầm hương lượng tử mặt thánh giá", "price": 16800000, "art": "necklace", "image": "img/san-pham/sp-16.jpg", "spec": "Mẫu mới", "material": "Trầm hương tự nhiên", "tone": 1, "desc": "Mẫu mới."},
+  {"id": "day-mat-thanh-gia-deo-tay", "cat": "day-chuyen", "name": "Dây trầm hương lượng tử mặt thánh giá (đeo cổ hoặc đeo tay)", "price": 16800000, "art": "necklace", "image": "img/san-pham/sp-17.jpg", "spec": "Mẫu mới, có thể đeo tay", "material": "Trầm hương tự nhiên", "tone": 2, "desc": "Mẫu mới, có thể đeo tay."},
+  {"id": "tuong-quan-am-15cm", "cat": "tuong", "name": "Tượng Phật Quan Âm trầm hương lượng tử 15 cm", "price": 6800000, "art": "statue", "image": "img/san-pham/sp-18.jpg", "spec": "Mẫu tham khảo: cao 15 cm, rộng 9 cm; xác nhận theo phiên bản thực tế", "material": "Trầm hương tạc nguyên khối", "tone": 3, "hot": true, "desc": "Mẫu tham khảo: cao 15 cm, rộng 9 cm; xác nhận theo phiên bản thực tế."},
+  {"id": "tuong-quan-am-22cm", "cat": "tuong", "name": "Tượng Phật Quan Âm trầm hương lượng tử 22 cm", "price": 8900000, "art": "statue", "image": "img/san-pham/sp-19.jpg", "spec": "Mẫu tham khảo: cao 22 cm, rộng 6 cm; xác nhận theo phiên bản thực tế", "material": "Trầm hương tạc nguyên khối", "tone": 4, "desc": "Mẫu tham khảo: cao 22 cm, rộng 6 cm; xác nhận theo phiên bản thực tế."},
+  {"id": "tuong-treo-xe-5cm", "cat": "tuong", "name": "Tượng Phật trầm hương lượng tử treo xe ô tô 5 cm", "price": 3900000, "art": "car", "image": "img/san-pham/sp-20.jpg", "spec": "Mẫu tham khảo: cao 5 cm, rộng 3 cm; xác nhận theo phiên bản thực tế", "material": "Trầm hương tạc nguyên khối", "tone": 0, "hot": true, "desc": "Mẫu tham khảo: cao 5 cm, rộng 3 cm; xác nhận theo phiên bản thực tế."},
+  {"id": "tuong-treo-xe-6cm", "cat": "tuong", "name": "Tượng Phật trầm hương lượng tử treo xe ô tô 6 cm", "price": 3900000, "art": "car", "image": "img/san-pham/sp-21.jpg", "spec": "Mẫu tham khảo: cao 6 cm, rộng 4 cm; xác nhận theo phiên bản thực tế", "material": "Trầm hương tạc nguyên khối", "tone": 1, "desc": "Mẫu tham khảo: cao 6 cm, rộng 4 cm; xác nhận theo phiên bản thực tế."},
+  {"id": "tra-tram-huong-1", "cat": "tra", "name": "Trà trầm hương lượng tử (mẫu 1)", "price": 1680000, "art": "box", "image": "img/san-pham/sp-22.jpg", "spec": "Trà cuốn theo công nghệ oolong, hàm lượng GABA cao", "material": "Trà cuốn phối trầm hương", "tone": 2, "hot": true, "desc": "Trà cuốn theo công nghệ oolong, hàm lượng GABA cao."},
+  {"id": "tra-tram-huong-2", "cat": "tra", "name": "Trà trầm hương lượng tử (mẫu 2)", "price": 1680000, "art": "box", "image": "img/san-pham/sp-23.jpg", "spec": "Trà cuốn theo công nghệ oolong, hàm lượng GABA cao", "material": "Trà cuốn phối trầm hương", "tone": 3, "desc": "Trà cuốn theo công nghệ oolong, hàm lượng GABA cao."},
+  {"id": "lich-de-ban-tram", "cat": "luu-niem", "name": "Lịch để bàn trầm hương lượng tử cao cấp", "price": 6800000, "art": "box", "image": "img/san-pham/sp-24.jpg", "spec": "Thiết kế tinh tế, đầy đủ giờ, ngày, tháng, năm", "material": "Gỗ trầm hương", "tone": 4, "desc": "Thiết kế tinh tế, đầy đủ giờ, ngày, tháng, năm."},
+  {"id": "but-tram-huong", "cat": "luu-niem", "name": "Bút trầm hương lượng tử cao cấp", "price": 9900000, "art": "box", "image": "img/san-pham/sp-25.jpg", "spec": "Thiết kế đẹp, phong cách sang trọng", "material": "Thân bút trầm hương", "tone": 0, "hot": true, "desc": "Thiết kế đẹp, phong cách sang trọng."}
+];
+
+window.POST_CATS = [
+  { id: 'luong-tu', name: 'Trầm hương lượng tử' },
+  { id: 'hinh-thanh', name: 'Nguồn gốc và hình thành' },
+  { id: 'phan-loai', name: 'Phân loại và giá trị' },
+  { id: 'su-dung', name: 'Sử dụng và bảo quản' }
+];
+
+// cover: ảnh bìa (dùng ảnh trong img/), body: nội dung HTML
+window.POSTS = [
+  { id: 'tram-huong-luong-tu-la-gi', cat: 'luong-tu', date: '20/10/2026', read: 6, cover: 'img/intro/phuc-sinh-canh-nen-ngay-m.jpg', featured: true,
+    title: 'Trầm hương lượng tử là gì?',
+    excerpt: 'Cách Phúc Sinh QuanTum gọi tên dòng trầm tuyển chọn: trầm tự nhiên, quy trình kiểm định riêng và trải nghiệm hương có chiều sâu.',
+    body: `<p>“Trầm hương lượng tử” là tên gọi Phúc Sinh QuanTum đặt cho dòng sản phẩm trầm tuyển chọn của thương hiệu. Tên gọi thể hiện cách chúng tôi tiếp cận trầm hương: tôn trọng giá trị tự nhiên, kết hợp quy trình tuyển chọn và kiểm soát chất lượng hiện đại. (đoạn mẫu, anh thay bằng định nghĩa chính thức của thương hiệu)</p>
+<h2>Ba trụ cột của dòng trầm lượng tử</h2>
+<h3>1. Nguồn trầm tự nhiên</h3>
+<p>Trầm được tạo thành trong thân cây dó bầu qua nhiều năm. Chúng tôi chỉ chọn trầm có nguồn gốc rõ ràng, có hồ sơ vùng nguyên liệu.</p>
+<h3>2. Tuyển chọn và kiểm định</h3>
+<p>Mỗi lô trầm được đánh giá theo màu, vân dầu, độ nặng và mùi hương. Thông tin lô được gắn với từng sản phẩm để khách tra cứu.</p>
+<h3>3. Trải nghiệm hương</h3>
+<p>Hương trầm thay đổi theo nhiệt độ và thời gian đeo. Chúng tôi hướng dẫn khách cách dùng để cảm nhận trọn tầng hương.</p>
+<blockquote>Có những giá trị chỉ mở ra khi ta chậm lại.</blockquote>
+<p>Lưu ý: trầm hương là sản phẩm văn hóa và tinh thần, không phải thuốc, không thay thế việc khám chữa bệnh.</p>` },
+  { id: 'tram-hinh-thanh-nhu-the-nao', cat: 'hinh-thanh', date: '18/10/2026', read: 5, cover: 'img/intro/canh-1-may-nui-ngay-m.jpg',
+    title: 'Trầm hương hình thành như thế nào?',
+    excerpt: 'Từ vết thương trên thân cây dó bầu đến khối trầm thơm: một quá trình tự nhiên kéo dài nhiều năm.',
+    body: `<p>Trầm hương hình thành khi cây dó bầu (chi Aquilaria) bị tổn thương, ví dụ do gió bão, côn trùng hay vi nấm. Cây tiết ra nhựa để tự bảo vệ, lượng nhựa này tích tụ dần trong thớ gỗ qua nhiều năm và tạo thành trầm.</p>
+<h2>Các yếu tố quyết định chất lượng</h2>
+<ul><li>Thời gian tích tụ nhựa: càng lâu, hương càng sâu.</li><li>Thổ nhưỡng và khí hậu vùng trồng.</li><li>Cách khai thác và xử lý sau khai thác.</li></ul>
+<p>Việt Nam là một trong những vùng có trầm hương nổi tiếng, với các vùng nguyên liệu tại miền Trung và Tây Nguyên. (đoạn mẫu)</p>` },
+  { id: 'phan-biet-cac-loai-tram', cat: 'phan-loai', date: '15/10/2026', read: 7, cover: 'img/intro/phuc-sinh-canh-nen-m.jpg',
+    title: 'Phân biệt các loại trầm hương phổ biến',
+    excerpt: 'Trầm tự nhiên, trầm cấy, trầm sánh chìm, trầm tốc: đặc điểm và cách nhận biết cơ bản.',
+    body: `<p>Trên thị trường có nhiều cách gọi trầm hương. Dưới đây là cách phân loại phổ biến để khách dễ hình dung. (nội dung mẫu, anh bổ sung theo tiêu chuẩn của thương hiệu)</p>
+<h3>Trầm tự nhiên</h3><p>Hình thành hoàn toàn trong tự nhiên, thời gian dài, số lượng hiếm nên giá trị cao.</p>
+<h3>Trầm cấy</h3><p>Cây dó được tác động để tạo trầm, thời gian ngắn hơn, giá dễ tiếp cận hơn.</p>
+<h3>Trầm sánh chìm</h3><p>Lượng dầu cao, khối trầm nặng, chìm trong nước. Đây là dòng được đánh giá cao.</p>
+<h3>Trầm tốc</h3><p>Phần trầm hình thành do côn trùng đục khoét, hương ngọt đặc trưng.</p>
+<h2>Mẹo nhận biết cơ bản</h2><ul><li>Quan sát vân dầu và màu sắc tự nhiên, không đều tuyệt đối.</li><li>Mùi hương dịu, có tầng, không gắt như hương liệu.</li><li>Mua tại nơi có giấy tờ nguồn gốc và chính sách đổi trả.</li></ul>` },
+  { id: 'cach-deo-va-bao-quan-vong-tram', cat: 'su-dung', date: '12/10/2026', read: 4, cover: 'img/intro/canh-1-may-nui-m.jpg',
+    title: 'Cách đeo và bảo quản vòng trầm luôn thơm',
+    excerpt: 'Tránh nước, nước hoa và hóa chất. Cất trong hộp kín khi không đeo để giữ hương lâu.',
+    body: `<h2>Khi đeo</h2><ul><li>Tháo vòng khi tắm, bơi, rửa tay hoặc làm việc nặng.</li><li>Tránh xịt nước hoa, kem dưỡng trực tiếp lên hạt.</li><li>Đeo thường xuyên giúp vòng lên nước bóng đẹp hơn.</li></ul>
+<h2>Khi cất</h2><ul><li>Cất trong hộp kín hoặc túi vải, nơi khô thoáng.</li><li>Tránh ánh nắng gắt và nơi ẩm thấp.</li><li>Nếu hạt bị ướt, lau nhẹ bằng khăn mềm và để khô tự nhiên.</li></ul>
+<p>Dây đeo nên được thay sau một thời gian sử dụng. Phúc Sinh QuanTum hỗ trợ thay dây miễn phí cho thành viên. (chính sách mẫu)</p>` },
+  { id: 'xong-tram-dung-cach', cat: 'su-dung', date: '08/10/2026', read: 4, cover: 'img/intro/phuc-sinh-canh-nen-ngay-m.jpg',
+    title: 'Xông trầm đúng cách trong nhà',
+    excerpt: 'Chọn lư xông, lượng trầm và thời điểm xông để hương dịu, không gian thư thái.',
+    body: `<p>Xông trầm là thói quen lâu đời trong nhiều gia đình Việt. Để hương dịu và an toàn, anh chị lưu ý các bước sau. (nội dung mẫu)</p>
+<ul><li>Dùng lư xông điện ở nhiệt độ thấp hoặc than chuyên dụng.</li><li>Mỗi lần chỉ cần một lượng nhỏ trầm miếng hoặc một nụ trầm.</li><li>Mở hé cửa để không khí lưu thông.</li><li>Để xa tầm tay trẻ nhỏ, vật dễ cháy.</li></ul>` },
+  { id: 'gia-tri-cua-tram', cat: 'phan-loai', date: '02/10/2026', read: 5, cover: 'img/intro/canh-1-may-nui-ngay-m.jpg',
+    title: 'Điều gì làm nên giá trị của một chiếc vòng trầm?',
+    excerpt: 'Loại trầm, kích thước hạt, độ đều hạt, tay nghề chế tác và giấy tờ nguồn gốc.',
+    body: `<p>Hai chiếc vòng trông giống nhau có thể chênh giá nhiều lần. Các yếu tố chính gồm:</p>
+<ul><li>Loại trầm và hàm lượng dầu.</li><li>Kích thước hạt: hạt lớn cần khối trầm lớn hơn.</li><li>Độ đều màu, đều vân giữa các hạt.</li><li>Tay nghề mài, khoan, đánh bóng.</li><li>Giấy kiểm định và chính sách bảo hành.</li></ul><p>(nội dung mẫu)</p>` }
+];
+
+// số liệu thương hiệu hiển thị ở trang chủ và trang giới thiệu (mẫu)
+window.STATS = [
+  { label: 'Khách hàng tin dùng', value: '12.000+', icon: 'users' },
+  { label: 'Năm kinh nghiệm', value: '15', icon: 'award' },
+  { label: 'Đại lý toàn quốc', value: '120+', icon: 'map' },
+  { label: 'Đánh giá 5 sao', value: '98%', icon: 'star' }
+];
+
+// Video trải nghiệm khách hàng ở đầu trang chủ. Thêm, xóa, sắp xếp trong Quản trị > Video khách hàng.
+// Danh sách dưới đây là mặc định khi trình duyệt chưa có danh sách lưu từ trang quản trị.
+// Mẫu: { url: 'https://www.youtube.com/watch?v=XXXXXXXXXXX', title: 'Tên video', name: 'Tên khách hàng' }
+window.VIDEOS = [];
+
+window.REVIEWS = [
+  { name: 'Chị Minh Anh', place: 'Hà Nội', text: 'Vòng thơm nhẹ, đeo cả ngày rất dễ chịu. Đóng gói sang trọng, giao nhanh. (đánh giá mẫu)' },
+  { name: 'Anh Quốc Huy', place: 'Đà Nẵng', text: 'Tư vấn kỹ, có giấy tờ nguồn gốc rõ ràng. Sẽ quay lại mua làm quà. (đánh giá mẫu)' },
+  { name: 'Cô Thu Hà', place: 'TP. Hồ Chí Minh', text: 'Nụ trầm khói mỏng, hương dịu, cả nhà đều thích. (đánh giá mẫu)' }
+];
+
+window.TEAM = [
+  { name: 'Người sáng lập (mẫu)', role: 'Nhà sáng lập', initials: 'PS' },
+  { name: 'Chuyên gia trầm (mẫu)', role: 'Tuyển chọn nguyên liệu', initials: 'TH' },
+  { name: 'Nghệ nhân (mẫu)', role: 'Chế tác', initials: 'NN' },
+  { name: 'Chăm sóc khách hàng (mẫu)', role: 'Tư vấn', initials: 'CS' }
+];
+
+window.TIMELINE = [
+  { year: '2011', text: 'Bắt đầu từ một xưởng chế tác trầm nhỏ. (mẫu)' },
+  { year: '2016', text: 'Xây dựng vùng nguyên liệu dó bầu. (mẫu)' },
+  { year: '2021', text: 'Ra mắt thương hiệu Phúc Sinh. (mẫu)' },
+  { year: '2026', text: 'Ra mắt dòng trầm hương lượng tử và web app thành viên. (mẫu)' }
+];
+
+// hạng thành viên theo tổng chi tiêu
+window.RANKS = [
+  { id: 'dong', name: 'Đồng', min: 0, color: '#c98b5a', perk: 'Tích 10% điểm PS trên mỗi đơn' },
+  { id: 'bac', name: 'Bạc', min: 20000000, color: '#cfd8dc', perk: 'Giảm 3% đơn tiếp theo, thay dây miễn phí' },
+  { id: 'vang', name: 'Vàng', min: 50000000, color: '#f3c76b', perk: 'Giảm 5%, quà sinh nhật' },
+  { id: 'kim-cuong', name: 'Kim cương', min: 150000000, color: '#4fe6df', perk: 'Giảm 8%, tư vấn riêng, sự kiện đặc biệt' }
+];

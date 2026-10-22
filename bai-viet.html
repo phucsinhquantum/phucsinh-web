@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bài viết · Phúc Sinh QuanTum</title>
+<meta name="description" content="Kiến thức trầm hương từ Phúc Sinh QuanTum.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .topbar > div:nth-child(2) { min-width: 0; }
+  .topbar h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .art-hero { min-height: 340px; align-content: end; }
+  .art-hero h1 { max-width: 22ch; }
+  .art-hero .post-meta { flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--text-2); }
+  .art-hero .post-meta svg { width: 15px; height: 15px; }
+  .back-link { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); margin-bottom: auto; }
+  .back-link:hover { color: var(--gold); }
+  .article { padding: clamp(20px, 3.6vw, 44px); }
+  .article .prose { margin: 0 auto; }
+  .article .prose > :first-child { margin-top: 0; }
+  .article .prose > p:first-child { font-size: 17px; color: var(--text); }
+  .share { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 28px auto 0; padding-top: 20px; border-top: 1px solid var(--line); max-width: 72ch; }
+  .share b { font-size: 13px; color: var(--text-2); font-weight: 500; margin-right: 4px; }
+  .rel { display: grid; grid-template-columns: 84px 1fr; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .rel:last-child { border-bottom: 0; padding-bottom: 0; }
+  .rel:first-child { padding-top: 0; }
+  .rel-cover { aspect-ratio: 4/3; border-radius: 10px; background-size: cover; background-position: center; border: 1px solid var(--line-2); }
+  .rel b { display: block; font-size: 14px; line-height: 1.4; font-weight: 600; transition: color .2s; }
+  .rel:hover b { color: var(--gold); }
+  .rel small { font-size: 12px; color: var(--text-3); }
+  .side-col { align-content: start; }
+  @media (min-width: 1100px) { .side-col { position: sticky; top: calc(var(--top-h) + 8px); } }
+  @media (min-width: 700px) and (max-width: 1099px) { .side-col { grid-template-columns: 1fr 1fr; align-items: start; } }
+  .sugg { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .card.p-card { padding: 0; }
+  @media (min-width: 700px) { .sugg .p-img { aspect-ratio: 4/3; } }
+  @media (max-width: 699px) {
+    .art-hero { min-height: 320px; }
+    .sugg { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 72%; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 14px; padding: 4px 14px 14px; margin: 0 -14px; scrollbar-width: none; }
+    .sugg::-webkit-scrollbar { display: none; }
+    .sugg > * { scroll-snap-align: start; }
+    .sugg .p-actions { flex-direction: row; }
+  }
+</style>
+</head>
+<body data-page="learn">
+<div id="page" data-title="Bài viết" data-crumb="Kiến thức / Bài viết">
+  <div id="view"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, esc, icon, qs, toast, productCard } = PSQ;
+  const catName = id => (POST_CATS.find(c => c.id === id) || {}).name || '';
+  const id = qs('id');
+  const post = id ? POSTS.find(p => p.id === id) : POSTS[0];
+  const setTitle = t => { const h = $('.topbar h1'); if (h) { h.textContent = t; h.title = t; } document.title = t + ' · Phúc Sinh QuanTum'; };
+
+  if (!post) {
+    setTitle('Không tìm thấy bài viết');
+    $('#view').innerHTML = `<section class="card glow-mix empty reveal" style="padding:clamp(40px,8vw,80px) 20px">
+      ${icon('book')}<h2 class="display" style="font-size:32px;color:var(--text)">Không tìm thấy bài viết</h2>
+      <p class="muted mt-1">Bài viết có thể đã được đổi tên hoặc gỡ xuống. Anh chị xem các bài khác nhé.</p>
+      <div class="row wrap mt-3" style="justify-content:center"><a class="btn btn-gold" href="kien-thuc.html">Về trang kiến thức</a><a class="btn btn-ghost" href="index.html">Trang chủ</a></div></section>
+      <div class="section-title"><div><span class="eyebrow">Gợi ý</span><h2>Bài viết mới</h2></div></div>
+      <div class="grid g-3">${POSTS.slice(0, 3).map(card).join('')}</div>`;
+    PSQ.reveal(); return;
+  }
+
+  setTitle(post.title);
+  const url = location.origin + location.pathname + '?id=' + encodeURIComponent(post.id);
+  let related = POSTS.filter(p => p.cat === post.cat && p !== post);
+  if (related.length < 3) related = related.concat(POSTS.filter(p => p.cat !== post.cat && p !== post)).slice(0, 3);
+  // sản phẩm gợi ý theo nội dung bài
+  const want = /xong/.test(post.id) ? ['tram-tho', 'tra'] : /vong|gia-tri/.test(post.id) ? ['vong-tay', 'day-chuyen'] : [];
+  let prods = PRODUCTS.filter(p => want.includes(p.cat));
+  prods = prods.concat(PRODUCTS.filter(p => p.hot && !prods.includes(p))).slice(0, 3);
+
+  $('#view').innerHTML = `
+    <section class="hero page-hero art-hero card glow-mix reveal">
+      <div class="hero-bg" style="background-image:url(${post.cover})"></div>
+      <a class="back-link" href="kien-thuc.html">${icon('back')} Kiến thức trầm hương</a>
+      <div class="mt-3"><a class="badge gold" href="kien-thuc.html?cat=${post.cat}">${esc(catName(post.cat))}</a></div>
+      <h1 class="mt-2">${esc(post.title)}</h1>
+      <div class="post-meta"><span class="row" style="gap:6px">${icon('clock')} ${post.date}</span><span>·</span><span class="row" style="gap:6px">${icon('book')} ${post.read} phút đọc</span></div>
+    </section>
+
+    <section class="grid g-main-r mt-3">
+      <article class="card glow-gold article reveal">
+        <p class="lead muted" style="max-width:72ch;margin:0 auto 22px;font-size:16px;font-style:italic">${esc(post.excerpt)}</p>
+        <div class="prose">${post.body}</div>
+        <div class="share">
+          <b>Chia sẻ bài viết</b>
+          <button class="btn btn-outline-gold btn-sm" type="button" id="copyLink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="i"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg> Sao chép liên kết</button>
+          <a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}">${icon('facebook')} Facebook</a>
+          <a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://zalo.me/share?url=${encodeURIComponent(url)}">${icon('zalo')} Zalo</a>
+          <button class="btn btn-ghost btn-sm" type="button" id="nativeShare" hidden>${icon('arrow')} Khác</button>
+        </div>
+      </article>
+      <aside class="stack side-col">
+        <div class="card glow-cyan reveal">
+          <div class="card-head"><h3>Bài viết liên quan</h3><a class="card-link" href="kien-thuc.html?cat=${post.cat}">Cùng chủ đề</a></div>
+          <div>${related.map(p => `<a class="rel" href="bai-viet.html?id=${p.id}"><span class="rel-cover" style="background-image:url(${p.cover})"></span><span><b>${esc(p.title)}</b><small>${esc(catName(p.cat))} · ${p.read} phút đọc</small></span></a>`).join('')}</div>
+        </div>
+        <div class="card glow-gold reveal">
+          <div class="row" style="gap:10px;font-weight:600"><span class="stat-ico gold">${icon('chat')}</span>Cần tư vấn chọn trầm?</div>
+          <p class="muted mt-1" style="font-size:14px">Chuyên viên PSQ giải đáp miễn phí về cách chọn, đeo và bảo quản trầm hương.</p>
+          <a class="btn btn-grad btn-block mt-2" href="lien-he.html">Liên hệ tư vấn</a>
+        </div>
+      </aside>
+    </section>
+
+    <div class="section-title"><div><span class="eyebrow">Có thể anh chị quan tâm</span><h2>Sản phẩm gợi ý</h2></div><a class="card-link" href="san-pham.html">Xem tất cả</a></div>
+    <section class="sugg">${prods.map(productCard).join('')}</section>`;
+
+  $('#copyLink').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(url); }
+    catch (e) { const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (_) {} t.remove(); }
+    toast('Đã sao chép liên kết bài viết');
+  });
+  if (navigator.share) { const b = $('#nativeShare'); b.hidden = false; b.onclick = () => navigator.share({ title: post.title, url }).catch(() => {}); }
+  PSQ.reveal();
+
+  function card(p) {
+    return `<a class="card post-card reveal" href="bai-viet.html?id=${p.id}"><div class="post-cover" style="background-image:url(${p.cover})"></div><div class="post-body"><div class="post-meta"><span class="badge gold">${esc(catName(p.cat))}</span></div><h3>${esc(p.title)}</h3><div class="post-meta">${p.date} · ${p.read} phút đọc</div></div></a>`;
+  }
+})();
+</script>
+</body>
+</html>

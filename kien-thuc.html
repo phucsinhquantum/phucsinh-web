@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kiến thức trầm hương lượng tử · Phúc Sinh QuanTum</title>
+<meta name="description" content="Bài viết về trầm hương: nguồn gốc, phân loại, cách sử dụng và bảo quản, trầm hương lượng tử của Phúc Sinh QuanTum.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .feat { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); padding: 0; overflow: hidden; transition: transform .3s; }
+  .feat:hover { transform: translateY(-3px); }
+  .feat .post-cover { aspect-ratio: auto; min-height: 320px; }
+  .feat .post-cover::after { background: linear-gradient(90deg, transparent 50%, rgba(10, 14, 16, .95)); }
+  .feat-body { padding: clamp(22px, 3.4vw, 40px); display: grid; gap: 14px; align-content: center; }
+  .feat-body h2 { font-size: clamp(30px, 3.4vw, 46px); line-height: 1.08; }
+  .feat-body p { color: var(--text-2); }
+  .filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .filters .tabs { min-width: 0; max-width: 100%; }
+  @media (min-width: 700px) { .filters .tabs { flex-wrap: wrap; } }
+  .card.post-card { padding: 0; }
+  .filters .search { display: flex; width: auto; flex: 1 1 200px; min-width: 0; }
+  .post-card h3 { transition: color .2s; }
+  .post-card:hover h3 { color: var(--gold); }
+  .post-card .excerpt { font-size: 13px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .count-note { font-size: 12px; color: var(--text-3); margin: -6px 2px 14px; }
+
+  .faq details { border-bottom: 1px solid var(--line); }
+  .faq details:last-child { border-bottom: 0; }
+  .faq summary { list-style: none; cursor: pointer; display: flex; gap: 12px; align-items: center; padding: 14px 0; font-weight: 600; font-size: 14px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: ""; margin-left: auto; flex: none; width: 8px; height: 8px; border-right: 1.6px solid var(--gold); border-bottom: 1.6px solid var(--gold); transform: rotate(45deg) translateY(-3px); transition: transform .25s; }
+  .faq details[open] summary::after { transform: rotate(-135deg) translateY(-2px); }
+  .faq details[open] summary { color: var(--gold); }
+  .faq .ans { padding: 0 0 14px; font-size: 14px; color: var(--text-2); }
+  .faq .q-ico { width: 26px; height: 26px; border-radius: 8px; }
+  .faq .q-ico svg { width: 14px; height: 14px; }
+  .side-col { align-content: start; }
+  @media (min-width: 1100px) { .side-col { position: sticky; top: calc(var(--top-h) + 8px); } }
+  @media (min-width: 700px) and (max-width: 1099px) { .side-col { grid-template-columns: 1fr 1fr; align-items: start; } }
+  @media (max-width: 1099px) {
+    .feat { grid-template-columns: 1fr; }
+    .feat .post-cover { min-height: 0; aspect-ratio: 16/8; }
+    .feat .post-cover::after { background: linear-gradient(transparent 40%, rgba(10, 14, 16, .95)); }
+  }
+  @media (max-width: 699px) {
+    .feat .post-cover { aspect-ratio: 16/10; }
+    .filters .search { flex-basis: 100%; }
+  }
+</style>
+</head>
+<body data-page="learn">
+<div id="page" data-title="Kiến thức trầm hương lượng tử" data-crumb="Kiến thức">
+
+  <section id="featured"></section>
+
+  <section class="mt-3">
+    <div class="filters">
+        <div class="tabs" id="tabs" role="tablist" aria-label="Chủ đề bài viết"></div>
+        <label class="search" for="q">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input id="q" type="search" placeholder="Tìm theo tiêu đề bài viết..." autocomplete="off">
+        </label>
+      </div>
+  </section>
+
+  <section class="grid g-main-r">
+    <div>
+      <p class="count-note" id="countNote"></p>
+      <div class="grid g-2" id="list"></div>
+    </div>
+
+    <aside class="stack side-col">
+      <div class="card glow-gold faq"></div>
+      <form class="card glow-cyan" id="subscribe" novalidate>
+        <div class="card-head" style="margin-bottom:8px"><span class="stat-ico" id="mailIco"></span><h3>Đăng ký nhận bài mới</h3></div>
+        <p class="muted" style="font-size:14px">Mỗi tháng một lá thư ngắn về trầm hương: kiến thức, mẹo bảo quản và ưu đãi dành cho thành viên.</p>
+        <div class="field mt-2"><label for="subEmail">Email của anh chị</label><input class="input" id="subEmail" type="email" placeholder="ten@email.com" autocomplete="email"></div>
+        <button class="btn btn-grad btn-block mt-2" type="submit">Đăng ký</button>
+      </form>
+    </aside>
+  </section>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, $$, esc, icon, qs, toast } = PSQ;
+  const catName = id => (POST_CATS.find(c => c.id === id) || {}).name || '';
+  const feat = POSTS.find(p => p.featured) || POSTS[0];
+
+  $('#featured').innerHTML = `<a class="card glow-mix feat reveal" href="bai-viet.html?id=${feat.id}">
+    <div class="post-cover" style="background-image:url(${feat.cover})"></div>
+    <div class="feat-body">
+      <div class="post-meta"><span class="badge gold">${icon('star')} Bài nổi bật</span><span class="badge ship">${esc(catName(feat.cat))}</span></div>
+      <h2 class="display">${esc(feat.title)}</h2>
+      <p>${esc(feat.excerpt)}</p>
+      <div class="post-meta">${icon('clock')} ${feat.date} · ${feat.read} phút đọc</div>
+      <span class="btn btn-gold" style="justify-self:start">Đọc bài viết ${icon('arrow')}</span>
+    </div></a>`;
+
+  // sidebar: câu hỏi thường gặp
+  const faqs = [
+    ['Làm sao phân biệt trầm hương thật?', 'Trầm thật có vân dầu tự nhiên, màu không đều tuyệt đối, mùi dịu và có tầng, không gắt như hương liệu. Khi đốt thử, khói trầm thật mỏng và thơm ngọt. Cách chắc chắn nhất là mua nơi có giấy tờ nguồn gốc, phiếu kiểm định và chính sách đổi trả rõ ràng.'],
+    ['Làm sao để vòng trầm giữ mùi lâu?', 'Cất vòng trong hộp kín hoặc túi vải khi không đeo, tránh nắng gắt và nơi ẩm. Không xịt nước hoa, kem dưỡng lên hạt. Đeo thường xuyên giúp hơi ấm cơ thể làm hương tỏa đều và hạt lên nước bóng đẹp.'],
+    ['Có nên đeo vòng trầm khi tắm không?', 'Không nên. Nước, xà phòng và hóa chất làm hạt trầm nhanh xỉn màu, giảm mùi và làm dây nhanh mục. Anh chị nên tháo vòng khi tắm, bơi, rửa tay hoặc làm việc nhà. Nếu hạt bị ướt, lau nhẹ bằng khăn mềm và để khô tự nhiên.'],
+    ['Vòng trầm dùng được bao lâu?', 'Hạt trầm tự nhiên nếu bảo quản đúng có thể dùng rất nhiều năm, hương sẽ dịu dần theo thời gian. Dây đeo thường cần thay sau 6 đến 12 tháng tùy tần suất đeo. Thành viên PSQ được hỗ trợ thay dây miễn phí. (mẫu)'],
+    ['Điểm PS là gì?', 'Điểm PS là điểm thưởng của chương trình thành viên Phúc Sinh QuanTum. Mỗi đơn hàng được cộng 10% giá trị thành điểm PS, dùng để lên hạng thành viên và nhận ưu đãi như giảm giá, quà sinh nhật, thay dây miễn phí.']
+  ];
+  $('.faq').innerHTML = `<div class="card-head"><span class="stat-ico gold">${icon('info')}</span><h3>Câu hỏi thường gặp</h3></div>` +
+    faqs.map(([q, a], i) => `<details${i === 0 ? ' open' : ''}><summary>${esc(q)}</summary><div class="ans">${esc(a)}</div></details>`).join('') +
+    `<a class="card-link" style="display:inline-block;margin-top:10px" href="lien-he.html">Chưa có câu trả lời? Hỏi chúng tôi</a>`;
+  // chỉ mở một câu hỏi một lúc
+  $$('.faq details').forEach(d => d.addEventListener('toggle', () => { if (d.open) $$('.faq details').forEach(o => o !== d && (o.open = false)); }));
+
+  $('#mailIco').innerHTML = icon('mail');
+  $('#subscribe').addEventListener('submit', e => {
+    e.preventDefault();
+    const v = $('#subEmail').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast('Anh chị nhập giúp một email hợp lệ.'); $('#subEmail').focus(); return; }
+    toast('Cảm ơn anh chị, chúng tôi sẽ gửi bài mới tới ' + v);
+    e.target.reset();
+  });
+
+  // lọc bài viết
+  let cat = POST_CATS.some(c => c.id === qs('cat')) ? qs('cat') : 'all';
+  const tabs = [{ id: 'all', name: 'Tất cả' }, ...POST_CATS];
+  $('#tabs').innerHTML = tabs.map(t => `<button type="button" role="tab" data-cat="${t.id}">${esc(t.name)}</button>`).join('');
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+
+  function render() {
+    const q = norm($('#q').value.trim());
+    $$('#tabs button').forEach(b => { const on = b.dataset.cat === cat; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    let list = POSTS.filter(p => (cat === 'all' || p.cat === cat) && (!q || norm(p.title).includes(q)));
+    $('#countNote').textContent = q || cat !== 'all' ? `${list.length} bài viết phù hợp` : `Tất cả ${list.length} bài viết`;
+    $('#list').innerHTML = list.length ? list.map(p => `<a class="card post-card reveal in" href="bai-viet.html?id=${p.id}">
+        <div class="post-cover" style="background-image:url(${p.cover})"></div>
+        <div class="post-body"><div class="post-meta"><span class="badge gold">${esc(catName(p.cat))}</span></div>
+          <h3>${esc(p.title)}</h3><p class="excerpt">${esc(p.excerpt)}</p>
+          <div class="post-meta">${p.date} · ${p.read} phút đọc</div></div></a>`).join('')
+      : `<div class="card empty" style="grid-column:1/-1">${icon('search')}<div>Chưa có bài viết phù hợp.</div><button class="btn btn-outline-gold btn-sm mt-2" type="button" id="clearF">Xem tất cả bài viết</button></div>`;
+    const c = $('#clearF'); if (c) c.onclick = () => { cat = 'all'; $('#q').value = ''; sync(); render(); };
+  }
+  function sync() {
+    const u = new URL(location.href);
+    cat === 'all' ? u.searchParams.delete('cat') : u.searchParams.set('cat', cat);
+    history.replaceState(null, '', u);
+  }
+  $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; cat = b.dataset.cat; sync(); render(); b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
+  $('#q').addEventListener('input', render);
+  render();
+  PSQ.reveal();
+})();
+</script>
+</body>
+</html>

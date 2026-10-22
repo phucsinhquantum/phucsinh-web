@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thành viên · Phúc Sinh QuanTum</title>
+<meta name="description" content="Tài khoản thành viên Phúc Sinh QuanTum: điểm PS, hạng thành viên, đơn hàng và ưu đãi riêng.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .auth-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 18px; align-items: stretch; }
+  .auth-art { position: relative; overflow: hidden; min-height: 520px; display: grid; align-content: end; isolation: isolate; }
+  .auth-art .hero-bg { position: absolute; inset: 0; z-index: -2; background: url(img/intro/canh-1-may-nui-ngay.jpg) center / cover; animation: heroDrift 24s ease-in-out infinite alternate; }
+  .auth-art::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(rgba(6,8,10,0) 30%, rgba(6,8,10,.9) 85%); }
+  .rank-line { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .rank-line:last-child { border-bottom: 0; }
+  .rank-gem { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; grid-row: span 2; box-shadow: 0 0 14px -2px currentColor; border: 1px solid currentColor; }
+  .rank-gem svg { width: 16px; height: 16px; }
+  .profile { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; }
+  .profile h2 { font-size: clamp(22px, 2.4vw, 28px); }
+  .member-card { position: relative; overflow: hidden; border-radius: 20px; padding: 22px; min-height: 200px; display: grid; align-content: space-between;
+    background: linear-gradient(135deg, rgba(243,199,107,.22), rgba(20,26,30,.85) 45%, rgba(79,230,223,.18)), #0b1013; border: 1px solid rgba(243,199,107,.45); box-shadow: 0 0 34px -10px var(--gold-glow); }
+  .member-card::before { content: ""; position: absolute; width: 260px; height: 260px; right: -80px; top: -90px; border-radius: 50%; border: 1px solid rgba(243,199,107,.35); box-shadow: 0 0 40px rgba(243,199,107,.15) inset; }
+  .member-card img { width: 70px; }
+  .member-card .num { font-size: 18px; letter-spacing: .18em; font-weight: 600; }
+  @media (max-width: 1099px) { .auth-wrap { grid-template-columns: 1fr; } .auth-art { min-height: 300px; } }
+  @media (max-width: 699px) { .profile { grid-template-columns: auto 1fr; } .profile .actions { grid-column: 1 / -1; } .auth-art { min-height: 240px; } }
+</style>
+</head>
+<body data-page="member">
+<div id="page" data-title="Thành viên" data-crumb="Thành viên">
+  <div id="view"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, esc, money, icon, auth, memberInfo, statusBadge, toast, initials, fdate, productCard, modal } = PSQ;
+  const view = $('#view');
+  const ranksHtml = cur => RANKS.map(r => `<div class="rank-line"><span class="rank-gem" style="color:${r.color}">${icon('gem')}</span><b style="color:${r.color}">${r.name}${cur && cur.id === r.id ? ' <span class="badge gold">Hạng của anh chị</span>' : ''}</b><span class="dim" style="font-size:13px">${r.min ? 'Chi tiêu từ ' + money(r.min) : 'Khi đăng ký'} · ${esc(r.perk)}</span></div>`).join('');
+
+  /* ---------- chưa đăng nhập ---------- */
+  function guest(mode = 'login') {
+    view.innerHTML = `<div class="auth-wrap">
+      <div class="card glow-mix auth-art"><div class="hero-bg"></div>
+        <span class="eyebrow">Thành viên Phúc Sinh QuanTum</span>
+        <h2 class="display mt-1" style="font-size:clamp(30px,3.6vw,46px);line-height:1.08">Mỗi đơn hàng là một bước <span class="gold">lên hạng</span>.</h2>
+        <div class="grid g-3 mt-3" style="gap:10px">
+          ${[['sparkle', 'Tích 10% điểm PS'], ['gift', 'Quà sinh nhật'], ['shield', 'Bảo hành trọn đời']].map(([i, t]) => `<div class="row" style="gap:8px;font-size:13px"><span class="stat-ico gold">${icon(i)}</span>${t}</div>`).join('')}
+        </div>
+      </div>
+      <div class="card glow-gold">
+        <div class="tabs" id="atabs" style="width:max-content"><button data-m="login" class="${mode === 'login' ? 'on' : ''}">Đăng nhập</button><button data-m="register" class="${mode === 'register' ? 'on' : ''}">Đăng ký</button></div>
+        <form id="af" class="mt-3" novalidate>
+          ${mode === 'register' ? `<div class="field"><label for="fn">Họ và tên</label><input class="input" id="fn" name="name" autocomplete="name" required></div>
+          <div class="field mt-2"><label for="fp">Số điện thoại</label><input class="input" id="fp" name="phone" type="tel" autocomplete="tel" inputmode="tel"></div>` : ''}
+          <div class="field mt-2"><label for="fe">Email</label><input class="input" id="fe" name="email" type="email" autocomplete="email" required></div>
+          <div class="field mt-2"><label for="fw">Mật khẩu</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>
+          ${mode === 'register' ? '<label class="check mt-2"><input type="checkbox" name="agree" required> Tôi đồng ý với điều khoản và chính sách bảo mật</label>' : ''}
+          <p class="red mt-1" id="err" style="font-size:13px;min-height:20px"></p>
+          <button class="btn btn-gold btn-block btn-lg" type="submit">${mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</button>
+          <p class="dim mt-2" style="font-size:12px">${mode === 'login' ? 'Tài khoản dùng thử: khach1@email.com / 123456' : 'Mật khẩu tối thiểu 6 ký tự.'}</p>
+        </form>
+        <div class="divider"></div>
+        <h3 style="font-size:15px">Hạng thành viên</h3>
+        <div class="mt-1">${ranksHtml()}</div>
+      </div>
+    </div>`;
+    $('#atabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) guest(b.dataset.m); });
+    $('#af').addEventListener('submit', e => {
+      e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
+      if (mode === 'register') {
+        if (!f.name || !f.email || !f.pass) return $('#err').textContent = 'Anh chị điền đủ họ tên, email và mật khẩu.';
+        if (f.pass.length < 6) return $('#err').textContent = 'Mật khẩu tối thiểu 6 ký tự.';
+        if (!f.agree) return $('#err').textContent = 'Anh chị cần đồng ý với điều khoản.';
+      }
+      const r = mode === 'login' ? auth.login(f.email, f.pass) : auth.register(f);
+      if (r.error) return $('#err').textContent = r.error;
+      location.reload();
+    });
+  }
+
+  /* ---------- đã đăng nhập ---------- */
+  function member(u) {
+    const m = memberInfo(u);
+    const pts = Math.max(0, m.points);
+    const needed = m.next ? m.next.min - m.spent : 0;
+    view.innerHTML = `
+      <section class="card glow-mix profile">
+        <span class="avatar lg g">${esc(initials(u.name))}</span>
+        <div><span class="eyebrow">Xin chào</span><h2>${esc(u.name)}</h2>
+          <div class="row wrap mt-1" style="gap:8px"><span class="badge" style="color:${m.rank.color};border:1px solid ${m.rank.color}66;background:${m.rank.color}1a">${icon('gem')} Hạng ${m.rank.name}</span><span class="dim" style="font-size:13px">Thành viên từ ${fdate(u.created)}</span></div></div>
+        <div class="row actions">${u.role === 'admin' ? `<a class="btn btn-outline-gold btn-sm" href="quan-tri.html">${icon('grid')} Quản trị</a>` : ''}<button class="btn btn-sm" id="edit" type="button">${icon('edit')} Sửa hồ sơ</button><button class="btn btn-sm btn-ghost" id="out" type="button">${icon('logout')} Đăng xuất</button></div>
+      </section>
+
+      <section class="grid g-4 keep-2 mt-2">
+        ${[['Điểm PS', pts.toLocaleString('vi-VN'), 'sparkle', 'gold', 'glow-gold'], ['Tổng chi tiêu', money(m.spent), 'wallet', '', 'glow-cyan'], ['Đơn hàng', m.orders.length, 'bag', 'violet', 'glow-gold'], ['Hạng hiện tại', m.rank.name, 'award', 'green', 'glow-cyan']]
+          .map(([l, v, i, c, g]) => `<div class="card ${g} stat"><div class="stat-top"><span class="stat-ico ${c}">${icon(i)}</span>${l}</div><div class="stat-val">${v}</div></div>`).join('')}
+      </section>
+
+      <section class="grid g-main mt-2">
+        <div class="stack">
+          <div class="member-card">
+            <div class="row between"><img src="${SITE.logo}" alt="PSQ"><span class="badge" style="color:${m.rank.color};border:1px solid ${m.rank.color}88">${m.rank.name.toUpperCase()}</span></div>
+            <div><div class="num">PSQ ${u.id.replace(/\D/g, '').slice(-8).padStart(8, '0').replace(/(\d{4})(\d{4})/, '$1 $2')}</div><div class="row between mt-1"><span>${esc(u.name)}</span><span class="gold">${pts.toLocaleString('vi-VN')} điểm</span></div></div>
+          </div>
+          <div class="card glow-gold">
+            <div class="card-head"><h3>Tiến trình lên hạng</h3></div>
+            ${m.next ? `<div class="row between" style="font-size:13px"><span>${m.rank.name}</span><span style="color:${m.next.color}">${m.next.name}</span></div><div class="progress mt-1"><i style="width:${Math.max(3, Math.min(100, m.progress * 100))}%"></i></div><p class="dim mt-1" style="font-size:13px">Còn ${money(needed)} để lên hạng ${m.next.name}.</p>` : '<p class="gold">Anh chị đang ở hạng cao nhất. Cảm ơn anh chị đã đồng hành.</p>'}
+            <div class="divider"></div>${ranksHtml(m.rank)}
+          </div>
+        </div>
+        <div class="card glow-cyan">
+          <div class="card-head"><h3>Đơn hàng của tôi</h3><a class="card-link" href="san-pham.html">Mua thêm</a></div>
+          ${m.orders.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Mã đơn</th><th>Sản phẩm</th><th>Tổng</th><th>Trạng thái</th><th>Ngày</th></tr></thead><tbody>
+            ${m.orders.map(o => `<tr data-o="${o.id}" style="cursor:pointer"><td><b>#${o.id}</b></td><td class="dim">${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="gold nowrap">${money(o.total)}</td><td>${statusBadge(o.status)}</td><td class="dim nowrap">${fdate(o.date)}</td></tr>`).join('')}
+          </tbody></table></div>` : `<div class="empty">${icon('bag')}Chưa có đơn hàng.<div class="mt-2"><a class="btn btn-gold btn-sm" href="san-pham.html">Chọn sản phẩm</a></div></div>`}
+        </div>
+      </section>
+
+      <div class="section-title"><div><span class="eyebrow">Dành cho anh chị</span><h2>Gợi ý theo hạng ${m.rank.name}</h2></div></div>
+      <section class="p-grid">${PRODUCTS.filter(p => p.hot).slice(0, 4).map(productCard).join('')}</section>`;
+    $('#out').addEventListener('click', () => { auth.logout(); location.reload(); });
+    $('#edit').addEventListener('click', () => {
+      const md = modal(`<form id="pf"><div class="card-head"><h3>Sửa hồ sơ</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+        <div class="form-grid"><div class="field full"><label>Họ và tên</label><input class="input" name="name" value="${esc(u.name)}" required></div>
+        <div class="field"><label>Số điện thoại</label><input class="input" name="phone" value="${esc(u.phone || '')}"></div>
+        <div class="field"><label>Ngày sinh</label><input class="input" name="birthday" type="date" value="${esc(u.birthday || '')}"></div>
+        <div class="field full"><label>Địa chỉ nhận hàng</label><input class="input" name="address" value="${esc(u.address || '')}"></div></div>
+        <div class="row mt-3" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu</button></div></form>`);
+      $('#pf', md.el).addEventListener('submit', e => { e.preventDefault(); auth.update(Object.fromEntries(new FormData(e.target))); md.close(); toast('Đã lưu hồ sơ'); member(auth.user()); });
+    });
+    view.querySelectorAll('[data-o]').forEach(r => r.addEventListener('click', () => {
+      const o = m.orders.find(x => x.id === r.dataset.o);
+      modal(`<div class="card-head"><h3>Đơn #${o.id}</h3>${statusBadge(o.status)}<button class="icon-btn" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+        ${o.items.map(x => `<div class="row between" style="padding:6px 0"><span>${esc(x.name)} x${x.qty}</span><b>${money(x.price * x.qty)}</b></div>`).join('')}
+        <div class="divider"></div><div class="row between"><span class="muted">Tổng</span><b class="gold">${money(o.total)}</b></div><p class="dim mt-2" style="font-size:13px">Ngày đặt ${fdate(o.date)} · ${o.pay === 'bank' ? 'Chuyển khoản' : 'Thanh toán khi nhận hàng'}</p>`);
+    }));
+  }
+
+  const u = auth.user();
+  u ? member(u) : guest(PSQ.qs('dang-ky') ? 'register' : 'login');
+})();
+</script>
+</body>
+</html>

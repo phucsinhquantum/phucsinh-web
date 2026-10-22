@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Giới thiệu · Phúc Sinh QuanTum</title>
+<meta name="description" content="Câu chuyện thương hiệu Phúc Sinh QuanTum: sứ mệnh, giá trị, hành trình phát triển, đội ngũ và quy trình tuyển chọn trầm hương.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .story h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1.12; }
+  .story .prose { font-size: 15px; max-width: none; }
+  .promise { display: grid; gap: 14px; }
+  .promise-logo { display: grid; place-items: center; padding: 10px 0 4px; }
+  .promise-logo img { width: 120px; filter: drop-shadow(0 0 18px rgba(243, 199, 107, .45)); }
+  .ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 14px; }
+  .ticks li { display: flex; gap: 10px; align-items: flex-start; color: var(--text-2); }
+  .ticks li svg { color: var(--green); margin-top: 3px; }
+
+  /* dòng thời gian dọc phát sáng */
+  .tl { position: relative; display: grid; gap: 22px; padding-left: 30px; }
+  .tl::before { content: ""; position: absolute; left: 8px; top: 6px; bottom: 6px; width: 2px; border-radius: 2px;
+    background: linear-gradient(var(--gold), var(--cyan)); box-shadow: 0 0 12px var(--gold-glow); }
+  .tl-item { position: relative; }
+  .tl-item::before { content: ""; position: absolute; left: -28px; top: 5px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--bg); border: 2px solid var(--gold); box-shadow: 0 0 12px var(--gold-glow); }
+  .tl-item:last-child::before { border-color: var(--cyan); box-shadow: 0 0 14px var(--cyan-glow); background: var(--cyan); }
+  .tl-year { font-family: var(--display); font-size: 26px; font-weight: 700; color: var(--gold); line-height: 1; }
+  .tl-item:last-child .tl-year { color: var(--cyan); }
+  .tl-item p { margin-top: 6px; color: var(--text-2); font-size: 14px; }
+
+  .team { text-align: center; display: grid; justify-items: center; gap: 6px; padding: 24px 16px; }
+  .team .avatar.lg { width: 76px; height: 76px; font-family: var(--display); font-size: 26px; margin-bottom: 8px; box-shadow: 0 0 22px -6px currentColor; }
+  .team b { font-size: 15px; }
+  .team small { color: var(--text-3); font-size: 12px; }
+
+  @media (min-width: 1100px) and (max-width: 1280px) {
+    .steps { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .steps > * { grid-column: span 2; }
+    .steps > :nth-child(n+4) { grid-column: span 3; }
+  }
+  .step { position: relative; display: grid; gap: 10px; align-content: start; }
+  .step .num { position: absolute; top: 16px; right: 18px; font-family: var(--display); font-size: 40px; line-height: 1; font-weight: 700; color: rgba(243, 199, 107, .18); }
+  .step h3 { font-size: 16px; }
+  .step p { font-size: 14px; color: var(--text-2); }
+  .step .stat-ico { width: 44px; height: 44px; border-radius: 12px; }
+  .step .stat-ico svg { width: 22px; height: 22px; }
+
+  .cta { padding: clamp(22px, 4vw, 40px); }
+  .cta h2 { font-size: clamp(26px, 3.2vw, 40px); }
+  .cta .row { justify-content: flex-end; }
+  .cta .row .btn { min-width: 220px; }
+  @media (max-width: 1099px) { .cta .row { justify-content: flex-start; } }
+  @media (max-width: 699px) {
+    .team { padding: 18px 12px; }
+    .cta .btn { flex: 1 1 100%; }
+  }
+</style>
+</head>
+<body data-page="about">
+<div id="page" data-title="Giới thiệu" data-crumb="Giới thiệu">
+
+  <section class="hero page-hero card glow-mix reveal">
+    <div class="hero-bg" style="background-image:url(img/intro/canh-1-may-nui-ngay.jpg)"></div>
+    <span class="eyebrow">Về Phúc Sinh QuanTum</span>
+    <h1 class="mt-2">Gìn giữ hương trầm Việt <em>bằng sự tử tế.</em></h1>
+    <p class="lead">Chúng tôi tuyển chọn trầm hương tự nhiên, chế tác thủ công và minh bạch nguồn gốc cho từng sản phẩm, để mỗi món quà trầm mang đúng giá trị của nó.</p>
+  </section>
+
+  <section class="grid g-main-r mt-3">
+    <article class="card glow-gold story reveal">
+      <span class="eyebrow">Câu chuyện thương hiệu</span>
+      <h2 class="display mt-1">Từ một xưởng trầm nhỏ đến thương hiệu trầm hương lượng tử</h2>
+      <div class="prose mt-2">
+        <p>Phúc Sinh QuanTum bắt đầu từ một xưởng chế tác trầm nhỏ, nơi những người thợ dành nhiều năm học cách đọc vân dầu, cảm nhận độ nặng và lắng nghe từng tầng hương của khúc trầm. (mẫu)</p>
+        <p>Chúng tôi tin rằng trầm hương là một sản phẩm văn hóa: thứ giúp ta chậm lại, thư thái hơn trong nhịp sống bận rộn. Vì thế mỗi sản phẩm đều đi kèm thông tin lô nguyên liệu, quy trình chế tác và chính sách hậu mãi rõ ràng. (mẫu)</p>
+        <p>“Trầm hương lượng tử” là tên gọi dòng trầm tuyển chọn của thương hiệu, thể hiện cách chúng tôi kết hợp giá trị tự nhiên với quy trình kiểm soát chất lượng hiện đại. (mẫu)</p>
+      </div>
+    </article>
+    <aside class="card glow-cyan promise reveal">
+      <div class="promise-logo"><img src="img/intro/logo-psq.png" alt="Logo Phúc Sinh QuanTum"></div>
+      <h3 class="display gold" style="font-size:24px;text-align:center">Cam kết của chúng tôi</h3>
+      <ul class="ticks" id="ticks"></ul>
+      <p class="dim" style="font-size:12px">Trầm hương là sản phẩm văn hóa và tinh thần, không phải thuốc, không thay thế việc khám chữa bệnh.</p>
+    </aside>
+  </section>
+
+  <div class="section-title"><div><span class="eyebrow">Điều chúng tôi theo đuổi</span><h2>Sứ mệnh và giá trị</h2></div></div>
+  <section class="grid g-4" id="values"></section>
+
+  <section class="grid g-4 keep-2 mt-3" id="stats"></section>
+
+  <section class="grid g-main mt-4">
+    <div class="card glow-gold reveal">
+      <div class="card-head"><div><span class="eyebrow">Hành trình</span><h3 class="mt-1">Các cột mốc phát triển</h3></div></div>
+      <div class="tl mt-2" id="timeline"></div>
+    </div>
+    <div class="card glow-cyan reveal">
+      <div class="card-head"><div><span class="eyebrow">Đội ngũ</span><h3 class="mt-1">Những người giữ hương</h3></div></div>
+      <div class="grid g-2 keep-2" id="team"></div>
+      <p class="dim mt-2" style="font-size:12px">Ảnh và tên thật của đội ngũ sẽ cập nhật sau (mẫu).</p>
+    </div>
+  </section>
+
+  <div class="section-title"><div><span class="eyebrow">Từ rừng dó đến tay anh chị</span><h2>Quy trình tuyển chọn</h2></div></div>
+  <section class="grid g-5 steps" id="steps"></section>
+
+  <section class="card glow-mix cta mt-4 reveal">
+    <div class="grid g-main-r" style="align-items:center">
+      <div><span class="eyebrow">Bắt đầu cùng PSQ</span>
+        <h2 class="display mt-1">Chọn món trầm hợp với mình, tích điểm trên mỗi đơn</h2>
+        <p class="muted mt-1">Xem bộ sưu tập vòng trầm, chuỗi hạt, vật phẩm phong thủy, hoặc đăng ký thành viên miễn phí để nhận ưu đãi riêng.</p></div>
+      <div class="row wrap"><a class="btn btn-gold btn-lg" href="san-pham.html">Xem sản phẩm</a><a class="btn btn-outline-gold btn-lg" href="thanh-vien.html">Đăng ký thành viên</a></div>
+    </div>
+  </section>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, esc, icon } = PSQ;
+  $('#ticks').innerHTML = [
+    'Trầm tự nhiên, có hồ sơ nguồn gốc cho từng lô',
+    'Chế tác thủ công, kiểm tra từng hạt trước khi xâu',
+    'Đổi trả trong 7 ngày nếu sản phẩm lỗi (mẫu)',
+    'Thay dây miễn phí cho thành viên (mẫu)'
+  ].map(t => `<li>${icon('check')}<span>${esc(t)}</span></li>`).join('');
+
+  const values = [
+    { ico: 'leaf', c: 'green', t: 'Tôn trọng tự nhiên', d: 'Chỉ chọn trầm có nguồn gốc rõ ràng, khai thác có trách nhiệm với rừng dó và người trồng.' },
+    { ico: 'shield', c: '', t: 'Minh bạch', d: 'Mỗi sản phẩm gắn với thông tin lô nguyên liệu, giấy kiểm định và chính sách bảo hành.' },
+    { ico: 'sparkle', c: 'gold', t: 'Tay nghề thủ công', d: 'Nghệ nhân mài, khoan, đánh bóng từng hạt để giữ vân dầu và hương trầm tự nhiên.' },
+    { ico: 'users', c: 'violet', t: 'Đồng hành lâu dài', d: 'Tư vấn tận tâm, chăm sóc sau bán và chương trình thành viên tích điểm PS.' }
+  ];
+  $('#values').innerHTML = values.map((v, i) => `<div class="card ${['glow-cyan', 'glow-gold', 'glow-mix', 'glow-cyan'][i]} feature reveal"><span class="stat-ico ${v.c}">${icon(v.ico)}</span><h3>${esc(v.t)}</h3><p>${esc(v.d)}</p></div>`).join('');
+
+  const ico = ['', 'gold', 'violet', 'green'];
+  $('#stats').innerHTML = STATS.map((s, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat reveal"><div class="stat-top"><span class="stat-ico ${ico[i]}">${icon(s.icon)}</span>${esc(s.label)}</div><div class="stat-val">${esc(s.value)}</div></div>`).join('');
+
+  $('#timeline').innerHTML = TIMELINE.map(t => `<div class="tl-item"><div class="tl-year">${esc(t.year)}</div><p>${esc(t.text)}</p></div>`).join('');
+
+  $('#team').innerHTML = TEAM.map((m, i) => `<div class="card team" style="box-shadow:none"><span class="avatar lg ${['g', '', 'v', 'g'][i % 4]}">${esc(m.initials)}</span><b>${esc(m.name)}</b><small>${esc(m.role)}</small></div>`).join('');
+
+  const steps = [
+    { ico: 'leaf', c: 'green', t: 'Nguồn nguyên liệu', d: 'Thu mua từ vùng dó bầu có hồ sơ, ghi rõ nơi khai thác và thời gian tạo trầm. (mẫu)' },
+    { ico: 'eye', c: '', t: 'Tuyển chọn', d: 'Đánh giá màu, vân dầu, độ nặng và mùi hương của từng khối trầm.' },
+    { ico: 'sparkle', c: 'gold', t: 'Chế tác', d: 'Nghệ nhân mài tay, khoan và đánh bóng, giữ lại vân trầm tự nhiên.' },
+    { ico: 'shield', c: 'violet', t: 'Kiểm định', d: 'Kiểm tra độ đều hạt, độ hoàn thiện và lập phiếu thông tin cho từng sản phẩm. (mẫu)' },
+    { ico: 'gift', c: 'gold', t: 'Đóng gói', d: 'Hộp quà sang trọng, kèm thẻ hướng dẫn bảo quản và giấy bảo hành.' }
+  ];
+  $('#steps').innerHTML = steps.map((s, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} step reveal"><span class="num">0${i + 1}</span><span class="stat-ico ${s.c}">${icon(s.ico)}</span><h3>${esc(s.t)}</h3><p>${esc(s.d)}</p></div>`).join('');
+
+  PSQ.reveal();
+})();
+</script>
+</body>
+</html>

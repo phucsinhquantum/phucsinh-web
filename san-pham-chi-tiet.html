@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chi tiết sản phẩm · Phúc Sinh QuanTum</title>
+<meta name="description" content="Thông tin chi tiết sản phẩm trầm hương Phúc Sinh QuanTum: giá, điểm PS, thông số và hướng dẫn bảo quản.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .topbar > div:nth-child(2) { min-width: 0; }
+  .topbar h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .back-link { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); margin: 0 2px 14px; }
+  .back-link:hover { color: var(--gold); }
+  .pd { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .gallery { padding: 16px; display: grid; gap: 14px; }
+  .stage { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; display: grid; place-items: center;
+    background: radial-gradient(55% 50% at 50% 44%, rgba(243, 199, 107, .2), transparent 70%), radial-gradient(60% 40% at 50% 100%, rgba(79, 230, 223, .1), transparent 70%), linear-gradient(#0d1215, #070a0c);
+    border: 1px solid rgba(243, 199, 107, .18); }
+  .stage::before { content: ""; position: absolute; left: 18%; right: 18%; bottom: 13%; height: 9%; border-radius: 50%; background: radial-gradient(closest-side, rgba(243, 199, 107, .35), transparent); filter: blur(6px); }
+  .stage::after { content: ""; position: absolute; left: 50%; top: 50%; height: 82%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; border: 1px solid rgba(243, 199, 107, .14); box-shadow: 0 0 60px -10px var(--gold-glow) inset; pointer-events: none; }
+  .stage svg, .stage img { position: relative; width: 72%; height: 72%; object-fit: contain; transition: transform .6s cubic-bezier(.2, .8, .2, 1); }
+  .stage .tag { position: absolute; top: 14px; left: 14px; z-index: 1; }
+  .stage .v-name { position: absolute; bottom: 12px; right: 14px; z-index: 1; font-size: 12px; color: var(--text-3); }
+  .v-1 svg, .v-1 img { transform: scale(1.55) translate(-6%, 14%); }
+  .v-2 svg, .v-2 img { transform: perspective(600px) rotateX(52deg) rotate(-12deg) translateY(-4%); }
+  .thumbs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .thumb { aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; display: grid; place-items: center; padding: 0; cursor: pointer;
+    background: radial-gradient(60% 60% at 50% 45%, rgba(243, 199, 107, .12), transparent 70%), #0b1013; border: 1px solid var(--line-2); transition: border-color .2s, box-shadow .2s; }
+  .thumb svg, .thumb img { width: 64%; height: 80%; object-fit: contain; }
+  /* ảnh thật: phủ kín khung, ẩn vòng sáng trang trí */
+  .stage img, .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .stage:has(img)::before, .stage:has(img)::after { display: none; }
+  .thumb.v-1 svg, .thumb.v-1 img { transform: scale(1.6) translate(-6%, 14%); }
+  .thumb.v-2 svg, .thumb.v-2 img { transform: perspective(300px) rotateX(52deg) rotate(-12deg); }
+  .thumb:hover { border-color: rgba(243, 199, 107, .4); }
+  .thumb.on { border-color: rgba(243, 199, 107, .7); box-shadow: 0 0 18px -6px var(--gold-glow); }
+  .info { display: grid; gap: 16px; }
+  .info h2.display { font-size: clamp(30px, 3vw, 42px); line-height: 1.1; }
+  .price-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .price-row .now { font-size: clamp(26px, 2.4vw, 32px); font-weight: 700; color: var(--gold); letter-spacing: -.02em; text-shadow: 0 0 24px rgba(243, 199, 107, .3); }
+  .pts { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: rgba(79, 230, 223, .06); border: 1px solid rgba(79, 230, 223, .22); font-size: 14px; color: var(--text-2); }
+  .pts b { color: var(--cyan); }
+  .pts svg { color: var(--cyan); }
+  .buy { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .buy .qty { margin: 0; height: 52px; border-radius: 14px; }
+  .buy .qty button { width: 44px; height: 50px; }
+  .buy .qty input { width: 44px; text-align: center; background: none; border: 0; outline: none; font-weight: 600; -moz-appearance: textfield; }
+  .buy .qty input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .buy .btn { flex: 1 1 160px; }
+  .trust { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .trust div { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 14px 8px; border-radius: 12px; background: rgba(0, 0, 0, .22); border: 1px solid var(--line); font-size: 12px; color: var(--text-2); line-height: 1.35; }
+  .trust svg { width: 22px; height: 22px; color: var(--gold); }
+  .tab-panel { padding-top: 18px; }
+  .tab-panel.prose { font-size: 15px; line-height: 1.8; }
+  .tab-panel[hidden] { display: none; }
+  .spec { grid-template-columns: minmax(120px, auto) 1fr; gap: 0; }
+  .spec dt, .spec dd { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .spec dt { padding-right: 16px; }
+  .spec dt:last-of-type, .spec dd:last-of-type { border-bottom: 0; }
+  .care { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .care li { display: flex; gap: 12px; align-items: flex-start; color: var(--text-2); }
+  .care li svg { color: var(--gold); margin-top: 3px; }
+  #related { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 1099px) { #related { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 899px) {
+    .pd { grid-template-columns: 1fr; }
+    .stage { aspect-ratio: 16 / 10; }
+    .thumb { aspect-ratio: 16 / 9; }
+  }
+  @media (max-width: 699px) {
+    .trust { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .trust div { display: flex; align-items: center; justify-items: start; text-align: left; gap: 10px; padding: 10px 12px; }
+    .trust svg { width: 20px; height: 20px; flex: none; }
+    .thumb { aspect-ratio: 4 / 3; }
+    .stage { aspect-ratio: 1; }
+    .buy .qty { flex: 1 1 100%; justify-content: space-between; }
+    .buy .qty input { flex: 1; }
+    .buy .btn { flex: 1 1 calc(50% - 6px); padding: 0 12px; }
+    .thumbs { gap: 10px; }
+    .tabs button { padding: 0 12px; }
+  }
+</style>
+</head>
+<body data-page="shop">
+<div id="page" data-title="Chi tiết sản phẩm" data-crumb="Sản phẩm">
+  <a class="back-link" href="san-pham.html"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5M11 6l-6 6 6 6"/></svg>Tất cả sản phẩm</a>
+  <div id="view"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, $$, esc, money, icon, art, productCard, qs, cart, toast } = PSQ;
+  const S = SITE, id = qs('id');
+  const p = id ? PSQ.product(id) : PRODUCTS[0];
+  const view = $('#view');
+
+  if (!p) {
+    view.innerHTML = `<section class="card glow-gold empty reveal">${icon('search')}<h2 class="display" style="font-size:30px;color:var(--text)">Không tìm thấy sản phẩm</h2><p class="mt-1">Sản phẩm có thể đã ngừng bán hoặc đường dẫn chưa đúng.</p><div class="row mt-3" style="justify-content:center;flex-wrap:wrap"><a class="btn btn-gold" href="san-pham.html">Xem tất cả sản phẩm</a><a class="btn btn-ghost" href="lien-he.html">Liên hệ tư vấn</a></div></section>
+      <div class="section-title"><div><span class="eyebrow">Gợi ý cho anh chị</span><h2>Sản phẩm nổi bật</h2></div></div>
+      <section class="p-grid">${PRODUCTS.filter(x => x.hot).slice(0, 4).map(productCard).join('')}</section>`;
+    $('.topbar h1').textContent = 'Không tìm thấy sản phẩm';
+    PSQ.reveal(); return;
+  }
+
+  const cat = CATEGORIES.find(c => c.id === p.cat) || { name: 'Sản phẩm' };
+  document.title = p.name + ' · Phúc Sinh QuanTum';
+  $('.topbar h1').textContent = p.name;
+  const crumb = $('.topbar .crumb'); if (crumb) crumb.textContent = `${S.brand} / Sản phẩm / ${cat.name}`;
+
+  const rate = S.pointRate || .1;
+  const off = p.old ? Math.round((1 - p.price / p.old) * 100) : 0;
+  const isBead = ['bracelet', 'mala', 'necklace', 'car'].includes(p.art);
+  const size = p.spec ? p.spec : p.bead ? p.bead + ' li (mm)' : p.art === 'mala' ? '8 li, 108 hạt' : p.art === 'necklace' ? '6 li, mặt ngọc 18 mm' : p.art === 'car' ? 'Hạt 10 li, dây dài 28 cm' : p.art === 'statue' ? 'Cao khoảng 12 cm' : p.art === 'cone' ? 'Không áp dụng' : 'Hộp 30 x 22 cm';
+  const material = p.material ? p.material : p.art === 'cone' ? 'Bột trầm hương tự nhiên, không hóa chất' : p.art === 'box' ? 'Vòng trầm, nụ trầm, hộp gỗ và thiệp' : p.gem ? 'Trầm hương tự nhiên phối đá tự nhiên' : p.charm ? 'Trầm hương tự nhiên, charm vàng' : 'Trầm hương tự nhiên nguyên khối';
+  const variants = ['Toàn cảnh', 'Cận chất trầm', 'Góc nghiêng'];
+
+  view.innerHTML = `
+    <section class="pd">
+      <div class="card glow-mix gallery reveal">
+        <div class="stage" id="stage">${art(p)}${off ? `<span class="badge gold tag">Giảm ${off}%</span>` : p.hot ? '<span class="badge violet tag">Bán chạy</span>' : ''}<span class="v-name" id="vname">${variants[0]}</span></div>
+        <div class="thumbs" role="tablist" aria-label="Góc nhìn sản phẩm">${variants.map((v, i) => `<button class="thumb v-${i}${i ? '' : ' on'}" type="button" data-v="${i}" aria-label="${v}">${art(p)}</button>`).join('')}</div>
+      </div>
+      <div class="card glow-gold info reveal">
+        <div class="row wrap" style="gap:8px"><a class="badge ship" href="san-pham.html?cat=${p.cat}">${esc(cat.name)}</a>${p.hot ? '<span class="badge violet">Bán chạy</span>' : ''}<span class="badge ok">Còn hàng</span></div>
+        <h2 class="display">${esc(p.name)}</h2>
+        <div class="price-row"><span class="now">${money(p.price)}</span>${p.old ? `<s class="dim">${money(p.old)}</s><span class="badge gold">Tiết kiệm ${money(p.old - p.price)}</span>` : ''}</div>
+        <div class="pts">${icon('sparkle')}<span>Thành viên nhận <b id="ptsVal">+${money(p.price * rate).replace('đ', '')} điểm PS</b> cho đơn này</span></div>
+        <p class="muted">${esc(p.desc)}</p>
+        <div class="divider" style="margin:2px 0"></div>
+        <div class="buy">
+          <div class="qty" aria-label="Số lượng"><button type="button" data-step="-1" aria-label="Bớt">${icon('minus')}</button><input id="qty" type="number" inputmode="numeric" min="1" max="99" value="1" aria-label="Số lượng"><button type="button" data-step="1" aria-label="Thêm">${icon('plus')}</button></div>
+          <button class="btn btn-outline-gold btn-lg" type="button" id="addBtn">${icon('cart')} Thêm vào giỏ</button>
+          <button class="btn btn-gold btn-lg" type="button" id="buyBtn">Mua ngay ${icon('arrow')}</button>
+        </div>
+        <div class="trust">
+          <div>${icon('shield')}<span>Chính hãng</span></div>
+          <div>${icon('truck')}<span>Giao toàn quốc</span></div>
+          <div>${icon('back')}<span>Đổi trả 7 ngày</span></div>
+          <div>${icon('award')}<span>Bảo hành</span></div>
+        </div>
+        <p class="dim" style="font-size:12px">Cần tư vấn chọn size? Gọi <a class="gold" href="tel:${esc(S.phone.replace(/\s/g, ''))}">${esc(S.phone)}</a> hoặc nhắn Zalo.</p>
+      </div>
+    </section>
+
+    <section class="card mt-3 reveal">
+      <div class="tabs" role="tablist" id="tabs"><button class="on" type="button" role="tab" data-tab="0">Mô tả</button><button type="button" role="tab" data-tab="1">Thông số</button><button type="button" role="tab" data-tab="2">Hướng dẫn bảo quản</button></div>
+      <div class="tab-panel prose" data-panel="0">
+        <p>${esc(p.desc)}</p>
+        <p>Mỗi sản phẩm của Phúc Sinh QuanTum được tuyển chọn từ lô trầm có hồ sơ nguồn gốc, chế tác thủ công và kiểm tra kỹ trước khi đóng hộp. Màu sắc, vân dầu giữa các hạt có thể khác nhau đôi chút vì đây là trầm tự nhiên. (nội dung mẫu)</p>
+        <p class="dim" style="font-size:14px">Trầm hương là sản phẩm văn hóa và tinh thần, không phải thuốc, không thay thế việc khám chữa bệnh.</p>
+      </div>
+      <div class="tab-panel" data-panel="1" hidden>
+        <dl class="kv spec">
+          <dt>Chất liệu</dt><dd>${esc(material)}</dd>
+          <dt>${p.spec ? 'Quy cách' : isBead ? 'Kích thước hạt' : 'Kích thước'}</dt><dd>${esc(size)}</dd>
+          <dt>Nguồn gốc</dt><dd>Vùng nguyên liệu miền Trung Việt Nam (mẫu)</dd>
+          <dt>Danh mục</dt><dd>${esc(cat.name)}</dd>
+          <dt>Mã sản phẩm</dt><dd>${esc(p.id.toUpperCase())}</dd>
+          <dt>Kèm theo</dt><dd>Hộp đựng, thẻ bảo hành, giấy giới thiệu nguồn gốc (mẫu)</dd>
+        </dl>
+      </div>
+      <div class="tab-panel" data-panel="2" hidden>
+        <ul class="care">
+          <li>${icon('check')}<span>Tháo sản phẩm khi tắm, bơi, rửa tay hoặc vận động mạnh để tránh nước và mồ hôi đọng lâu.</span></li>
+          <li>${icon('check')}<span>Tránh để nước hoa, kem dưỡng và hóa chất tiếp xúc trực tiếp với trầm.</span></li>
+          <li>${icon('check')}<span>Khi không dùng, cất trong hộp kín hoặc túi vải, đặt nơi khô thoáng, tránh nắng gắt.</span></li>
+          <li>${icon('check')}<span>Nếu bị ướt, lau nhẹ bằng khăn mềm và để khô tự nhiên, không sấy nóng.</span></li>
+          <li>${icon('check')}<span>Thành viên được hỗ trợ thay dây và vệ sinh sản phẩm tại cửa hàng. (chính sách mẫu)</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="section-title"><div><span class="eyebrow">Có thể anh chị thích</span><h2>Sản phẩm liên quan</h2></div><a class="card-link" href="san-pham.html?cat=${p.cat}">Xem thêm</a></div>
+    <section class="p-grid" id="related"></section>`;
+
+  const others = PRODUCTS.filter(x => x.id !== p.id);
+  const related = [...others.filter(x => x.cat === p.cat), ...others.filter(x => x.cat !== p.cat).sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0))].slice(0, 4);
+  $('#related').innerHTML = related.map(productCard).join('');
+
+  // góc nhìn
+  $$('.thumb').forEach(b => b.addEventListener('click', () => {
+    const v = +b.dataset.v; $$('.thumb').forEach(x => x.classList.toggle('on', x === b));
+    const st = $('#stage'); st.classList.remove('v-0', 'v-1', 'v-2'); st.classList.add('v-' + v); $('#vname').textContent = variants[v];
+  }));
+  // số lượng
+  const qi = $('#qty');
+  const getQ = () => Math.max(1, Math.min(99, parseInt(qi.value, 10) || 1));
+  const upd = () => { $('#ptsVal').textContent = '+' + money(p.price * rate * getQ()).replace('đ', '') + ' điểm PS'; };
+  $$('[data-step]').forEach(b => b.addEventListener('click', () => { qi.value = Math.max(1, Math.min(99, getQ() + +b.dataset.step)); upd(); }));
+  qi.addEventListener('input', upd); qi.addEventListener('blur', () => { qi.value = getQ(); upd(); });
+  $('#addBtn').addEventListener('click', () => { cart.add(p.id, getQ()); toast(`Đã thêm ${getQ()} sản phẩm vào giỏ`); });
+  $('#buyBtn').addEventListener('click', () => { cart.add(p.id, getQ()); location.href = 'dat-hang.html'; });
+  // tab
+  $('#tabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]'); if (!b) return;
+    $$('#tabs button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
+    $$('.tab-panel').forEach(x => x.hidden = x.dataset.panel !== b.dataset.tab);
+  });
+  PSQ.reveal();
+})();
+</script>
+</body>
+</html>

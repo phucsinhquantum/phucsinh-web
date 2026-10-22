@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sản phẩm · Phúc Sinh QuanTum</title>
+<meta name="description" content="Vòng tay trầm, chuỗi hạt, vật phẩm phong thủy, nụ trầm và quà tặng cao cấp từ Phúc Sinh QuanTum. Tích điểm PS trên mỗi đơn hàng.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .shop-hero { min-height: 240px; }
+  .shop-hero h1 { max-width: 16ch; }
+  .shop-hero .hero-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .filters { display: grid; gap: 14px; position: relative; z-index: 2; }
+  .f-top { display: grid; grid-template-columns: minmax(0, 1fr) 210px 210px; gap: 12px; }
+  .f-search { position: relative; }
+  .f-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: var(--text-3); pointer-events: none; }
+  .f-search .input { padding-left: 42px; }
+  .f-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; padding: 2px 4px; }
+  .f-chips::-webkit-scrollbar { display: none; }
+  .f-chips .chip { flex: none; display: inline-flex; align-items: center; gap: 8px; }
+  .f-chips .chip small { font-size: 11px; color: var(--text-3); }
+  .f-chips .chip.on small { color: inherit; opacity: .75; }
+  .result-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 22px 2px 14px; }
+  .result-bar b { color: var(--gold); }
+  .result-bar .link-btn { margin-left: auto; font-size: 13px; color: var(--cyan); }
+  .result-bar .link-btn:hover { color: var(--gold); }
+  .shop-empty { grid-column: 1 / -1; }
+  @media (max-width: 1280px) { .f-chips { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); padding-right: 40px; } }
+  @media (max-width: 1099px) { .f-top { grid-template-columns: minmax(0, 1fr) 1fr 1fr; } }
+  @media (max-width: 699px) {
+    .shop-hero { min-height: 230px; }
+    .f-top { grid-template-columns: 1fr; gap: 10px; }
+    .f-chips { margin: 0 -16px; padding: 2px 16px; }
+  }
+</style>
+</head>
+<body data-page="shop">
+<div id="page" data-title="Sản phẩm" data-crumb="Sản phẩm">
+
+  <section class="hero page-hero shop-hero card glow-mix reveal">
+    <div class="hero-bg" style="background-image:url(img/intro/canh-3-cong-sang-m.jpg)"></div>
+    <span class="eyebrow">Bộ sưu tập Phúc Sinh QuanTum</span>
+    <h1 class="mt-1">Trầm hương <em>tuyển chọn</em> cho từng khoảnh khắc</h1>
+    <div class="hero-meta">
+      <span class="badge gold">Chính hãng, có nguồn gốc</span>
+      <span class="badge ship">Giao toàn quốc</span>
+      <span class="badge violet">Tích 10% điểm PS</span>
+    </div>
+  </section>
+
+  <section class="card glow-gold filters mt-3" aria-label="Bộ lọc sản phẩm">
+    <div class="f-top">
+      <label class="f-search"><span class="sr-only">Tìm sản phẩm</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input class="input" id="fq" type="search" placeholder="Tìm theo tên sản phẩm..." autocomplete="off"></label>
+      <label><span class="sr-only">Khoảng giá</span><select class="input" id="fprice">
+        <option value="">Mọi mức giá</option>
+        <option value="0-5000000">Dưới 5 triệu</option>
+        <option value="5000000-10000000">5 đến 10 triệu</option>
+        <option value="10000000-">Trên 10 triệu</option>
+      </select></label>
+      <label><span class="sr-only">Sắp xếp</span><select class="input" id="fsort">
+        <option value="hot">Sắp xếp: nổi bật</option>
+        <option value="asc">Giá tăng dần</option>
+        <option value="desc">Giá giảm dần</option>
+        <option value="name">Tên A đến Z</option>
+      </select></label>
+    </div>
+    <div class="chips f-chips" id="fcats" role="tablist" aria-label="Danh mục"></div>
+  </section>
+
+  <div class="result-bar"><span class="muted" id="count"></span><button class="link-btn" type="button" id="reset" hidden>Xóa bộ lọc</button></div>
+  <section class="p-grid" id="grid" aria-live="polite"></section>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, $$, esc, icon, productCard, qs } = PSQ;
+  const st = { cat: CATEGORIES.some(c => c.id === qs('cat')) ? qs('cat') : '', q: qs('q') || '', price: '', sort: 'hot' };
+  const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+  $('#fq').value = st.q;
+
+  const chips = [{ id: '', name: 'Tất cả' }, ...CATEGORIES];
+  $('#fcats').innerHTML = chips.map(c => {
+    const n = c.id ? PRODUCTS.filter(p => p.cat === c.id).length : PRODUCTS.length;
+    return `<button class="chip" type="button" role="tab" data-cat="${c.id}">${c.icon ? icon(c.icon) : icon('grid')}${esc(c.name)} <small>${n}</small></button>`;
+  }).join('');
+  $$('#fcats .chip svg').forEach(s => { s.style.width = '15px'; s.style.height = '15px'; });
+
+  function syncUrl() {
+    const u = new URLSearchParams();
+    if (st.cat) u.set('cat', st.cat);
+    if (st.q) u.set('q', st.q);
+    history.replaceState(null, '', location.pathname + (u.toString() ? '?' + u : ''));
+  }
+
+  function render() {
+    $$('#fcats .chip').forEach(b => { const on = b.dataset.cat === st.cat; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    const q = norm(st.q.trim());
+    const [lo, hi] = st.price ? st.price.split('-').map(v => v === '' ? Infinity : +v) : [0, Infinity];
+    let list = PRODUCTS.filter(p => (!st.cat || p.cat === st.cat)
+      && (!q || norm(p.name + ' ' + p.desc + ' ' + (CATEGORIES.find(c => c.id === p.cat) || {}).name).includes(q))
+      && p.price >= (lo || 0) && p.price < hi);
+    const by = { hot: (a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0), asc: (a, b) => a.price - b.price, desc: (a, b) => b.price - a.price, name: (a, b) => a.name.localeCompare(b.name, 'vi') };
+    list = [...list].sort(by[st.sort]);
+    const cat = CATEGORIES.find(c => c.id === st.cat);
+    $('#count').innerHTML = `Hiển thị <b>${list.length}</b> sản phẩm${cat ? ' trong ' + esc(cat.name) : ''}${st.q ? ` cho từ khóa “${esc(st.q)}”` : ''}`;
+    $('#reset').hidden = !(st.cat || st.q || st.price || st.sort !== 'hot');
+    $('#grid').innerHTML = list.length ? list.map(productCard).join('')
+      : `<div class="card shop-empty empty">${icon('search')}<div style="font-size:16px;color:var(--text)">Chưa tìm thấy sản phẩm phù hợp</div><p class="mt-1">Anh chị thử từ khóa khác hoặc bỏ bớt bộ lọc nhé.</p><div class="mt-2"><button class="btn btn-outline-gold btn-sm" type="button" data-reset>Xem tất cả sản phẩm</button></div></div>`;
+    syncUrl();
+  }
+  function reset() { Object.assign(st, { cat: '', q: '', price: '', sort: 'hot' }); $('#fq').value = ''; $('#fprice').value = ''; $('#fsort').value = 'hot'; render(); }
+
+  $('#fcats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (!b) return; st.cat = b.dataset.cat; render(); b.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); });
+  let t; $('#fq').addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => { st.q = e.target.value; render(); }, 160); });
+  $('#fprice').addEventListener('change', e => { st.price = e.target.value; render(); });
+  $('#fsort').addEventListener('change', e => { st.sort = e.target.value; render(); });
+  $('#reset').addEventListener('click', reset);
+  $('#grid').addEventListener('click', e => { if (e.target.closest('[data-reset]')) reset(); });
+  // ô tìm kiếm trên thanh trên: lọc ngay tại trang, không tải lại
+  const top = $('.topbar .search');
+  if (top) { top.querySelector('input').value = st.q; top.addEventListener('submit', e => { e.preventDefault(); st.q = top.querySelector('input').value; $('#fq').value = st.q; render(); }); }
+
+  render();
+  const active = $('#fcats .chip.on'); if (active && st.cat) active.scrollIntoView({ block: 'nearest', inline: 'center' });
+  PSQ.reveal();
+})();
+</script>
+</body>
+</html>
