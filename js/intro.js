@@ -27,7 +27,10 @@
     music: 'audio/intro.mp3',   // để '' nếu không muốn nhạc
     volume: 0.7,
     oncePerSession: true,
-    respectReducedMotion: false
+    respectReducedMotion: false,
+    // Trình duyệt chỉ cho phát nhạc sau khi khách chạm. Bật màn hình "Chạm để bắt đầu" để intro luôn chạy kèm nhạc từ giây đầu.
+    tapToStart: true,
+    tapText: 'Chạm để bắt đầu'
   };
 
   // Ảnh từng cảnh và các điểm quan trọng trên ảnh gốc (toạ độ theo khổ 1672 × 941)
@@ -80,6 +83,7 @@
     </div>
     <canvas aria-hidden="true"></canvas>
     <button class="intro-skip" type="button" data-at="1">Bỏ qua</button>
+    ${INTRO.tapToStart ? `<button class="intro-gate" type="button" aria-label="${INTRO.tapText}"><img src="${INTRO.logo}" alt=""><span>${INTRO.tapText}</span></button>` : ''}
     <button class="intro-sound" type="button" data-at="1" aria-label="Bật/tắt nhạc" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="w" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M16 9l6 6M22 9l-6 6"/></svg>
     </button>
@@ -554,8 +558,18 @@
   const decode = img => (img.decode ? img.decode() : new Promise(r => { img.complete ? r() : (img.onload = img.onerror = r); })).catch(() => {});
   const fonts = document.fonts && document.fonts.ready ? document.fonts.ready.catch(() => {}) : Promise.resolve();
   const loaded = new Promise(r => document.readyState === 'complete' ? r() : addEventListener('load', r, { once: true }));
-  const go = () => Promise.all([decode(S.clouds), decode(S.final), fonts, loaded]).then(() => requestAnimationFrame(() => requestAnimationFrame(start)));
-  const ready = () => { go(); setTimeout(start, 6000); };
+  // màn hình "Chạm để bắt đầu": cú chạm cho phép phát nhạc, intro chạy khi đã chạm và ảnh đã tải xong
+  const gate = el.querySelector('.intro-gate');
+  let tapped = !gate, isReady = false;
+  const begin = () => { if (tapped && isReady) start(); };
+  if (gate) gate.addEventListener('click', () => {
+    if (tapped) return; tapped = true; playMusic();
+    gate.classList.add('gone'); setTimeout(() => gate.remove(), 900);
+    begin();
+  });
+  const markReady = () => { isReady = true; el.classList.add('loaded'); begin(); };
+  const go = () => Promise.all([decode(S.clouds), decode(S.final), fonts, loaded]).then(() => requestAnimationFrame(() => requestAnimationFrame(markReady)));
+  const ready = () => { go(); setTimeout(markReady, 6000); };
   (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', ready) : ready();
   window.PSQIntro = { enter };
 })();

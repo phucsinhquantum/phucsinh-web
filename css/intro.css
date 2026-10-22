@@ -198,3 +198,12 @@ html.intro-cover body > *:not(.intro) { visibility: hidden; }
 .intro.reduce .intro-btn::before { animation: none; }
 .intro.reduce.leaving { transform: none; filter: none; }
 .intro.lite .intro-logo.lit::before { animation: none; opacity: .6; }
+
+/* màn hình "Chạm để bắt đầu" */
+.intro-gate { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 26px; border: 0; padding: 0; cursor: pointer; color: var(--i-ink);
+  background: radial-gradient(ellipse 55% 45% at 50% 45%, rgba(226,189,107,.14), rgba(11,10,12,0) 70%), var(--i-bg); transition: opacity .8s ease; }
+.intro-gate img { width: clamp(140px, 16vw, 260px); height: auto; filter: drop-shadow(0 0 22px rgba(226,189,107,.35)); animation: gateIn 1.2s ease both; }
+.intro-gate span { font: 500 13px var(--i-sans); letter-spacing: .32em; text-transform: uppercase; color: var(--i-gold); padding: 12px 26px; border: 1px solid var(--i-gold-soft); border-radius: 999px; animation: gateIn 1.2s .3s ease both, gatePulse 2s 1.5s ease-in-out infinite; }
+.intro-gate.gone { opacity: 0; pointer-events: none; }
+@keyframes gateIn { from { opacity: 0; transform: translateY(10px); } }
+@keyframes gatePulse { 50% { border-color: #ffe2a0; color: #fff6dc; box-shadow: 0 0 22px rgba(226,189,107,.45); } }
