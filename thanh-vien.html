@@ -7,7 +7,9 @@
 <title>Thành viên · Phúc Sinh QuanTum</title>
 <meta name="description" content="Tài khoản thành viên Phúc Sinh QuanTum: điểm PS, hạng thành viên, đơn hàng và ưu đãi riêng.">
 <meta name="theme-color" content="#06080a">
-<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
@@ -28,8 +30,22 @@
   .member-card::before { content: ""; position: absolute; width: 260px; height: 260px; right: -80px; top: -90px; border-radius: 50%; border: 1px solid rgba(243,199,107,.35); box-shadow: 0 0 40px rgba(243,199,107,.15) inset; }
   .member-card img { width: 70px; }
   .member-card .num { font-size: 18px; letter-spacing: .18em; font-weight: 600; }
+  .biz-tabs { margin-bottom: 14px; }
+  .biz-note { font-size: 12.5px; color: var(--text-3); display: flex; gap: 8px; align-items: center; margin: 0 0 12px; }
+  .biz-note svg { width: 15px; height: 15px; flex: none; }
+  .ref-code { font-size: clamp(26px, 3vw, 34px); font-weight: 700; letter-spacing: .12em; color: var(--gold); text-shadow: 0 0 18px var(--gold-glow); }
+  .ref-link { display: flex; gap: 8px; } .ref-link .input { flex: 1; min-width: 0; font-size: 13px; }
+  .lvl-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .lvl-pill { flex: 1 1 110px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(0,0,0,.2); }
+  .lvl-pill b { display: block; font-size: 22px; } .lvl-pill span { font-size: 12px; color: var(--text-3); }
+  .addr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+  .addr { padding: 14px; border-radius: 14px; border: 1px solid var(--line-2); background: rgba(0,0,0,.2); display: grid; gap: 6px; font-size: 14px; }
+  .addr.def { border-color: rgba(243,199,107,.5); box-shadow: 0 0 18px -8px var(--gold-glow); }
+  .addr .row { gap: 6px; flex-wrap: wrap; }
+  #biz .tbl .who b { white-space: nowrap; }
+  .biz-act { display: flex; gap: 6px; flex-wrap: wrap; }
   @media (max-width: 1099px) { .auth-wrap { grid-template-columns: 1fr; } .auth-art { min-height: 300px; } }
-  @media (max-width: 699px) { .profile { grid-template-columns: auto 1fr; } .profile .actions { grid-column: 1 / -1; } .auth-art { min-height: 240px; } }
+  @media (max-width: 699px) { .profile { grid-template-columns: auto 1fr; } .profile .actions { grid-column: 1 / -1; flex-wrap: wrap; } .auth-art { min-height: 240px; } }
 </style>
 </head>
 <body data-page="member">
@@ -39,10 +55,172 @@
 
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
+<script src="js/psq-data.js"></script>
 <script>
 (function () {
-  const { $, esc, money, icon, auth, memberInfo, statusBadge, toast, initials, fdate, productCard, modal } = PSQ;
+  const { $, esc, money, icon, auth, memberInfo, statusBadge, toast, initials, fdate, productCard, modal, short, today } = PSQ;
   const view = $('#view');
+  const refCode = (PSQ.qs('ref') || '').trim().toUpperCase().slice(0, 20);
+  /* ---------- tài khoản kinh doanh: giới thiệu, đội nhóm, ví, hoa hồng, nạp điểm, địa chỉ ---------- */
+  const BIZ_TABS = [['ref', 'Giới thiệu và cấp bậc', 'award'], ['team', 'Đội nhóm của tôi', 'users'], ['wallet', 'Ví của tôi', 'wallet'], ['com', 'Hoa hồng', 'gift'], ['top', 'Nạp điểm', 'plus'], ['addr', 'Sổ địa chỉ', 'pin']];
+  const WST = { done: ['Hoàn tất', 'ok'], pending: ['Chờ duyệt', 'pending'], rejected: ['Từ chối', 'failed'] };
+  const wB = s => `<span class="badge ${(WST[s] || [])[1] || ''}">${(WST[s] || [s])[0]}</span>`;
+  const sign = n => `<b class="nowrap ${n < 0 ? 'red' : 'green'}">${n > 0 ? '+' : ''}${money(n)}</b>`;
+  let bizTab = 'ref'; try { bizTab = localStorage.getItem('psq_member_tab') || 'ref'; } catch (e) {}
+  if (!BIZ_TABS.some(t => t[0] === bizTab)) bizTab = 'ref';
+  const save = (d, action, detail, msg) => { ADB.log(d, action, detail); ADB.save(d); toast(msg); };
+  const head = (t, sub, right = '') => `<div class="card-head" style="flex-wrap:wrap"><div><h3>${t}</h3>${sub ? `<div class="sub">${sub}</div>` : ''}</div>${right ? `<div style="margin-left:auto">${right}</div>` : ''}</div>`;
+  const note = `<p class="biz-note">${icon('info')}Yêu cầu rút tiền và nạp điểm do quản trị viên xử lý (chạy thử, chưa chuyển tiền thật).</p>`;
+
+  function biz(u0) {
+    const box = $('#biz'); if (!box) return;
+    const d = ADB.load(), me = ADB.user(d, u0.id) || u0;
+    box.innerHTML = `<div class="section-title" style="margin-top:0"><div><span class="eyebrow">Tài khoản kinh doanh</span><h2>Giới thiệu, đội nhóm và ví</h2></div></div>
+      <div class="tabs biz-tabs" role="tablist">${BIZ_TABS.map(([k, l]) => `<button type="button" role="tab" data-t="${k}" class="${k === bizTab ? 'on' : ''}" aria-selected="${k === bizTab}">${l}</button>`).join('')}</div>
+      <div id="bizBody"></div>`;
+    box.querySelector('.biz-tabs').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; bizTab = b.dataset.t; try { localStorage.setItem('psq_member_tab', bizTab); } catch (er) {} biz(u0); });
+    const body = $('#bizBody'), redo = () => biz(u0);
+    ({ ref: tabRef, team: tabTeam, wallet: tabWallet, com: tabCom, top: tabTop, addr: tabAddr })[bizTab](d, me, body, redo);
+  }
+
+  function tabRef(d, me, body) {
+    const link = location.href.split(/[?#]/)[0] + '?ref=' + encodeURIComponent(me.code || '');
+    const sp = me.sponsor && ADB.user(d, me.sponsor), f1 = d.users.filter(x => x.sponsor === me.id).length;
+    const L = ADB.leader(d, me.id), ranks = d.settings.leaderRanks, i = ranks.findIndex(r => r.id === L.rank.id), nx = ranks[i + 1];
+    const pct = (v, t) => Math.max(3, Math.min(100, t ? v / t * 100 : 100));
+    body.innerHTML = `<div class="grid g-2">
+      <div class="card glow-gold">${head('Mã giới thiệu của tôi', 'gửi cho người thân, bạn bè khi đăng ký')}
+        ${me.code ? `<div class="ref-code">${esc(me.code)}</div>
+        <div class="ref-link mt-2"><input class="input" id="refLink" value="${esc(link)}" readonly aria-label="Đường dẫn giới thiệu"><button class="btn btn-gold" type="button" id="refCopy">${icon('check')} Sao chép</button></div>
+        <dl class="kv mt-2"><dt>Người giới thiệu tôi</dt><dd>${sp ? esc(sp.name) + ' <span class="dim">(' + esc(sp.code || '') + ')</span>' : '<span class="dim">Không có</span>'}</dd><dt>Đã giới thiệu</dt><dd>${f1} người</dd><dt>Trạng thái trên cây</dt><dd>${me.placed === false ? '<span class="badge pending">Chờ xếp lên cây</span>' : '<span class="badge ok">Đã xếp</span>'}</dd></dl>`
+        : '<p class="dim">Tài khoản chưa có mã giới thiệu. Anh chị liên hệ cửa hàng để được cấp.</p>'}
+      </div>
+      <div class="card glow-cyan">${head('Cấp bậc lãnh đạo', 'theo số người trong nhóm và doanh số nhóm')}
+        <div class="row" style="gap:12px"><span class="rank-gem" style="color:${L.rank.color};grid-row:auto">${icon('star')}</span><div><b style="color:${L.rank.color};font-size:18px">${esc(L.rank.name)}</b><div class="dim" style="font-size:13px">${L.team} người trong nhóm · doanh số nhóm ${money(L.sales)}${L.rank.bonus ? ' · thưởng ' + L.rank.bonus + '%' : ''}</div></div></div>
+        ${nx ? `<div class="mt-2" style="font-size:13px"><div class="row between"><span>Thành viên nhóm</span><span class="dim">${L.team}/${nx.minTeam}</span></div><div class="progress mt-1"><i style="width:${pct(L.team, nx.minTeam)}%"></i></div>
+          <div class="row between mt-2"><span>Doanh số nhóm</span><span class="dim">${short(L.sales)}/${short(nx.minSales)}</span></div><div class="progress mt-1"><i style="width:${pct(L.sales, nx.minSales)}%"></i></div>
+          <p class="dim mt-1">Để lên <b style="color:${nx.color}">${esc(nx.name)}</b>: còn ${[nx.minTeam > L.team ? (nx.minTeam - L.team) + ' người trong nhóm' : '', nx.minSales > L.sales ? money(nx.minSales - L.sales) + ' doanh số nhóm' : ''].filter(Boolean).join(' và ')}.</p></div>` : '<p class="gold mt-2">Anh chị đang ở cấp bậc cao nhất.</p>'}
+        <div class="divider"></div>${ranks.map(r => `<div class="rank-line"><span class="rank-gem" style="color:${r.color}">${icon('star')}</span><b style="color:${r.color}">${esc(r.name)}${r.id === L.rank.id ? ' <span class="badge gold">Hiện tại</span>' : ''}</b><span class="dim" style="font-size:13px">${r.minTeam ? 'Từ ' + r.minTeam + ' người, doanh số nhóm ' + short(r.minSales) : 'Khi tham gia'}${r.bonus ? ' · thưởng ' + r.bonus + '%' : ''} (mẫu)</span></div>`).join('')}
+      </div></div>`;
+    const cp = $('#refCopy'); if (cp) cp.addEventListener('click', async () => {
+      const inp = $('#refLink'); try { await navigator.clipboard.writeText(inp.value); } catch (e) { inp.select(); try { document.execCommand('copy'); } catch (er) {} }
+      toast('Đã sao chép đường dẫn giới thiệu');
+    });
+  }
+
+  function tabTeam(d, me, body) {
+    const dl = ADB.downline(d, me.id), wait = d.users.filter(x => x.sponsor === me.id && x.placed === false);
+    const lv = {}; dl.forEach(x => (lv[x.level] = lv[x.level] || []).push(x.user));
+    const levels = Object.keys(lv).map(Number).sort((a, b) => a - b);
+    body.innerHTML = `<div class="card glow-mix">${head('Đội nhóm của tôi', dl.length + ' người theo sơ đồ phả hệ')}
+      <div class="lvl-row">${(levels.length ? levels : [1]).map(l => `<div class="lvl-pill"><span>Tầng F${l}</span><b class="${l === 1 ? 'gold' : 'cyan'}">${(lv[l] || []).length}</b><span>Doanh số ${((v) => v ? short(v) : '0đ')((lv[l] || []).reduce((s, x) => s + ADB.sales(d, x.id), 0))}</span></div>`).join('')}${wait.length ? `<div class="lvl-pill"><span>Chờ xếp lên cây</span><b style="color:var(--amber)">${wait.length}</b><span>người anh chị giới thiệu</span></div>` : ''}</div>
+      ${dl.length || wait.length ? `<div class="table-wrap mt-2"><table class="tbl"><thead><tr><th>Thành viên</th><th>Tầng</th><th>Ngày tham gia</th><th>Doanh số</th></tr></thead><tbody>
+        ${wait.map(x => `<tr><td><div class="who"><span class="avatar">${esc(initials(x.name))}</span><div><b>${esc(x.name)}</b><small>${esc(x.code || '')}</small></div></div></td><td><span class="badge pending">Chờ lên cây</span></td><td class="dim nowrap">${fdate(x.created)}</td><td class="nowrap">${money(ADB.sales(d, x.id))}</td></tr>`).join('')}
+        ${dl.slice().sort((a, b) => a.level - b.level).slice(0, 100).map(({ user: x, level }, i) => `<tr><td><div class="who"><span class="avatar ${['', 'v', 'g'][i % 3]}">${esc(initials(x.name))}</span><div><b>${esc(x.name)}</b><small>${esc(x.code || '')}</small></div></div></td><td><span class="badge ${level === 1 ? 'gold' : 'violet'}">F${level}</span></td><td class="dim nowrap">${fdate(x.created)}</td><td class="nowrap">${money(ADB.sales(d, x.id))}</td></tr>`).join('')}
+      </tbody></table></div>` : `<div class="empty mt-2">${icon('users')}Chưa có thành viên trong nhóm. Anh chị gửi mã giới thiệu để mời người thân tham gia.</div>`}</div>`;
+  }
+
+  function tabWallet(d, me, body, redo) {
+    const bal = ADB.balance(d, me.id), mine = (d.wallet || []).filter(w => w.user === me.id).sort((a, b) => b.date.localeCompare(a.date));
+    const pend = -mine.filter(w => w.type === 'withdraw' && w.status === 'pending').reduce((s, w) => s + w.amount, 0), avail = bal - pend, min = d.settings.minWithdraw || 0;
+    body.innerHTML = `${note}<div class="grid g-3 keep-2">
+        <div class="card glow-gold stat"><div class="stat-top"><span class="stat-ico gold">${icon('wallet')}</span>Số dư ví</div><div class="stat-val">${money(bal)}</div></div>
+        <div class="card glow-cyan stat"><div class="stat-top"><span class="stat-ico cyan">${icon('clock')}</span>Đang chờ rút</div><div class="stat-val">${money(pend)}</div></div>
+        <div class="card glow-gold stat"><div class="stat-top"><span class="stat-ico green">${icon('check')}</span>Có thể rút</div><div class="stat-val">${money(Math.max(0, avail))}</div></div></div>
+      <div class="grid g-main-r mt-2">
+        <div class="card glow-cyan">${head('Giao dịch gần đây', mine.length + ' giao dịch')}
+          ${mine.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>${mine.slice(0, 30).map(w => `<tr><td class="dim nowrap">${fdate(w.date)}</td><td>${ADB.walletType[w.type] || esc(w.type)}</td><td class="dim">${esc(w.note || '')}</td><td>${sign(w.amount)}</td><td>${wB(w.status)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('wallet')}Ví chưa có giao dịch.</div>`}
+        </div>
+        <form class="card glow-gold" id="wdF" novalidate>${head('Yêu cầu rút tiền', 'tối thiểu ' + money(min))}
+          <div class="field"><label for="wdA">Số tiền (đồng)</label><input class="input" id="wdA" name="amount" type="number" min="${min}" step="10000" inputmode="numeric" required></div>
+          <div class="field mt-2"><label for="wdB">Ngân hàng</label><input class="input" id="wdB" name="bank" placeholder="Ví dụ Vietcombank" required></div>
+          <div class="field mt-2"><label for="wdN">Số tài khoản và tên chủ tài khoản</label><input class="input" id="wdN" name="acc" required></div>
+          <p class="red mt-1" id="wdE" style="font-size:13px;min-height:18px"></p>
+          <button class="btn btn-gold btn-block" type="submit" ${avail < min ? 'disabled' : ''}>Gửi yêu cầu rút</button>
+          ${avail < min ? `<p class="dim mt-1" style="font-size:12px">Số dư có thể rút chưa đủ mức tối thiểu ${money(min)}.</p>` : ''}
+        </form></div>`;
+    $('#wdF').addEventListener('submit', e => {
+      e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), a = Math.round(+f.amount), err = $('#wdE');
+      if (!a || a < min) return err.textContent = 'Số tiền rút tối thiểu ' + money(min) + '.';
+      if (a > avail) return err.textContent = 'Số tiền vượt số dư có thể rút (' + money(Math.max(0, avail)) + ').';
+      if (!f.bank.trim() || !f.acc.trim()) return err.textContent = 'Anh chị điền ngân hàng và số tài khoản.';
+      const dd = ADB.load(); (dd.wallet = dd.wallet || []).push({ id: ADB.uid('gd'), user: me.id, type: 'withdraw', amount: -a, ref: '', date: today(), note: `Rút về ${f.bank.trim()} · ${f.acc.trim()}`, status: 'pending' });
+      save(dd, 'Yêu cầu rút tiền', `${me.name}: ${money(a)}`, 'Đã gửi yêu cầu rút ' + money(a) + ', chờ quản trị duyệt'); redo();
+    });
+  }
+
+  function tabCom(d, me, body) {
+    const C = (d.commissions || []).filter(c => c.user === me.id).sort((a, b) => b.date.localeCompare(a.date)), CS = ADB.commissionStatus;
+    const sm = s => C.filter(c => c.status === s).reduce((t, c) => t + c.amount, 0);
+    body.innerHTML = `<div class="grid g-4 keep-2">${Object.entries(CS).map(([k, v], i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat"><div class="stat-top"><span class="stat-ico ${['gold', 'cyan', 'green', 'red'][i]}">${icon(['clock', 'check', 'wallet', 'close'][i])}</span>${v[0]}</div><div class="stat-val">${short(sm(k))}</div></div>`).join('')}</div>
+      <div class="card glow-mix mt-2">${head('Hoa hồng của tôi', 'tỉ lệ theo tầng F1, F2, F3: ' + d.settings.commission.join('%, ') + '% (mẫu)')}
+        ${C.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Đơn</th><th>Người mua</th><th>Tầng</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>${C.slice(0, 50).map(c => `<tr><td class="dim nowrap">${fdate(c.date)}</td><td><b>#${esc(c.order)}</b></td><td>${esc((ADB.user(d, c.from) || {}).name || '')}</td><td><span class="badge violet">F${c.level} · ${c.rate}%</span></td><td class="gold nowrap"><b>${money(c.amount)}</b></td><td><span class="badge ${(CS[c.status] || [])[1]}">${(CS[c.status] || [c.status])[0]}</span></td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('gift')}Chưa có hoa hồng. Hoa hồng phát sinh khi người trong nhóm đặt hàng.</div>`}
+        <p class="dim mt-2" style="font-size:12px">Hoa hồng đã trả được cộng vào Ví của tôi.</p></div>`;
+  }
+
+  function tabTop(d, me, body, redo) {
+    const T = (d.topups || []).filter(t => t.user === me.id).sort((a, b) => b.date.localeCompare(a.date));
+    body.innerHTML = `${note}<div class="grid g-main-r">
+      <div class="card glow-cyan">${head('Lịch sử nạp điểm', T.length + ' yêu cầu')}
+        ${T.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Số tiền</th><th>Hình thức</th><th>Trạng thái</th></tr></thead><tbody>${T.map(t => `<tr><td class="dim nowrap">${fdate(t.date)}</td><td class="gold nowrap"><b>${money(t.amount)}</b></td><td>${esc(t.method || '')}</td><td>${wB(t.status)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('plus')}Chưa có yêu cầu nạp điểm.</div>`}
+      </div>
+      <form class="card glow-gold" id="tpF" novalidate>${head('Yêu cầu nạp điểm', '1 đồng = 1 điểm vào ví')}
+        <div class="field"><label for="tpA">Số tiền (đồng)</label><input class="input" id="tpA" name="amount" type="number" min="100000" step="50000" inputmode="numeric" required></div>
+        <div class="chips mt-1" id="tpQ">${[500000, 1000000, 2000000, 5000000].map(v => `<button class="chip" type="button" data-v="${v}">${short(v)}</button>`).join('')}</div>
+        <div class="field mt-2"><label for="tpM">Hình thức</label><select class="input" id="tpM" name="method">${['Chuyển khoản', 'Ví MoMo', 'Tiền mặt tại cửa hàng'].map(m => `<option>${m}</option>`).join('')}</select></div>
+        <div class="field mt-2"><label for="tpN">Ghi chú</label><input class="input" id="tpN" name="note" placeholder="Mã giao dịch chuyển khoản (nếu có)"></div>
+        <p class="red mt-1" id="tpE" style="font-size:13px;min-height:18px"></p>
+        <button class="btn btn-gold btn-block" type="submit">Gửi yêu cầu nạp</button>
+        <p class="dim mt-1" style="font-size:12px">Chuyển khoản theo thông tin ở trang Liên hệ, ghi nội dung là mã ${esc(me.code || me.phone || '')}.</p>
+      </form></div>`;
+    $('#tpQ').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) $('#tpA').value = b.dataset.v; });
+    $('#tpF').addEventListener('submit', e => {
+      e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), a = Math.round(+f.amount);
+      if (!a || a < 100000) return $('#tpE').textContent = 'Số tiền nạp tối thiểu 100.000đ.';
+      const dd = ADB.load(); (dd.topups = dd.topups || []).push({ id: ADB.uid('nd'), user: me.id, amount: a, points: a, method: f.method, status: 'pending', date: today(), note: f.note.trim() });
+      save(dd, 'Yêu cầu nạp điểm', `${me.name}: ${money(a)} qua ${f.method}`, 'Đã gửi yêu cầu nạp ' + money(a) + ', chờ quản trị duyệt'); redo();
+    });
+  }
+
+  function tabAddr(d, me, body, redo) {
+    const A = (d.addresses || []).filter(a => a.user === me.id).sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+    body.innerHTML = `<div class="card glow-mix">${head('Sổ địa chỉ', A.length + ' địa chỉ nhận hàng', `<button class="btn btn-sm btn-gold" type="button" id="adAdd">${icon('plus')} Thêm địa chỉ</button>`)}
+      ${A.length ? `<div class="addr-grid">${A.map(a => `<div class="addr${a.isDefault ? ' def' : ''}"><div class="row between"><b>${esc(a.name)}</b>${a.isDefault ? '<span class="badge gold">Mặc định</span>' : ''}</div><span class="dim">${esc(a.phone || '')}</span><span>${esc(a.line)}${a.province ? ', ' + esc(a.province) : ''}</span>
+        <div class="biz-act mt-1"><button class="btn btn-sm" type="button" data-ae="${a.id}">${icon('edit')} Sửa</button>${a.isDefault ? '' : `<button class="btn btn-sm btn-ghost" type="button" data-ad="${a.id}">Đặt mặc định</button>`}<button class="btn btn-sm btn-ghost" type="button" data-ax="${a.id}" aria-label="Xóa địa chỉ">${icon('trash')}</button></div></div>`).join('')}</div>`
+      : `<div class="empty">${icon('pin')}Chưa có địa chỉ. Anh chị thêm địa chỉ để đặt hàng nhanh hơn.</div>`}</div>`;
+    const edit = a => {
+      const isNew = !a; a = a || { name: me.name, phone: me.phone || '', line: '', province: me.city || '', isDefault: !A.length };
+      const md = modal(`<form id="adF"><div class="card-head"><h3>${isNew ? 'Thêm địa chỉ' : 'Sửa địa chỉ'}</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+        <div class="form-grid"><div class="field"><label>Người nhận</label><input class="input" name="name" value="${esc(a.name)}" required></div>
+        <div class="field"><label>Số điện thoại</label><input class="input" name="phone" type="tel" value="${esc(a.phone)}" required></div>
+        <div class="field full"><label>Địa chỉ</label><input class="input" name="line" value="${esc(a.line)}" placeholder="Số nhà, đường, phường hoặc xã" required></div>
+        <div class="field full"><label>Tỉnh, thành phố</label><input class="input" name="province" value="${esc(a.province || '')}" required></div>
+        <label class="check full"><input type="checkbox" name="isDefault"${a.isDefault ? ' checked' : ''}> Đặt làm địa chỉ mặc định</label></div>
+        <p class="red mt-1" id="adE" style="font-size:13px;min-height:18px"></p>
+        <div class="row mt-2" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu</button></div></form>`);
+      $('#adF', md.el).addEventListener('submit', e => {
+        e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), v = { name: f.name.trim(), phone: f.phone.trim(), line: f.line.trim(), province: f.province.trim(), isDefault: !!f.isDefault };
+        if (!v.name || !v.phone || v.line.length < 5 || !v.province) return $('#adE', md.el).textContent = 'Anh chị điền đủ người nhận, số điện thoại, địa chỉ và tỉnh thành.';
+        const dd = ADB.load(); dd.addresses = dd.addresses || [];
+        const mineD = dd.addresses.filter(x => x.user === me.id);
+        if (v.isDefault) mineD.forEach(x => x.isDefault = false);
+        if (isNew) dd.addresses.push({ id: ADB.uid('dc'), user: me.id, ...v }); else Object.assign(dd.addresses.find(x => x.id === a.id), v);
+        if (!dd.addresses.some(x => x.user === me.id && x.isDefault)) dd.addresses.find(x => x.user === me.id).isDefault = true;
+        save(dd, isNew ? 'Thêm địa chỉ' : 'Sửa địa chỉ', me.name, 'Đã lưu địa chỉ'); md.close(); redo();
+      });
+    };
+    $('#adAdd').addEventListener('click', () => edit(null));
+    body.querySelector('.card').addEventListener('click', e => {
+      const ed = e.target.closest('[data-ae]'), df = e.target.closest('[data-ad]'), dl = e.target.closest('[data-ax]');
+      if (ed) return edit(A.find(a => a.id === ed.dataset.ae));
+      if (!df && !dl) return;
+      if (dl && !confirm('Xóa địa chỉ này?')) return;
+      const dd = ADB.load(), mineD = dd.addresses.filter(x => x.user === me.id);
+      if (df) { mineD.forEach(x => x.isDefault = x.id === df.dataset.ad); save(dd, 'Đặt địa chỉ mặc định', me.name, 'Đã đặt địa chỉ mặc định'); }
+      if (dl) { const wasDef = (mineD.find(x => x.id === dl.dataset.ax) || {}).isDefault; dd.addresses = dd.addresses.filter(x => x.id !== dl.dataset.ax); const rest = dd.addresses.filter(x => x.user === me.id); if (wasDef && rest.length) rest[0].isDefault = true; save(dd, 'Xóa địa chỉ', me.name, 'Đã xóa địa chỉ'); }
+      redo();
+    });
+  }
   const ranksHtml = cur => RANKS.map(r => `<div class="rank-line"><span class="rank-gem" style="color:${r.color}">${icon('gem')}</span><b style="color:${r.color}">${r.name}${cur && cur.id === r.id ? ' <span class="badge gold">Hạng của anh chị</span>' : ''}</b><span class="dim" style="font-size:13px">${r.min ? 'Chi tiêu từ ' + money(r.min) : 'Khi đăng ký'} · ${esc(r.perk)}</span></div>`).join('');
 
   /* ---------- chưa đăng nhập ---------- */
@@ -62,7 +240,8 @@
           <div class="field mt-2"><label for="fp">Số điện thoại</label><input class="input" id="fp" name="phone" type="tel" autocomplete="tel" inputmode="tel"></div>` : ''}
           <div class="field mt-2"><label for="fe">Email</label><input class="input" id="fe" name="email" type="email" autocomplete="email" required></div>
           <div class="field mt-2"><label for="fw">Mật khẩu</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>
-          ${mode === 'register' ? '<label class="check mt-2"><input type="checkbox" name="agree" required> Tôi đồng ý với điều khoản và chính sách bảo mật</label>' : ''}
+          ${mode === 'register' ? `<div class="field mt-2"><label for="fr">Mã giới thiệu (nếu có)</label><input class="input" id="fr" name="ref" autocomplete="off" placeholder="Ví dụ PS1001" value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>
+          <label class="check mt-2"><input type="checkbox" name="agree" required> Tôi đồng ý với điều khoản và chính sách bảo mật</label>` : ''}
           <p class="red mt-1" id="err" style="font-size:13px;min-height:20px"></p>
           <button class="btn btn-gold btn-block btn-lg" type="submit">${mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</button>
           <p class="dim mt-2" style="font-size:12px">${mode === 'login' ? 'Tài khoản dùng thử: khach1@email.com / 123456' : 'Mật khẩu tối thiểu 6 ký tự.'}</p>
@@ -73,6 +252,10 @@
       </div>
     </div>`;
     $('#atabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) guest(b.dataset.m); });
+    const fr = $('#fr');
+    if (fr) { const hint = () => { const c = fr.value.trim().toUpperCase(), sp = c && ADB.load().users.find(x => (x.code || '').toUpperCase() === c);
+      $('#frHint').innerHTML = !c ? '' : sp ? `Người giới thiệu: <b class="gold">${esc(sp.name)}</b>` : '<span class="red">Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.</span>'; };
+      fr.addEventListener('input', hint); hint(); }
     $('#af').addEventListener('submit', e => {
       e.preventDefault(); const f = Object.fromEntries(new FormData(e.target));
       if (mode === 'register') {
@@ -124,8 +307,11 @@
         </div>
       </section>
 
+      <section id="biz" class="mt-2"></section>
+
       <div class="section-title"><div><span class="eyebrow">Dành cho anh chị</span><h2>Gợi ý theo hạng ${m.rank.name}</h2></div></div>
       <section class="p-grid">${PRODUCTS.filter(p => p.hot).slice(0, 4).map(productCard).join('')}</section>`;
+    biz(u);
     $('#out').addEventListener('click', () => { auth.logout(); location.reload(); });
     $('#edit').addEventListener('click', () => {
       const md = modal(`<form id="pf"><div class="card-head"><h3>Sửa hồ sơ</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
@@ -144,8 +330,9 @@
     }));
   }
 
+  ADB.load(); // bổ sung dữ liệu mã giới thiệu, ví, hoa hồng (chạy thử)
   const u = auth.user();
-  u ? member(u) : guest(PSQ.qs('dang-ky') ? 'register' : 'login');
+  u ? member(u) : guest(PSQ.qs('dang-ky') || refCode ? 'register' : 'login');
 })();
 </script>
 </body>

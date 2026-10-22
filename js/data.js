@@ -9,7 +9,7 @@ window.SITE = {
   brand: 'Phúc Sinh QuanTum',
   short: 'PSQ',
   slogan: 'Tinh hoa trầm hương Việt',
-  logo: 'img/intro/logo-psq.png',
+  logo: 'img/logo-psq.png',
   phone: '0900 000 000',           // TODO: số điện thoại thật
   zalo: '0900000000',
   email: 'lienhe@tenmien.vn',
@@ -160,3 +160,14 @@ window.RANKS = [
   { id: 'vang', name: 'Vàng', min: 50000000, color: '#f3c76b', perk: 'Giảm 5%, quà sinh nhật' },
   { id: 'kim-cuong', name: 'Kim cương', min: 150000000, color: '#4fe6df', perk: 'Giảm 8%, tư vấn riêng, sự kiện đặc biệt' }
 ];
+
+// Danh mục và bài viết do trang Quản trị sửa (lưu trên trình duyệt này) sẽ thay cho danh sách mặc định ở trên.
+// Giữ nguyên mảng gốc (splice) để các đoạn mã đã giữ tham chiếu vẫn thấy nội dung mới. Bài viết bị ẩn không hiện ra ngoài.
+(function () {
+  const use = (arr, key, keep) => {
+    try { const v = JSON.parse(localStorage.getItem(key)); if (Array.isArray(v) && v.length) arr.splice(0, arr.length, ...v.filter(x => x && x.id && (!keep || keep(x)))); } catch (e) {}
+  };
+  use(window.CATEGORIES, 'psq_cats_v1');
+  use(window.POST_CATS, 'psq_postcats_v1');
+  use(window.POSTS, 'psq_posts_v1', p => !p.hidden);
+})();

@@ -138,11 +138,15 @@
       if (!u || u.pass !== hash(pass)) return { error: 'Email hoặc mật khẩu chưa đúng.' };
       store.set(SES_KEY, u.id); return { user: u };
     },
-    register({ name, email, phone, pass }) {
+    register({ name, email, phone, pass, ref }) {
       const d = db.load();
       if (!name || !email || !pass) return { error: 'Anh chị điền đủ họ tên, email và mật khẩu.' };
       if (d.users.some(x => x.email.toLowerCase() === email.trim().toLowerCase())) return { error: 'Email này đã có tài khoản.' };
-      const u = { id: 'u' + Date.now(), name: name.trim(), email: email.trim(), phone: (phone || '').trim(), pass: hash(pass), role: 'member', created: today() };
+      const u = { id: 'u' + Date.now(), name: name.trim(), email: email.trim(), phone: (phone || '').trim(), pass: hash(pass), role: 'member', created: today(), status: 'active' };
+      // mã giới thiệu: người giới thiệu là tuyến trên (F1), tài khoản mới vào danh sách "chờ lên cây"
+      let k = 1000 + d.users.length; while (d.users.some(x => x.code === 'PS' + k)) k++; u.code = 'PS' + k;
+      const sp = ref && d.users.find(x => (x.code || '').toUpperCase() === String(ref).trim().toUpperCase());
+      if (sp) { u.sponsor = sp.id; const auto = d.settings && d.settings.autoPlace; u.placed = !!auto; u.parent = auto ? sp.id : null; }
       d.users.push(u); db.save(d); store.set(SES_KEY, u.id); return { user: u };
     },
     update(patch) { const d = db.load(), u = d.users.find(x => x.id === store.get(SES_KEY)); if (!u) return; Object.assign(u, patch); db.save(d); return u; },
@@ -343,7 +347,7 @@
       <div class="side-back" data-nav-close></div>
       <aside class="side" aria-label="Điều hướng">
         <div class="side-in card">
-          <a class="brand" href="index.html"><img src="${S.logo}" alt="${esc(S.short)}"><span><b>${esc(S.brand)}</b><small>${esc(S.slogan)}</small></span></a>
+          <a class="brand" href="index.html"><img src="${S.logo}" alt="${esc(S.short)}"><b>${esc(S.brand)}</b></a>
           <nav class="nav">${NAV.map(link).join('')}</nav>
           <div class="nav-label">Quản lý</div>
           <nav class="nav">${link({ id: 'admin', href: 'quan-tri.html', label: 'Quản trị', icon: 'grid' })}</nav>
@@ -372,7 +376,7 @@
         </header>
         <div class="content"></div>
         <footer class="foot">
-          <div><a class="brand" href="index.html" style="padding:0 0 12px"><img src="${S.logo}" alt=""><span><b>${esc(S.brand)}</b><small>${esc(S.slogan)}</small></span></a>
+          <div><a class="brand" href="index.html" style="padding:0 0 12px"><img src="${S.logo}" alt=""><b>${esc(S.brand)}</b></a>
             <p style="max-width:36ch">Trầm hương tự nhiên tuyển chọn, chế tác thủ công, có nguồn gốc rõ ràng.</p></div>
           <div><h4>Khám phá</h4><a href="gioi-thieu.html">Giới thiệu</a><a href="san-pham.html">Sản phẩm</a><a href="kien-thuc.html">Kiến thức trầm</a><a href="thanh-vien.html">Thành viên</a></div>
           <div><h4>Hỗ trợ</h4><a href="dat-hang.html">Đặt hàng</a><a href="lien-he.html">Liên hệ</a><a href="lien-he.html#chinh-sach">Chính sách đổi trả</a><a href="lien-he.html#chinh-sach">Bảo hành</a></div>

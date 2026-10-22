@@ -7,13 +7,36 @@
 <title>Quản trị · Phúc Sinh QuanTum</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#06080a">
-<link rel="icon" href="img/intro/logo-psq.png">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
 <style>
-  .adm-tabs { margin-bottom: 18px; }
+  .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+  .adm-main { min-width: 0; }
+  .adm-side { position: sticky; top: calc(var(--top-h) + 6px); padding: 14px 10px; max-height: calc(100vh - var(--top-h) - 24px); overflow-y: auto; scrollbar-width: thin; }
+  .adm-me { padding: 2px 10px 12px; font-size: 13px; color: var(--text-2); border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .adm-me b { display: block; color: var(--text); font-size: 14px; }
+  .adm-pick { display: none; }
+  #admNav h4 { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-3); margin: 14px 10px 6px; font-weight: 600; }
+  #admNav a { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; font-size: 13.5px; color: var(--text-2); }
+  #admNav a:hover { background: rgba(255, 255, 255, .04); color: var(--text); }
+  #admNav a.on { background: rgba(243, 199, 107, .1); color: var(--gold); box-shadow: inset 0 0 0 1px rgba(243, 199, 107, .35); }
+  #admNav a .badge { margin-left: auto; height: 20px; padding: 0 7px; font-size: 11px; }
+  .adm-out { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 12px; padding: 9px 10px; border-radius: 10px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--red); font: inherit; font-size: 13.5px; cursor: pointer; }
+  .adm-out:hover { background: rgba(255, 107, 107, .08); }
+  @media (min-width: 1100px) and (max-width: 1599px) { .adm-main .g-5 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }
+  .noperm { text-align: center; padding: 40px 20px; color: var(--text-3); }
+  @media (max-width: 1099px) {
+    .adm-layout { grid-template-columns: minmax(0, 1fr); }
+    .adm-side { position: static; max-height: none; padding: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .adm-me { border: 0; margin: 0; padding: 0; flex: 1 1 160px; }
+    .adm-pick { display: block; flex: 2 1 240px; } #admNav { display: none; }
+    .adm-out { width: auto; margin: 0; border: 1px solid rgba(255, 107, 107, .35); }
+  }
   .kpi .stat-val { font-size: clamp(22px, 2vw, 28px); }
   .kpi .delta { font-size: 12px; font-weight: 600; }
   .tbl select.input { height: 32px; font-size: 12px; padding: 0 30px 0 10px; width: auto; border-radius: 9px; }
@@ -39,18 +62,14 @@
 <div id="page" data-title="Bảng điều khiển" data-crumb="Quản trị">
   <div id="gate"></div>
   <div id="admin" hidden>
-    <div class="row between wrap adm-tabs">
-      <div class="tabs" role="tablist" id="tabs">
-        <button class="on" data-tab="overview">Tổng quan</button>
-        <button data-tab="orders">Đơn hàng</button>
-        <button data-tab="products">Sản phẩm</button>
-        <button data-tab="videos">Video khách hàng</button>
-        <button data-tab="members">Thành viên</button>
-        <button data-tab="messages">Tin nhắn</button>
-      </div>
-      <div class="row"><span class="dim" style="font-size:13px" id="hello"></span><button class="btn btn-sm" id="logout" type="button">Đăng xuất</button></div>
-    </div>
-
+    <div class="adm-layout">
+    <aside class="adm-side card" id="admSide" aria-label="Danh mục quản trị">
+      <div class="adm-me" id="hello"></div>
+      <label class="adm-pick"><span class="sr-only">Chọn mục quản trị</span><select class="input" id="admPick"></select></label>
+      <nav id="admNav"></nav>
+      <button class="adm-out" id="logout" type="button"></button>
+    </aside>
+    <div class="adm-main" id="panes">
     <!-- TỔNG QUAN -->
     <section data-pane="overview">
       <div class="grid g-5" id="kpis"></div>
@@ -138,11 +157,21 @@
     <section data-pane="messages" hidden>
       <div class="card glow-gold"><div class="card-head"><h3>Tin nhắn từ trang Liên hệ</h3><span class="sub" id="msub"></span></div><div id="mlistMsg"></div></div>
     </section>
+    </div>
+    </div>
   </div>
 </div>
 
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
+<script src="js/psq-data.js"></script>
+<!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
+<script src="js/admin/pha-he.js"></script>
+<script src="js/admin/nguoi-dung.js"></script>
+<script src="js/admin/noi-dung.js"></script>
+<script src="js/admin/kho.js"></script>
+<script src="js/admin/tai-chinh.js"></script>
+<script src="js/admin/he-thong.js"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, memberInfo, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -152,7 +181,7 @@
   /* ---------- cổng đăng nhập ---------- */
   function gate() {
     const u = auth.user();
-    if (u && u.role === 'admin') { $('#gate').innerHTML = ''; $('#admin').hidden = false; $('#hello').textContent = 'Xin chào, ' + u.name; render(); return; }
+    if (u && u.role === 'admin' && u.status !== 'locked') { $('#gate').innerHTML = ''; $('#admin').hidden = false; buildNav(u); return; }
     $('#admin').hidden = true;
     $('#gate').innerHTML = `<div class="login-wrap"><form class="card glow-mix" id="alogin">
       <div class="row" style="gap:14px"><span class="stat-ico gold" style="width:46px;height:46px">${icon('lock')}</span><div><h2 style="font-size:20px">Đăng nhập quản trị</h2><p class="dim" style="font-size:13px">Chỉ dành cho quản trị viên ${esc(SITE.brand)}</p></div></div>
@@ -161,26 +190,71 @@
       <div class="field mt-2"><label for="ap">Mật khẩu</label><input class="input" id="ap" type="password" autocomplete="current-password" required></div>
       <p class="red mt-1" id="aerr" style="font-size:13px"></p>
       <button class="btn btn-gold btn-block mt-2" type="submit">Đăng nhập</button>
-      <p class="dim mt-2" style="font-size:12px">Bản chạy thử: ${esc(SITE.demoAdmin.email)} / ${esc(SITE.demoAdmin.pass)}. Trước khi chạy chính thức cần máy chủ và đổi mật khẩu.</p>
+      <p class="dim mt-2" style="font-size:12px">Bản chạy thử: ${esc(SITE.demoAdmin.email)} / ${esc(SITE.demoAdmin.pass)}. Nhân viên mẫu (mật khẩu 123456): kinhdoanh@psq.vn, kho@psq.vn. Trước khi chạy chính thức cần máy chủ và đổi mật khẩu.</p>
     </form></div>`;
     $('#alogin').addEventListener('submit', e => {
       e.preventDefault();
       const r = auth.login($('#ae').value, $('#ap').value);
       if (r.error) { $('#aerr').textContent = r.error; return; }
       if (r.user.role !== 'admin') { $('#aerr').textContent = 'Tài khoản này không có quyền quản trị.'; return; }
+      if (r.user.status === 'locked') { auth.logout(); $('#aerr').textContent = 'Tài khoản quản trị này đang bị khóa.'; return; }
+      const d = ADB.load(); ADB.log(d, 'Đăng nhập', 'Đăng nhập trang quản trị'); ADB.save(d);
       location.reload();
     });
   }
   $('#logout').addEventListener('click', () => { auth.logout(); location.reload(); });
 
-  /* ---------- chuyển thẻ ---------- */
+  /* ---------- danh mục quản trị (nhóm theo nghiệp vụ) ---------- */
+  // [mã mục, tên, biểu tượng, quyền cần có]
+  const NAV = [
+    ['Tổng quan', [['overview', 'Bảng điều khiển', 'chart', 'dashboard'], ['videos', 'Video khách hàng', 'activity', 'content']]],
+    ['Phả hệ', [['tree', 'Sơ đồ phả hệ', 'users', 'tree'], ['pending', 'Chờ lên cây', 'clock', 'tree'], ['leaders', 'Cấp bậc lãnh đạo', 'star', 'tree'], ['fund', 'Quỹ tri ân', 'gift', 'finance']]],
+    ['Người dùng', [['members', 'Danh sách thành viên', 'users', 'members'], ['admins', 'Danh sách quản trị', 'shield', 'admins'], ['roles', 'Vai trò & phân quyền', 'lock', 'admins']]],
+    ['Sản phẩm', [['categories', 'Danh mục sản phẩm', 'grid', 'products'], ['products', 'Quản lý sản phẩm', 'bag', 'products']]],
+    ['Kiến thức trầm hương', [['postcats', 'Danh mục kiến thức', 'book', 'content'], ['posts', 'Bài viết kiến thức', 'edit', 'content']]],
+    ['Đơn hàng & kho', [['orders', 'Danh sách đơn hàng', 'cart', 'orders'], ['stock', 'Thống kê tồn kho', 'chart', 'stock'], ['receipts', 'Phiếu nhập kho', 'download', 'stock']]],
+    ['Tài chính', [['finance', 'Báo cáo tài chính', 'trend', 'finance.view'], ['wallet', 'Đối soát ví & dòng tiền', 'wallet', 'finance'], ['expenses', 'Quản lý chi phí', 'card', 'finance'], ['transactions', 'Lịch sử giao dịch', 'activity', 'finance.view'], ['commissions', 'Lịch sử hoa hồng', 'award', 'finance.view'], ['topups', 'Lịch sử nạp điểm', 'plus', 'finance.view']]],
+    ['Hệ thống', [['logs', 'Nhật ký thao tác', 'eye', 'system'], ['mails', 'Lịch sử gửi mail', 'mail', 'system'], ['messages', 'Tin nhắn liên hệ', 'chat', 'messages'], ['addresses', 'Quản lý địa chỉ', 'pin', 'members'], ['settings', 'Thiết lập hệ thống', 'settings', 'system']]]
+  ];
+  const ITEMS = {}; NAV.forEach(([g, list]) => list.forEach(([id, label, ic, perm]) => ITEMS[id] = { id, label, ic, perm, group: g }));
+  const can = perm => {
+    const u = auth.user(); if (!u) return false;
+    const d = ADB.load(), role = (d.roles || []).find(r => r.id === (u.adminRole || 'owner'));
+    const ps = role ? role.perms : ['*'];
+    return ps.includes('*') || ps.includes(perm) || (perm === 'finance.view' && ps.includes('finance'));
+  };
+  window.ADMIN = { can, show: id => show(id), items: ITEMS };
+  function badgeFor(id) {
+    const d = ADB.load();
+    if (id === 'pending') return ADB.pending(d).length;
+    if (id === 'messages') return (d.messages || []).filter(m => m.status === 'new').length;
+    if (id === 'topups') return (d.topups || []).filter(t => t.status === 'pending').length;
+    if (id === 'orders') return d.orders.filter(o => o.status === 'pending').length;
+    return 0;
+  }
+  function buildNav(u) {
+    const d = ADB.load(), role = (d.roles || []).find(r => r.id === (u.adminRole || 'owner'));
+    $('#hello').innerHTML = `<b>${esc(u.name)}</b>${esc(role ? role.name : 'Quản trị')}`;
+    $('#logout').innerHTML = icon('logout') + 'Đăng xuất';
+    $('#admNav').innerHTML = NAV.map(([g, list]) => { const vis = list.filter(x => can(x[3])); return vis.length ? `<h4>${esc(g)}</h4>` + vis.map(([id, label, ic]) => { const n = badgeFor(id); return `<a href="#${id}" data-nav="${id}">${icon(ic)}<span>${esc(label)}</span>${n ? `<span class="badge pending">${n}</span>` : ''}</a>`; }).join('') : ''; }).join('');
+    $('#admPick').innerHTML = NAV.map(([g, list]) => { const vis = list.filter(x => can(x[3])); return vis.length ? `<optgroup label="${esc(g)}">${vis.map(([id, label]) => `<option value="${id}">${esc(label)}</option>`).join('')}</optgroup>` : ''; }).join('');
+  }
+  $('#admNav').addEventListener('click', e => { const a = e.target.closest('[data-nav]'); if (a) { e.preventDefault(); show(a.dataset.nav); scrollTo({ top: 0, behavior: 'smooth' }); } });
+  $('#admPick').addEventListener('change', e => show(e.target.value));
+
+  /* ---------- chuyển mục ---------- */
   function show(tab) {
-    $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+    if (!ITEMS[tab]) tab = 'overview';
+    $$('#admNav [data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === tab));
+    $('#admPick').value = tab;
+    // mục mở rộng: tạo khung lần đầu
+    if (!$(`[data-pane="${tab}"]`)) { const sec = document.createElement('section'); sec.dataset.pane = tab; sec.hidden = true; $('#panes').appendChild(sec); }
     $$('[data-pane]').forEach(p => p.hidden = p.dataset.pane !== tab);
+    const h1 = $('.topbar h1'); if (h1) h1.textContent = ITEMS[tab].label;
+    document.title = ITEMS[tab].label + ' · Quản trị · ' + SITE.brand;
     history.replaceState(null, '', '#' + tab);
     render(tab);
   }
-  $('#tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) show(b.dataset.tab); });
   document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) { e.preventDefault(); show(g.dataset.go); scrollTo({ top: 0, behavior: 'smooth' }); } });
 
   /* ---------- tổng quan ---------- */
@@ -355,11 +429,16 @@
 
   function render(tab = (location.hash.slice(1) || 'overview')) {
     if ($('#admin').hidden) return;
-    ({ overview, orders, products: productsPane, videos: videosPane, members: membersPane, messages: messagesPane }[tab] || overview)();
+    if (ITEMS[tab] && !can(ITEMS[tab].perm)) { const el = $(`[data-pane="${tab}"]`); if (el) el.innerHTML = `<div class="card noperm">${icon('lock')}<p class="mt-1">Vai trò của anh chị chưa được cấp quyền xem mục này.</p></div>`; return; }
+    const core = { overview, orders, products: productsPane, videos: videosPane, members: membersPane, messages: messagesPane };
+    if (core[tab]) return core[tab]();
+    const mod = (window.ADMIN_MODULES || {})[tab], el = $(`[data-pane="${tab}"]`);
+    if (mod && el) { try { mod.render(el); } catch (err) { console.error(err); el.innerHTML = `<div class="card noperm">Mục này đang lỗi: ${esc(err.message)}</div>`; } }
+    else if (el) el.innerHTML = `<div class="card noperm">${icon('settings')}<p class="mt-1">Mục ${esc(ITEMS[tab].label)} đang được xây dựng.</p></div>`;
   }
   let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!$('[data-pane="overview"]').hidden && window.__redraw) window.__redraw(); }, 200); });
   gate();
-  const start = location.hash.slice(1); if (start && start !== 'overview' && !$('#admin').hidden) show(start);
+  if (!$('#admin').hidden) { const h = location.hash.slice(1), first = Object.keys(ITEMS).find(k => can(ITEMS[k].perm)) || 'overview'; show(ITEMS[h] && can(ITEMS[h].perm) ? h : first); }
 })();
 </script>
 </body>
