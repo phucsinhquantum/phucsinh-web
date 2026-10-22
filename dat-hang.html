@@ -5,7 +5,7 @@
 <style>html{background:#06080a}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Đặt hàng · Phúc Sinh QuanTum</title>
-<meta name="description" content="Đặt hàng trầm hương Phúc Sinh QuanTum: kiểm tra giỏ hàng, nhập thông tin giao hàng, chọn thanh toán và tích điểm PS.">
+<meta name="description" content="Đặt hàng trầm hương Phúc Sinh QuanTum: kiểm tra giỏ hàng, nhập thông tin giao hàng, chọn thanh toán bằng ví hoặc chuyển khoản.">
 <meta name="theme-color" content="#06080a">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
@@ -175,8 +175,18 @@
           <div class="row"><span class="muted">Tạm tính</span><span>${money(sub)}</span></div>
           <div class="row"><span class="muted">Phí giao hàng</span><span class="${ship ? '' : 'green'}">${ship ? money(ship) : 'Miễn phí'}</span></div>
           <div class="row grand"><span>Tổng thanh toán</span><b>${money(sub + ship)}</b></div>
-          <div class="pts-note">${icon('sparkle')}<span>${placed ? 'Đơn này tích' : 'Đơn này sẽ tích'} <b>+${pts(sub)} điểm PS</b>${u ? '' : placed ? '. <a class="cyan" href="thanh-vien.html">Đăng ký thành viên</a> để tích điểm cho các đơn sau' : '. <a class="cyan" href="thanh-vien.html">Đăng nhập</a> để nhận điểm'}</span></div>
+          ${tierNote(sub)}
         </div>` : `<div class="empty" style="padding:24px 10px">${icon('cart')}Chưa có sản phẩm nào.</div>`);
+  }
+
+  // đơn hàng được cộng vào doanh số mua cộng dồn để lên đại lý (không tích điểm vào ví)
+  function tierNote(sub) {
+    if (!window.ADB) return '';
+    const d = ADB.load(), P = ADB.plan(d), me = u && ADB.user(d, u.id);
+    if (!me) return `<div class="pts-note">${icon('sparkle')}<span><a class="cyan" href="thanh-vien.html">Đăng nhập</a> để đơn hàng được cộng vào doanh số lên đại lý.</span></div>`;
+    if (me.tier === 'daily') return `<div class="pts-note">${icon('award')}<span>Anh chị đang là <b>Đại lý</b>.</span></div>`;
+    const spent = ADB.spent(d, me.id), after = spent + (placed ? 0 : sub), left = Math.max(0, P.agentThreshold - after);
+    return `<div class="pts-note">${icon('sparkle')}<span>${placed ? 'Đơn này được cộng' : 'Đơn này cộng'} <b>${money(sub)}</b> vào doanh số mua cộng dồn khi đã thanh toán. ${left ? `Còn <b class="cyan">${money(left)}</b> nữa để lên Đại lý.` : '<b class="cyan">Đủ mốc lên Đại lý.</b>'}</span></div>`;
   }
 
   /* ---------- bước 1: giỏ hàng ---------- */
@@ -188,13 +198,12 @@
       <div class="card-head"><div><span class="eyebrow">Bước 1</span><h2 class="display mt-1">Giỏ hàng của anh chị</h2></div><button class="link-btn" type="button" id="clearCart" style="margin-left:auto">Xóa tất cả</button></div>
       <div class="lines">${it.map(x => { const p = product(x.id); return `<div class="line">
         <a class="cart-thumb" href="san-pham-chi-tiet.html?id=${p.id}">${art(p)}</a>
-        <div class="nm"><h3><a href="san-pham-chi-tiet.html?id=${p.id}">${esc(p.name)}</a></h3><div class="meta">${money(p.price)} <span class="dim">·</span> <span class="cyan">+${pts(p.price * x.qty)} điểm</span></div></div>
+        <div class="nm"><h3><a href="san-pham-chi-tiet.html?id=${p.id}">${esc(p.name)}</a></h3><div class="meta">${money(p.price)}</div></div>
         <span class="qty" aria-label="Số lượng"><button type="button" data-qty="${p.id}|-1" aria-label="Bớt">${icon('minus')}</button><span>${x.qty}</span><button type="button" data-qty="${p.id}|1" aria-label="Thêm">${icon('plus')}</button></span>
         <div class="sum"><b>${money(p.price * x.qty)}</b><button class="link-btn" type="button" data-qty="${p.id}|x">${icon('trash')}Xóa</button></div>
       </div>`; }).join('')}</div>
       <div class="totals mt-2">
         <div class="row"><span class="muted">Tạm tính (${cart.count()} sản phẩm)</span><b style="font-size:18px" class="gold">${money(sub)}</b></div>
-        <div class="row"><span class="muted">Điểm PS sẽ tích</span><span class="cyan">+${pts(sub)} điểm</span></div>
       </div>
       <div class="nav-btns"><a class="btn btn-ghost" href="san-pham.html">${icon('back')} Tiếp tục mua sắm</a><button class="btn btn-gold" type="button" data-go="1">Tiếp tục ${icon('arrow')}</button></div>
     </div>`;
