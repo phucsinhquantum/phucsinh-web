@@ -318,7 +318,7 @@
     $('#ocount').textContent = list.length + ' đơn';
     $('#olist').innerHTML = list.length ? list.map((o, i) => `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(o.name)}</span><div><b>${esc(o.name)}</b><small>${esc(o.phone || '')}</small></div></div></td>
       <td><b>#${o.id}</b></td><td class="dim" style="max-width:220px">${isPkg(o) ? '<span class="badge violet">Gói CTV</span><br>' : ''}${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="nowrap gold">${money(o.total)}${o.shopPaid ? `<br><small class="green">Điểm: ${money(o.shopPaid).replace('đ', ' PS')}</small>` : ''}${o.cashPaid ? `<br><small class="cyan">Ví tiền mặt: ${money(o.cashPaid)}</small>` : ''}</td>
-      <td>${o.pay === 'bank' ? 'Chuyển khoản' : 'Khi nhận hàng'}</td>
+      <td>${o.pay === 'bank' ? 'Chuyển khoản' : o.pay === 'wallet' ? 'Bằng ví' : 'Khi nhận hàng'}</td>
       <td><select class="input" data-status="${o.id}" aria-label="Trạng thái đơn ${o.id}">${Object.entries(statusName).map(([k, v]) => `<option value="${k}"${k === o.status ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
       <td class="dim nowrap">${fdate(o.date)}</td><td><button class="btn btn-sm" type="button" data-view="${o.id}">Xem</button></td></tr>`).join('')
       : `<tr><td colspan="8"><div class="empty">Không có đơn phù hợp.</div></td></tr>`;
@@ -345,7 +345,7 @@
     const b = e.target.closest('[data-view]'); if (!b) return;
     const o = ADB.load().orders.find(x => x.id === b.dataset.view);
     modal(`<div class="card-head"><h3>Đơn #${o.id}</h3>${statusBadge(o.status)}<button class="icon-btn" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-      <dl class="kv"><dt>Khách</dt><dd>${esc(o.name)}</dd><dt>Điện thoại</dt><dd>${esc(o.phone || '')}</dd><dt>Email</dt><dd>${esc(o.email || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Thanh toán</dt><dd>${o.pay === 'bank' ? 'Chuyển khoản' : 'Khi nhận hàng'}${o.shopPaid ? ` · ví mua hàng ${money(o.shopPaid).replace('đ', ' PS')}` : ''}${o.cashPaid ? ` · ví tiền mặt ${money(o.cashPaid)}` : ''}</dd>${isPkg(o) ? '<dt>Loại đơn</dt><dd><span class="badge violet">Gói CTV</span></dd>' : ''}<dt>Ngày</dt><dd>${fdate(o.date)}</dd>${o.note ? `<dt>Ghi chú</dt><dd>${esc(o.note)}</dd>` : ''}</dl>
+      <dl class="kv"><dt>Khách</dt><dd>${esc(o.name)}</dd><dt>Điện thoại</dt><dd>${esc(o.phone || '')}</dd><dt>Email</dt><dd>${esc(o.email || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Thanh toán</dt><dd>${o.pay === 'bank' ? 'Chuyển khoản' : o.pay === 'wallet' ? 'Bằng ví' : 'Khi nhận hàng'}${o.shopPaid ? ` · ví mua hàng ${money(o.shopPaid).replace('đ', ' PS')}` : ''}${o.cashPaid ? ` · ví tiền mặt ${money(o.cashPaid)}` : ''}</dd>${isPkg(o) ? '<dt>Loại đơn</dt><dd><span class="badge violet">Gói CTV</span></dd>' : ''}<dt>Ngày</dt><dd>${fdate(o.date)}</dd>${o.note ? `<dt>Ghi chú</dt><dd>${esc(o.note)}</dd>` : ''}</dl>
       <div class="divider"></div>${o.items.map(x => `<div class="row between" style="padding:6px 0"><span>${esc(x.name)} x${x.qty}</span><b>${money(x.price * x.qty)}</b></div>`).join('')}
       <div class="divider"></div><div class="row between"><span class="muted">Tổng</span><b class="gold" style="font-size:18px">${money(o.total)}</b></div>`);
   });

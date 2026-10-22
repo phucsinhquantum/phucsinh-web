@@ -140,19 +140,18 @@
   const normPhone = s => String(s || '').replace(/[\s.\-()]/g, '').replace(/^\+84/, '0');
   const pts = n => money(n * rate).replace('đ', '');
   const u = auth.user();
-  const form = { name: u?.name || '', phone: u?.phone || '', email: u?.email || '', province: PROVINCES.includes(u?.city) ? u.city : '', address: '', note: '', pay: 'cod' };
+  const form = { name: u?.name || '', phone: u?.phone || '', email: u?.email || '', province: PROVINCES.includes(u?.city) ? u.city : '', address: '', note: '', pay: '' };
   let step = 0, placed = null;
   // ví điểm mua hàng (1 PS = 1đ) cho thành viên đã đăng nhập
   const PS = n => money(n).replace('đ', ' PS');
   const shopBal = () => { if (!u || !window.ADB) return 0; try { return ADB.balances(ADB.load(), u.id).shop || 0; } catch (e) { return 0; } };
-  const pay = { on: false, amount: 0 };
-  const payMax = () => Math.min(shopBal(), cart.total() + ship);
-  const payUsed = () => pay.on ? Math.max(0, Math.min(Math.round(+pay.amount || 0), payMax())) : 0;
-  // ví tiền mặt trả phần còn lại sau điểm mua hàng
+  // thanh toán bằng ví: trừ ví điểm mua hàng trước, thiếu thì trừ ví tiền mặt
   const cashBal = () => { if (!u || !window.ADB) return 0; try { return ADB.balances(ADB.load(), u.id).cash || 0; } catch (e) { return 0; } };
-  const cpay = { on: false, amount: 0 };
-  const cashMax = () => Math.max(0, Math.min(cashBal(), cart.total() + ship - payUsed()));
-  const cashUsed = () => cpay.on ? Math.max(0, Math.min(Math.round(+cpay.amount || 0), cashMax())) : 0;
+  const due = () => cart.total() + ship;
+  const walletBal = () => shopBal() + cashBal();
+  const walletOk = () => !!u && walletBal() >= due();
+  const payUsed = () => form.pay === 'wallet' ? Math.min(shopBal(), due()) : 0;
+  const cashUsed = () => form.pay === 'wallet' ? Math.min(cashBal(), due() - payUsed()) : 0;
 
   $('#lookup').closest('.card').querySelector('.stat-ico').innerHTML = icon('search');
 
@@ -217,9 +216,10 @@
       </div>
       <h3 class="mt-3" style="font-size:16px;margin-bottom:12px">Phương thức thanh toán</h3>
       <div class="choice">
-        <label><input type="radio" name="pay" value="cod"${form.pay === 'cod' ? ' checked' : ''}><span class="c-ico">${icon('truck')}</span><span><b>Thanh toán khi nhận hàng (COD)</b><small>Kiểm tra sản phẩm rồi mới thanh toán cho nhân viên giao hàng.</small></span></label>
+        <label class="${u ? '' : 'off'}"><input type="radio" name="pay" value="wallet"${form.pay === 'wallet' ? ' checked' : ''}${u ? '' : ' disabled'}><span class="c-ico">${icon('wallet')}</span><span><b>Thanh toán bằng ví điểm</b><small>${u ? `Trừ ví điểm mua hàng (${PS(shopBal())}) trước, còn lại trừ ví tiền mặt (${money(cashBal())}).` : '<a class="gold" href="thanh-vien.html">Đăng nhập</a> để thanh toán bằng ví.'}</small></span></label>
         <label><input type="radio" name="pay" value="bank"${form.pay === 'bank' ? ' checked' : ''}><span class="c-ico">${icon('card')}</span><span><b>Chuyển khoản ngân hàng</b><small>Đơn được xử lý ngay khi nhận được chuyển khoản.</small></span></label>
       </div>
+      <div id="walletBox">${walletNote()}</div>
       <div class="bank" id="bankBox"${form.pay === 'bank' ? '' : ' hidden'}>
         <dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Nội dung</dt><dd>Mã đơn hàng (hiện sau khi đặt)</dd></dl>
       </div>
@@ -229,7 +229,7 @@
   function readForm() {
     const f = $('#infoForm'); if (!f) return;
     ['name', 'phone', 'email', 'province', 'address', 'note'].forEach(k => form[k] = f.elements[k].value.trim());
-    form.pay = f.elements.pay.value || 'cod';
+    form.pay = f.elements.pay.value || '';
   }
   function validate() {
     const e = {};
@@ -241,6 +241,8 @@
     if (form.address.length < 5) e.address = 'Anh chị vui lòng nhập địa chỉ nhận hàng cụ thể.';
     $$('#infoForm .field').forEach(n => { const m = e[n.dataset.f]; n.classList.toggle('bad', !!m); const s = n.querySelector('.err'); s.hidden = !m; s.textContent = m || ''; });
     const first = Object.keys(e)[0]; if (first) $('#f-' + first).focus();
+    if (!first && !form.pay) { toast('Anh chị chọn phương thức thanh toán.'); return false; }
+    if (!first && form.pay === 'wallet' && !walletOk()) { toast('Số dư ví chưa đủ. Anh chị nạp thêm tiền hoặc chọn chuyển khoản.'); return false; }
     return !first;
   }
 
@@ -253,8 +255,8 @@
         <div class="box"><h4>${icon('pin')} Giao đến <button class="link-btn" type="button" data-go="1">Sửa</button></h4>
           <dl class="kv"><dt>Người nhận</dt><dd>${esc(form.name)}</dd><dt>Điện thoại</dt><dd>${esc(form.phone)}</dd>${form.email ? `<dt>Email</dt><dd style="word-break:break-all">${esc(form.email)}</dd>` : ''}<dt>Địa chỉ</dt><dd>${esc(form.address)}, ${esc(form.province)}</dd>${form.note ? `<dt>Ghi chú</dt><dd>${esc(form.note)}</dd>` : ''}</dl></div>
         <div class="box"><h4>${icon('wallet')} Thanh toán <button class="link-btn" type="button" data-go="1">Sửa</button></h4>
-          <p style="font-size:14px"><b>${form.pay === 'bank' ? 'Chuyển khoản ngân hàng' : 'Thanh toán khi nhận hàng (COD)'}</b></p>
-          <p class="muted mt-1" style="font-size:13px">${form.pay === 'bank' ? `Chuyển khoản tới ${esc(S.bank.name)}, số tài khoản ${esc(S.bank.account)}, nội dung ghi mã đơn hàng.` : 'Anh chị thanh toán tiền mặt hoặc chuyển khoản cho nhân viên khi nhận hàng.'}</p></div>
+          <p style="font-size:14px"><b>${form.pay === 'bank' ? 'Chuyển khoản ngân hàng' : 'Thanh toán bằng ví điểm'}</b></p>
+          <p class="muted mt-1" style="font-size:13px">${form.pay === 'bank' ? `Chuyển khoản tới ${esc(S.bank.name)}, số tài khoản ${esc(S.bank.account)}, nội dung ghi mã đơn hàng.` : `${payUsed() ? `Ví điểm mua hàng trừ ${PS(payUsed())}. ` : ''}${cashUsed() ? `Ví tiền mặt trừ ${money(cashUsed())}. ` : ''}Đơn được ghi nhận đã thanh toán ngay.`}</p></div>
       </div>
       <div class="box mt-2" style="padding:0">
         <div class="lines">${it.map(x => { const p = product(x.id); return `<div class="sum-item" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="cart-thumb">${art(p)}<i>${x.qty}</i></span><b>${esc(p.name)} <span class="dim">x ${x.qty}</span></b><span class="nowrap gold">${money(p.price * x.qty)}</span></div>`; }).join('')}</div>
@@ -265,27 +267,17 @@
         <div class="row grand"><span>Tổng thanh toán</span><b>${money(sub + ship)}</b></div>
         ${payUsed() ? `<div class="row" data-pt-line><span class="muted">Trừ ví điểm mua hàng</span><span class="green">-${PS(payUsed())}</span></div>` : ''}${cashUsed() ? `<div class="row"><span class="muted">Trừ ví tiền mặt</span><span class="cyan">-${money(cashUsed())}</span></div>` : ''}${payUsed() || cashUsed() ? `<div class="row"><span class="muted">Còn phải thanh toán</span><b class="gold">${money(sub + ship - payUsed() - cashUsed())}</b></div>` : ''}
       </div>
-      ${viewPoints()}
       <p class="dim mt-2" style="font-size:12px">Bấm xác nhận nghĩa là anh chị đồng ý với chính sách đổi trả và bảo hành của Phúc Sinh QuanTum. Nhân viên sẽ gọi xác nhận trước khi giao.</p>
       <div class="nav-btns"><button class="btn btn-ghost" type="button" data-go="1">${icon('back')} Quay lại</button><button class="btn btn-gold btn-lg" type="button" id="placeBtn">${icon('check')} Xác nhận đặt hàng</button></div>
     </div>`;
   }
 
-  function viewPoints() { return viewShop() + viewCash(); }
-  function viewShop() {
-    const bal = shopBal(), max = payMax(); if (!(bal > 0) || !(max > 0)) return '';
-    if (pay.on && !(+pay.amount > 0)) pay.amount = max;
-    return `<div class="box mt-2 dh-pts"><label class="check"><input type="checkbox" id="ptUse"${pay.on ? ' checked' : ''}> <span>Dùng điểm ví mua hàng (còn <b class="green">${PS(bal)}</b>)</span></label>
-      ${pay.on ? `<div class="row mt-1" style="gap:10px;flex-wrap:wrap;align-items:center"><label for="ptAmt" class="muted" style="font-size:13px">Số điểm dùng</label><input class="input" id="ptAmt" type="number" min="1000" max="${max}" step="1000" value="${payUsed()}" style="max-width:180px;height:40px"><button class="link-btn" type="button" id="ptMax">Dùng tối đa ${PS(max)}</button></div>
-        <p class="dim mt-1" style="font-size:12px">${payUsed() >= cart.total() + ship ? 'Điểm đủ thanh toán toàn bộ đơn, đơn sẽ được ghi nhận đã thanh toán ngay.' : 'Phần còn lại anh chị trả bằng ví tiền mặt hoặc phương thức đã chọn.'}</p>` : ''}</div>`;
-  }
-  function viewCash() {
-    const bal = cashBal(), max = cashMax(); if (!(bal > 0) || !(max > 0)) { cpay.on = false; return ''; }
-    if (cpay.on && !(+cpay.amount > 0)) cpay.amount = max;
-    const rest = cart.total() + ship - payUsed() - cashUsed();
-    return `<div class="box mt-2 dh-pts"><label class="check"><input type="checkbox" id="cpUse"${cpay.on ? ' checked' : ''}> <span>Trả bằng ví tiền mặt (còn <b class="cyan">${money(bal)}</b>)</span></label>
-      ${cpay.on ? `<div class="row mt-1" style="gap:10px;flex-wrap:wrap;align-items:center"><label for="cpAmt" class="muted" style="font-size:13px">Số tiền dùng</label><input class="input" id="cpAmt" type="number" min="1000" max="${max}" step="1000" value="${cashUsed()}" style="max-width:180px;height:40px"><button class="link-btn" type="button" id="cpMax">Dùng tối đa ${money(max)}</button></div>
-        <p class="dim mt-1" style="font-size:12px">${rest <= 0 ? 'Đủ thanh toán toàn bộ đơn, đơn sẽ được ghi nhận đã thanh toán ngay.' : 'Phần còn lại anh chị thanh toán theo phương thức đã chọn.'}</p>` : ''}</div>`;
+  // số dư ví và phần còn thiếu khi chọn thanh toán bằng ví
+  function walletNote() {
+    if (form.pay !== 'wallet' || !u) return '';
+    const lack = due() - walletBal();
+    return lack > 0 ? `<p class="pts-note mt-2">${icon('info')}<span>Ví còn thiếu <b class="gold">${money(lack)}</b> cho đơn này. <a class="gold" href="thanh-vien.html#nap-diem">Nạp tiền vào ví tiền mặt</a> rồi quay lại, hoặc chọn chuyển khoản.</span></p>`
+      : `<p class="pts-note mt-2">${icon('check')}<span>Ví đủ thanh toán ${money(due())}.${payUsed() ? ` Trừ ${PS(payUsed())} ví mua hàng` : ''}${cashUsed() ? `${payUsed() ? ',' : ' Trừ'} ${money(cashUsed())} ví tiền mặt` : ''}.</span></p>`;
   }
   function viewSuccess(o) {
     const sp = o.shopPaid || 0, cp = o.cashPaid || 0, due = Math.max(0, o.total - sp - cp), bank = o.pay === 'bank' && due > 0;
@@ -343,20 +335,14 @@
           ADB.log(d, 'Thanh toán bằng ví', `${o.id}: ${me.name}${used ? ` dùng ${PS(used)} ví mua hàng` : ''}${usedC ? ` trả ${money(usedC)} ví tiền mặt` : ''}${full ? ', đã thanh toán đủ' : ''}`);
           ADB.save(d); placed = o;
         }
-        pay.on = false; pay.amount = 0; cpay.on = false; cpay.amount = 0;
       }
       render(true); toast('Đặt hàng thành công: ' + placed.id);
     }
   });
   $('#main').addEventListener('submit', e => { if (e.target.id === 'infoForm') { e.preventDefault(); readForm(); if (validate()) { step = 2; render(true); } } });
   $('#main').addEventListener('change', e => {
-    if (e.target.name === 'pay') { $('#bankBox').hidden = e.target.value !== 'bank'; form.pay = e.target.value; }
-    if (e.target.id === 'ptUse') { pay.on = e.target.checked; pay.amount = pay.on ? payMax() : 0; render(); }
-    if (e.target.id === 'ptAmt') { pay.amount = Math.max(0, Math.min(Math.round(+e.target.value || 0), payMax())); render(); }
-    if (e.target.id === 'cpUse') { cpay.on = e.target.checked; cpay.amount = cpay.on ? cashMax() : 0; render(); }
-    if (e.target.id === 'cpAmt') { cpay.amount = Math.max(0, Math.min(Math.round(+e.target.value || 0), cashMax())); render(); }
+    if (e.target.name === 'pay') { $('#bankBox').hidden = e.target.value !== 'bank'; form.pay = e.target.value; $('#walletBox').innerHTML = walletNote(); }
   });
-  $('#main').addEventListener('click', e => { if (e.target.closest('#ptMax')) { pay.amount = payMax(); render(); } if (e.target.closest('#cpMax')) { cpay.amount = cashMax(); render(); } });
   $('#main').addEventListener('input', e => { const f = e.target.closest('.field.bad'); if (f) { f.classList.remove('bad'); f.querySelector('.err').hidden = true; } });
   document.addEventListener('cart:change', () => {
     if (placed) return;

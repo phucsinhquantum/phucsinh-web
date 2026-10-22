@@ -4,7 +4,7 @@
    Cần nạp sau js/data.js và js/app.js. */
 (function () {
   const { db, today } = PSQ;
-  const VERSION = 4;
+  const VERSION = 5;
 
   const DEFAULT_SETTINGS = {
     shopName: SITE.brand, hotline: SITE.phone, email: SITE.email, address: SITE.address,
@@ -150,6 +150,7 @@
     if (!(d.v >= 2)) migrateV2(d);
     if (d.v < 3) migrateV3(d);
     if (d.v < 4) migrateV4(d);
+    if (d.v < 5) migrateV5(d);
     d.v = VERSION; return true;
   }
 
@@ -343,6 +344,12 @@
     (d.wallet || []).forEach(w => { if (w.type === 'topup' && w.wallet === 'shop') { w.wallet = 'cash'; w.note = String(w.note || '').replace('Nạp điểm', 'Nạp tiền'); moved[w.user] = 1; } });
     // nếu điểm mua hàng đã được tiêu vượt số còn lại thì trả khoản nạp về ví cũ để không âm
     Object.keys(moved).forEach(id => { if (ADB.balances(d, id).shop < 0) d.wallet.forEach(w => { if (w.user === id && w.type === 'topup' && w.wallet === 'cash') w.wallet = 'shop'; }); });
+  }
+
+  // v5: lệnh rút thẳng từ ví hoa hồng (bản cũ, trước khi có ví tiền mặt) đang chờ duyệt: hủy, trả tiền về ví hoa hồng.
+  // Quy trình mới: rút hoa hồng sang ví tiền mặt (trừ thuế), rồi rút ví tiền mặt về ngân hàng.
+  function migrateV5(d) {
+    (d.wallet || []).forEach(w => { if (w.type === 'withdraw' && w.status === 'pending' && ADB.walletOf(w) === 'sales') { w.status = 'rejected'; w.note = (w.note || '') + ' · Đã hủy do đổi sang quy trình rút mới, tiền trả lại ví'; } });
   }
 
   Object.assign(ADB, {

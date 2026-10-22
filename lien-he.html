@@ -160,7 +160,7 @@
     { ico: 'back', c: 'gold', t: 'Đổi trả trong 7 ngày', d: ['Đổi trả trong 7 ngày nếu sản phẩm lỗi do sản xuất hoặc giao sai mẫu.', 'Sản phẩm còn nguyên tem, hộp và giấy kiểm định.', 'Miễn phí vận chuyển khi lỗi từ phía PSQ.'] },
     { ico: 'shield', c: '', t: 'Bảo hành', d: ['Bảo hành dây và khóa trong 12 tháng.', 'Thay dây miễn phí cho thành viên.', 'Đánh bóng, vệ sinh hạt trầm theo yêu cầu.'] },
     { ico: 'truck', c: 'violet', t: 'Giao hàng', d: [S.shipFee ? 'Phí giao hàng theo khu vực.' : 'Miễn phí giao hàng toàn quốc.', 'Nội thành 1 đến 2 ngày, tỉnh khác 2 đến 5 ngày.', 'Được kiểm tra hàng trước khi thanh toán.'] },
-    { ico: 'wallet', c: 'green', t: 'Thanh toán', d: ['Thanh toán khi nhận hàng (COD).', 'Chuyển khoản ngân hàng hoặc quét mã QR.', 'Xuất hóa đơn theo yêu cầu.'] }
+    { ico: 'wallet', c: 'green', t: 'Thanh toán', d: ['Thanh toán bằng ví điểm (nạp tiền vào ví tiền mặt).', 'Chuyển khoản ngân hàng hoặc quét mã QR.', 'Xuất hóa đơn theo yêu cầu.'] }
   ];
   $('#policies').innerHTML = pol.map((p, i) => `<div class="card ${['glow-gold', 'glow-cyan', 'glow-mix', 'glow-cyan'][i]} policy reveal"><span class="stat-ico ${p.c}">${icon(p.ico)}</span><h3>${p.t} <span class="dim" style="font-weight:400;font-size:12px">(mẫu)</span></h3><ul>${p.d.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
 

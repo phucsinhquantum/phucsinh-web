@@ -64,7 +64,7 @@
     let main;
     if (o) main = `<p>Phúc Sinh QuanTum đã nhận đơn hàng <b>#${esc(o.id)}</b> của anh chị ngày ${fdate(o.date)}.</p>
       <table>${o.items.map(x => `<tr><td>${esc(x.name)} x${x.qty}</td><td>${money(x.price * x.qty)}</td></tr>`).join('')}<tr><td><b>Tổng cộng</b></td><td><b>${money(o.total)}</b></td></tr></table>
-      <p>Giao đến: ${esc(o.address || '')}. Thanh toán: ${o.pay === 'bank' ? 'chuyển khoản' : 'khi nhận hàng'}.</p><p>Nhân viên sẽ gọi xác nhận trong thời gian sớm nhất.</p>
+      <p>Giao đến: ${esc(o.address || '')}. Thanh toán: ${o.pay === 'bank' ? 'chuyển khoản' : o.pay === 'wallet' ? 'bằng ví điểm' : 'khi nhận hàng'}.</p><p>Nhân viên sẽ gọi xác nhận trong thời gian sớm nhất.</p>
       <p><span class="ht-btn">Xem đơn hàng</span></p>`;
     else if (m.type === 'Đăng ký') main = `<p>Cảm ơn anh chị đã đăng ký thành viên ${esc(S.shopName || SITE.brand)}.</p>${u && u.code ? `<p>Mã giới thiệu của anh chị: <b>${esc(u.code)}</b>. Chia sẻ mã này để người thân nhận ưu đãi khi đăng ký.</p>` : ''}
       <p>Mỗi đơn hàng được tích ${Math.round((S.pointRate || .1) * 100)}% giá trị thành điểm PS, dùng để đổi ưu đãi ở các đơn sau.</p><p><span class="ht-btn">Vào trang thành viên</span></p>`;

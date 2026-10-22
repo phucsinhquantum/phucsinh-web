@@ -831,3 +831,4 @@ html.reduce-motion .wh-bulb { animation-duration: 1.2s !important; }
 .wh-ptbl .who > div { min-width: 190px; }
 @media (max-width: 1299px) { .wh-pgrid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 699px) { .wh-fs-t { display: none; } #whFs { width: 36px; padding: 0; } }
+.choice label.off { opacity: .65; cursor: default; }

@@ -215,7 +215,7 @@
   const pctOf = (v, t) => t > 0 ? Math.round(v / t * 100) : 0;
   const isPkg = o => (o.items || []).some(x => x.id === ADB.PKG_ID);
   const pkgOrder = (d, id) => d.orders.find(o => o.userId === id && o.status !== 'failed' && isPkg(o));
-  const PAYN = { bank: 'Chuyển khoản', cod: 'Thanh toán khi nhận hàng', shop: 'Ví điểm mua hàng' };
+  const PAYN = { bank: 'Chuyển khoản', cod: 'Thanh toán khi nhận hàng', shop: 'Ví điểm mua hàng', wallet: 'Thanh toán bằng ví' };
 
   /* ---------- tên truy cập ---------- */
   const UNAME = /^[a-z0-9._]{3,30}$/;
