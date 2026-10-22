@@ -21,17 +21,24 @@
 <body data-page="home">
 <div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
 
-  <!-- Video trải nghiệm khách hàng. Chưa có video nào thì hiện khung giới thiệu bên dưới. -->
-  <section class="vids card glow-mix reveal" id="vids" hidden></section>
-
-  <section class="hero card glow-mix reveal" id="hero">
-    <div class="hero-bg" style="background-image:url(img/intro/phuc-sinh-canh-nen-ngay.jpg)"></div>
-    <span class="eyebrow">Trầm hương lượng tử · Phúc Sinh QuanTum</span>
-    <h1 class="mt-2">Có những giá trị chỉ mở ra <em>khi ta chậm lại.</em></h1>
-    <p class="lead">Trầm hương tự nhiên tuyển chọn, chế tác thủ công, có hồ sơ nguồn gốc cho từng sản phẩm. Thành viên tích điểm PS trên mỗi đơn hàng.</p>
-    <div class="actions">
-      <a class="btn btn-gold btn-lg" href="san-pham.html">Khám phá sản phẩm <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
-      <a class="btn btn-outline-gold btn-lg" href="bai-viet.html?id=tram-huong-luong-tu-la-gi">Trầm hương lượng tử là gì?</a>
+  <!-- Chia sẻ từ khách hàng: video YouTube quản lý ở Quản trị > Video khách hàng -->
+  <section class="story card glow-mix reveal" id="story">
+    <div class="story-bg" style="background-image:url(img/intro/phuc-sinh-canh-nen-ngay.jpg)"></div>
+    <div class="story-text">
+      <span class="eyebrow">Trầm hương lượng tử · Phúc Sinh QuanTum</span>
+      <h1><em>Chia sẻ</em> từ <br><em>khách</em> hàng</h1>
+      <h2>Hành trình cảm nhận giá trị trầm hương tự nhiên</h2>
+      <p class="lead">Lắng nghe những trải nghiệm chân thực từ khách hàng đã tin dùng và đồng hành cùng Phúc Sinh Quantum.</p>
+      <div class="actions">
+        <button class="btn btn-gold btn-lg" type="button" id="storyAll">Xem thêm chia sẻ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+        <a class="btn btn-outline-gold btn-lg" href="san-pham.html">Tìm hiểu sản phẩm</a>
+      </div>
+    </div>
+    <div class="story-reel">
+      <button class="story-arrow prev" type="button" data-dir="-1" aria-label="Video trước"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="story-track" id="storyTrack"></div>
+      <button class="story-arrow next" type="button" data-dir="1" aria-label="Video tiếp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="story-nav"><button type="button" data-dir="-1" aria-label="Video trước"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button><button type="button" data-dir="1" aria-label="Video tiếp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
     </div>
   </section>
 
@@ -83,7 +90,7 @@
 <script src="js/app.js"></script>
 <script>
 (function () {
-  const { $, $$, esc, icon, productCard, area, donut } = PSQ;
+  const { $, $$, esc, icon, productCard, area, donut, modal } = PSQ;
   const ico = ['', 'gold', 'violet', 'green'];
   $('#stats').innerHTML = STATS.map((s, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat reveal"><div class="stat-top"><span class="stat-ico ${ico[i]}">${icon(s.icon)}</span>${esc(s.label)}</div><div class="stat-val">${esc(s.value)}</div></div>`).join('');
   $('#cats').innerHTML = CATEGORIES.map((c, i) => {
@@ -96,30 +103,42 @@
   navCheck(); addEventListener('resize', navCheck);
   nav.addEventListener('click', e => { const b = e.target.closest('button'); if (b) row.scrollBy({ left: +b.dataset.dir * row.clientWidth * 0.8, behavior: 'smooth' }); });
 
-  /* ---------- video trải nghiệm khách hàng ---------- */
-  const V = PSQ.videos, vids = V.list(), box = $('#vids');
+  /* ---------- chia sẻ từ khách hàng (video YouTube) ---------- */
+  const V = PSQ.videos, vids = V.list(), track = $('#storyTrack');
   const isAdmin = (PSQ.auth.user && PSQ.auth.user() || {}).role === 'admin';
-  const play = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>';
-  if (vids.length || isAdmin) {
-    $('#hero').hidden = true; box.hidden = false;
-    const head = `<div class="vids-head"><div><span class="eyebrow">Trải nghiệm thật</span><h2 class="mt-1">Khách hàng kể về trầm hương Phúc Sinh</h2></div>${isAdmin ? '<a class="btn btn-sm btn-outline-gold" href="quan-tri.html#videos" style="margin-left:auto">Quản lý video</a>' : ''}</div>`;
-    if (!vids.length) {
-      box.innerHTML = head + `<div class="empty">${icon('activity')}Chưa có video nào. Vào Quản trị, thẻ Video khách hàng, dán link YouTube để hiển thị ở đây. Khi chưa có video, khách sẽ thấy khung giới thiệu như cũ.</div>`;
-    } else {
-      // mở file trực tiếp trên máy thì YouTube không cho phát nhúng, nên mở sang YouTube
-      const local = location.protocol === 'file:';
-      const main = (v, auto) => `<div class="vid-main" id="vmain">${auto && !local ? `<iframe src="${V.embed(v.id)}" title="${esc(v.title || 'Video khách hàng')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>` : `<img src="${V.thumb(v.id)}" alt=""><button class="vid-play" type="button" data-play="${v.id}" aria-label="Phát video"><span class="ring">${play}</span><span class="vid-cap"><b>${esc(v.title || 'Video trải nghiệm khách hàng')}</b><small>${esc(v.name || '')}</small></span></button>`}</div>
-        <div class="row between mt-1" style="gap:8px"><span class="dim" style="font-size:13px">${esc(v.title || '')}${v.name ? ' · ' + esc(v.name) : ''}</span><a class="vid-yt cyan" href="${V.watch(v.id)}" target="_blank" rel="noopener">Xem trên YouTube</a></div>`;
-      const list = vids.length > 1 ? `<div class="vid-list" id="vlist">${vids.map((v, i) => `<button class="vid-item${i ? '' : ' on'}" type="button" data-i="${i}"><span class="th"><img src="${V.thumb(v.id)}" alt="" loading="lazy"></span><span><b>${esc(v.title || 'Video trải nghiệm khách hàng')}</b><small>${esc(v.name || '')}</small></span></button>`).join('')}</div>` : '';
-      box.innerHTML = head + `<div class="vids-body${vids.length > 1 ? '' : ' single'}"><div id="vwrap">${main(vids[0])}</div>${list}</div>`;
-      const show = (i, auto) => { $('#vwrap').innerHTML = main(vids[i], auto); $$('#vlist .vid-item').forEach(b => b.classList.toggle('on', +b.dataset.i === i)); cur = i; };
-      let cur = 0;
-      box.addEventListener('click', e => {
-        const it = e.target.closest('.vid-item'); if (it) { show(+it.dataset.i, true); if (local) open(V.watch(vids[+it.dataset.i].id), '_blank'); return; }
-        const pl = e.target.closest('[data-play]'); if (pl) { if (local) open(V.watch(pl.dataset.play), '_blank'); else show(cur, true); }
-      });
-    }
+  const play = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>';
+  const local = location.protocol === 'file:';
+  if (vids.length) {
+    track.innerHTML = vids.map((v, i) => `<button class="story-card${i ? '' : ' hot'}" type="button" data-v="${i}" aria-label="Xem video: ${esc(v.name || v.title || 'chia sẻ của khách hàng')}">
+      <img src="${V.thumb(v.id)}" alt="" loading="${i < 4 ? 'eager' : 'lazy'}"><span class="story-play">${play}</span>
+      <span class="story-cap">${esc(v.name || v.title || 'Khách hàng Phúc Sinh')}</span></button>`).join('');
+  } else {
+    // chưa có video: khung chờ, quản trị thấy hướng dẫn thêm video
+    const ph = ['img/intro/canh-1-may-nui-ngay.jpg', 'img/intro/phuc-sinh-canh-nen-ngay.jpg', 'img/intro/canh-1-may-nui-ngay.jpg'];
+    track.innerHTML = ph.map((src, i) => `<div class="story-card empty-card"${isAdmin ? '' : ' aria-hidden="true"'}><img src="${src}" alt="" style="object-position:${30 + i * 25}% center"><span class="story-play">${play}</span><span class="story-cap">${isAdmin && !i ? '<a href="quan-tri.html#videos">Thêm video trong Quản trị</a>' : 'Video sắp cập nhật'}</span></div>`).join('');
   }
+  const openVideo = i => {
+    const v = vids[i]; if (!v) return;
+    if (local) return open(V.watch(v.id), '_blank');
+    const tall = /\/shorts\//.test(v.url || '');
+    const m = modal(`<div class="story-modal${tall ? ' tall' : ''}"><div class="card-head"><div><h3>${esc(v.title || 'Chia sẻ từ khách hàng')}</h3>${v.name ? `<div class="sub">${esc(v.name)}</div>` : ''}</div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      <div class="story-frame"><iframe src="${V.embed(v.id)}" title="${esc(v.title || 'Video khách hàng')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+      <div class="row between mt-2" style="gap:8px;flex-wrap:wrap">${vids.length > 1 ? `<div class="row" style="gap:8px"><button class="btn btn-sm" type="button" data-vgo="${(i - 1 + vids.length) % vids.length}">${icon('back')} Video trước</button><button class="btn btn-sm" type="button" data-vgo="${(i + 1) % vids.length}">Video tiếp ${icon('arrow')}</button></div>` : '<span></span>'}<a class="cyan" style="font-size:13px" href="${V.watch(v.id)}" target="_blank" rel="noopener">Xem trên YouTube</a></div></div>`);
+    m.el.addEventListener('click', e => { const g = e.target.closest('[data-vgo]'); if (g) { m.close(); setTimeout(() => openVideo(+g.dataset.vgo), 60); } });
+  };
+  const step = dir => { const c = track.querySelector('.story-card'); track.scrollBy({ left: dir * ((c ? c.offsetWidth : 200) + 14), behavior: 'smooth' }); };
+  const arrows = () => { const max = track.scrollWidth - track.clientWidth - 2; $$('#story [data-dir]').forEach(b => { b.disabled = +b.dataset.dir < 0 ? track.scrollLeft <= 2 : track.scrollLeft >= max; }); $('#story').classList.toggle('no-scroll', max <= 0); };
+  track.addEventListener('scroll', arrows, { passive: true }); addEventListener('resize', arrows); setTimeout(arrows, 50);
+  $('#story').addEventListener('click', e => {
+    const d = e.target.closest('[data-dir]'); if (d) return step(+d.dataset.dir);
+    const c = e.target.closest('[data-v]'); if (c) openVideo(+c.dataset.v);
+  });
+  $('#storyAll').addEventListener('click', () => {
+    if (!vids.length) { PSQ.toast('Video chia sẻ của khách hàng đang được cập nhật.'); return; }
+    const m = modal(`<div class="card-head"><h3>Tất cả chia sẻ từ khách hàng</h3><span class="sub">${vids.length} video</span><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      <div class="story-grid">${vids.map((v, i) => `<button class="story-card" type="button" data-all="${i}"><img src="${V.thumb(v.id)}" alt="" loading="lazy"><span class="story-play">${play}</span><span class="story-cap">${esc(v.name || v.title || 'Khách hàng Phúc Sinh')}</span></button>`).join('')}</div>`);
+    m.el.addEventListener('click', e => { const c = e.target.closest('[data-all]'); if (c) { m.close(); setTimeout(() => openVideo(+c.dataset.all), 60); } });
+  });
   $('#best').innerHTML = [...PRODUCTS].sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0)).slice(0, 8).map(productCard).join('');
   const months = ['T11', 'T12', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10'];
   const draw = () => area($('#journey'), { labels: months, height: 250, mark: 9, fmt: v => Math.round(v).toLocaleString('vi-VN'),

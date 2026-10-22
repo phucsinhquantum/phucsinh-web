@@ -10,11 +10,11 @@ window.SITE = {
   short: 'PSQ',
   slogan: 'Tinh hoa trầm hương Việt',
   logo: 'img/logo-psq.png',
-  phone: '0900 000 000',           // TODO: số điện thoại thật
-  zalo: '0900000000',
+  phone: '0931 133 199',
+  zalo: '0931133199',
   messenger: '',                   // TODO: tên trang Facebook để mở Messenger (m.me/ten-trang); để trống sẽ mở trang Liên hệ
-  email: 'lienhe@tenmien.vn',
-  address: 'Số nhà, đường, phường, tỉnh/thành phố (mẫu)',
+  email: 'phucsinhquantum@gmail.com',
+  address: '41 Nguyễn Đình Chiểu, Phường Sài Gòn, TP. Hồ Chí Minh',
   hours: 'Thứ 2 đến Chủ nhật, 8:00 đến 20:00',
   website: 'tenmien.vn',
   social: { facebook: '', youtube: '', tiktok: '', zalo: '' },   // link mạng xã hội thật (để trống = "sắp ra mắt")
