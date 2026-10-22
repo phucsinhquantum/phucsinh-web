@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vòng quay may mắn · Phúc Sinh QuanTum</title>
+<meta name="description" content="Vòng quay may mắn Phúc Sinh QuanTum: giới thiệu bạn bè đăng ký thành viên để nhận mã quay, lượt nào cũng trúng quà. Vòng quay sự kiện cho buổi giao lưu Zoom online và offline.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/lang.js"></script>
+</head>
+<body data-page="wheel">
+<div id="page" data-title="Vòng quay may mắn" data-crumb="Vòng quay may mắn">
+
+  <section class="hero page-hero card glow-mix reveal wh-hero">
+    <div class="hero-bg" style="background-image:url(img/intro/phuc-sinh-canh-nen.jpg)"></div>
+    <span class="eyebrow">Tri ân khách hàng</span>
+    <h1 class="mt-2">Vòng quay <em>may mắn</em></h1>
+    <p class="lead">Giới thiệu bạn bè đăng ký thành viên, mỗi người đăng ký là một mã quay. Lượt quay nào cũng trúng quà. Ở các buổi giao lưu Zoom hay sự kiện tại cửa hàng, vòng quay sự kiện chọn người may mắn ngay trước mắt mọi người.</p>
+    <div class="wh-hero-stats" id="whStats"></div>
+  </section>
+
+  <div class="tabs wh-tabs mt-3" role="tablist" aria-label="Chọn vòng quay">
+    <button type="button" role="tab" data-wh-tab="khach-hang">Vòng quay khách hàng</button>
+    <button type="button" role="tab" data-wh-tab="su-kien">Vòng quay sự kiện</button>
+  </div>
+
+  <!-- 1. vòng quay khách hàng -->
+  <section class="wh-sec mt-3" data-wh-pane="khach-hang" aria-label="Vòng quay khách hàng">
+    <div class="wh-grid">
+      <div class="card glow-gold wh-wheel-card">
+        <div class="card-head"><div><h3>Vòng quay khách hàng</h3><div class="sub">100% trúng quà · mỗi mã quay một lượt</div></div>
+          <button class="icon-btn wh-sound" type="button" data-wh-sound aria-label="Bật tắt âm thanh" title="Âm thanh"></button></div>
+        <div class="wh-wheel" id="whCus"></div>
+        <p class="wh-status" id="whCusStatus"></p>
+      </div>
+      <div class="stack">
+        <div class="card glow-cyan">
+          <div class="card-head"><span class="stat-ico gold" data-wh-ico="gift"></span><div><h3>Nhập mã quay</h3><div class="sub">Mã có dạng PSQ-XXXXXX</div></div></div>
+          <form class="wh-code" id="whCodeForm" autocomplete="off">
+            <label class="sr-only" for="whCode">Mã quay</label>
+            <input class="input" id="whCode" placeholder="PSQ-7K3M9Q" maxlength="16" spellcheck="false" autocapitalize="characters">
+            <button class="btn btn-gold" type="submit">Nhập mã</button>
+          </form>
+          <p class="wh-msg" id="whCodeMsg" aria-live="polite"></p>
+          <div id="whLogin"></div>
+        </div>
+        <div class="card" id="whMine" hidden></div>
+        <div class="card" id="whHow"></div>
+      </div>
+    </div>
+    <div class="grid g-2 mt-3 wh-lower">
+      <div class="card"><div class="card-head"><div><h3>Quà trên vòng quay</h3><div class="sub">Quay trúng quà nào nhận quà đó</div></div></div><div id="whPrizes"></div></div>
+      <div class="card"><div class="card-head"><div><h3>Người trúng gần đây</h3><div class="sub">Tên được ẩn bớt để giữ riêng tư</div></div></div><div id="whRecent"></div></div>
+    </div>
+  </section>
+
+  <!-- 2. vòng quay sự kiện -->
+  <section class="wh-sec mt-3" data-wh-pane="su-kien" aria-label="Vòng quay sự kiện" hidden>
+    <div class="wh-grid wh-ev" id="whEv">
+      <div class="card glow-mix wh-wheel-card">
+        <div class="card-head"><div style="min-width:0"><h3 id="whEvTitle">Vòng quay sự kiện</h3><div class="sub" id="whEvSub"></div></div>
+          <div class="row" style="gap:8px;margin-left:auto">
+            <button class="icon-btn wh-sound" type="button" data-wh-sound aria-label="Bật tắt âm thanh" title="Âm thanh"></button>
+            <button class="btn btn-sm btn-outline-gold" type="button" id="whFs" aria-label="Toàn màn hình"></button>
+          </div></div>
+        <div class="wh-wheel" id="whEvWheel"></div>
+        <div class="wh-now" aria-live="off"><small id="whNowLbl">Đang chỉ vào</small><b id="whNow">...</b></div>
+        <p class="wh-status" id="whEvStatus"></p>
+      </div>
+      <div class="stack wh-ev-side">
+        <div class="card glow-cyan">
+          <div class="card-head"><div><h3>Chọn vòng quay</h3><div class="sub">Sự kiện do Phúc Sinh QuanTum tổ chức hoặc vòng quay nhanh</div></div></div>
+          <label class="sr-only" for="whEvPick">Sự kiện</label>
+          <select class="input" id="whEvPick"></select>
+          <div id="whQuick" class="mt-2"></div>
+          <label class="check mt-2"><input type="checkbox" id="whRemove"> Loại người đã trúng khỏi vòng</label>
+          <p class="dim mt-1" id="whEvNote" style="font-size:12.5px"></p>
+        </div>
+        <div class="card">
+          <div class="card-head"><div><h3>Người trúng thưởng</h3><div class="sub" id="whWinSub"></div></div><span style="margin-left:auto" id="whWinAct"></span></div>
+          <div id="whWinners"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/psq-data.js"></script>
+<script>
+(function () {
+  const { $, $$, esc, icon, toast, modal, fdate, auth } = PSQ;
+  $$('[data-wh-ico]').forEach(n => { n.innerHTML = icon(n.dataset.whIco); });
+  const reduce = document.documentElement.classList.contains('reduce-motion');
+  const NS = 'http://www.w3.org/2000/svg';
+  const PAL = ['#f3c76b', '#4fe6df', '#b98cff', '#45e08f', '#ffb547', '#ff8fb1'];
+  const store = { get(k, v) { try { const x = JSON.parse(localStorage.getItem(k)); return x ?? v; } catch (e) { return v; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+  const isNum = s => /^\d+$/.test(String(s));
+  const shown = s => isNum(s) ? 'Số ' + s : String(s);
+  const clean = s => String(s || '').replace(/\s*\(mẫu\)\s*/g, ' ').trim();
+
+  /* ---------- âm thanh tích tắc (tạo bằng WebAudio, không cần tệp) ---------- */
+  let sound = store.get('psq_wheel_sound', true), ac = null;
+  const paintSound = () => $$('[data-wh-sound]').forEach(b => { b.innerHTML = sound ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="i"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="i"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>'; b.setAttribute('aria-pressed', String(sound)); });
+  paintSound();
+  document.addEventListener('click', e => { if (e.target.closest('[data-wh-sound]')) { sound = !sound; store.set('psq_wheel_sound', sound); paintSound(); } });
+  function tick(strong) {
+    if (!sound) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle'; o.frequency.setValueAtTime(strong ? 880 : 1500, t); o.frequency.exponentialRampToValueAtTime(strong ? 440 : 900, t + .05);
+      g.gain.setValueAtTime(strong ? .14 : .05, t); g.gain.exponentialRampToValueAtTime(.0001, t + (strong ? .35 : .05));
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + (strong ? .4 : .06));
+    } catch (e) {}
+  }
+  function fanfare() { if (!sound) return; [0, 120, 240, 420].forEach((ms, i) => setTimeout(() => { try { ac = ac || new AudioContext(); const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = [523, 659, 784, 1047][i]; g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.0001, t + .5); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + .55); } catch (e) {} }, ms)); }
+
+  /* ---------- vòng quay (SVG, nét sắc ở mọi độ phân giải) ---------- */
+  const pt = (deg, r) => { const a = deg * Math.PI / 180; return [500 + r * Math.sin(a), 500 - r * Math.cos(a)]; };
+  const f1 = n => n.toFixed(1);
+  // chia tên dài thành 2 dòng cân nhau
+  function lines(text, max) {
+    const w = text.split(/\s+/); if (text.length <= max || w.length < 2) return [text];
+    let best = null;
+    for (let i = 1; i < w.length; i++) { const a = w.slice(0, i).join(' '), b = w.slice(i).join(' '), m = Math.max(a.length, b.length); if (!best || m < best[0]) best = [m, a, b]; }
+    return [best[1], best[2]];
+  }
+  let wid = 0;
+  function Wheel(host, opt = {}) {
+    const id = 'wh' + (wid++);
+    const BULBS = 28;
+    let bulbs = '';
+    for (let i = 0; i < BULBS; i++) { const [x, y] = pt(i * 360 / BULBS + 360 / BULBS / 2, 466); bulbs += `<g class="wh-bulb" style="animation-delay:${-(i % 4) * .3}s"><circle cx="${f1(x)}" cy="${f1(y)}" r="22" fill="url(#${id}bg)"/><circle cx="${f1(x)}" cy="${f1(y)}" r="8.5" fill="url(#${id}bl)"/></g>`; }
+    let studs = ''; for (let i = 0; i < BULBS; i++) { const [x, y] = pt(i * 360 / BULBS, 466); studs += `<circle cx="${f1(x)}" cy="${f1(y)}" r="3.2" fill="#5b3d12"/>`; }
+    host.innerHTML = `<div class="wh-stage">
+      <div class="wh-halo"></div>
+      <div class="wh-rot"><svg class="wh-face" viewBox="0 0 1000 1000" aria-hidden="true"></svg></div>
+      <svg class="wh-rim" viewBox="0 0 1000 1000" aria-hidden="true"><defs>
+        <linearGradient id="${id}gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2c4"/><stop offset=".18" stop-color="#e4b357"/><stop offset=".38" stop-color="#8f5f1c"/><stop offset=".55" stop-color="#f7d98a"/><stop offset=".72" stop-color="#b07a2a"/><stop offset=".88" stop-color="#ffe7a3"/><stop offset="1" stop-color="#7a4f15"/></linearGradient>
+        <linearGradient id="${id}gold2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffeaa8"/><stop offset=".5" stop-color="#7d5317"/><stop offset="1" stop-color="#f3c76b"/></linearGradient>
+        <radialGradient id="${id}bl" cx=".38" cy=".35" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#ffe9a6"/><stop offset="1" stop-color="#e09a2c"/></radialGradient>
+        <radialGradient id="${id}bg"><stop offset="0" stop-color="#ffe2a0" stop-opacity=".85"/><stop offset=".4" stop-color="#f3c76b" stop-opacity=".3"/><stop offset="1" stop-color="#f3c76b" stop-opacity="0"/></radialGradient>
+        <radialGradient id="${id}sh" cx="500" cy="500" r="440" gradientUnits="userSpaceOnUse"><stop offset=".86" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+        <radialGradient id="${id}gl" cx="380" cy="300" r="520" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".13"/><stop offset=".5" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      </defs>
+        <circle cx="500" cy="500" r="438" fill="url(#${id}sh)"/>
+        <circle cx="500" cy="500" r="436" fill="url(#${id}gl)"/>
+        <circle cx="500" cy="500" r="466" fill="none" stroke="url(#${id}gold)" stroke-width="54"/>
+        <circle cx="500" cy="500" r="493" fill="none" stroke="#3a260a" stroke-width="3"/>
+        <circle cx="500" cy="500" r="489" fill="none" stroke="#ffeab0" stroke-opacity=".55" stroke-width="2"/>
+        <circle cx="500" cy="500" r="440" fill="none" stroke="#2b1c07" stroke-width="5"/>
+        <circle cx="500" cy="500" r="443.5" fill="none" stroke="url(#${id}gold2)" stroke-width="2.5"/>
+        <circle cx="500" cy="500" r="466" fill="none" stroke="#3a260a" stroke-opacity=".5" stroke-width="22"/>
+        <circle cx="500" cy="500" r="466" fill="none" stroke="url(#${id}gold2)" stroke-opacity=".6" stroke-width="1.5"/>
+        ${studs}${bulbs}
+      </svg>
+      <div class="wh-pointer"><svg viewBox="0 0 120 150" aria-hidden="true"><defs>
+        <linearGradient id="${id}pg" x1="0" x2="1"><stop offset="0" stop-color="#8a5a17"/><stop offset=".3" stop-color="#ffe7a3"/><stop offset=".55" stop-color="#e5ae4c"/><stop offset="1" stop-color="#7a4f15"/></linearGradient></defs>
+        <path d="M60 146 L20 52 A44 44 0 1 1 100 52 Z" fill="#000" opacity=".45" transform="translate(0 6)"/>
+        <path d="M60 144 L20 52 A44 44 0 1 1 100 52 Z" fill="url(#${id}pg)" stroke="#3a260a" stroke-width="3"/>
+        <path d="M60 128 L30 54 A34 34 0 1 1 90 54 Z" fill="none" stroke="#fff3c8" stroke-opacity=".6" stroke-width="2"/>
+        <circle cx="60" cy="40" r="15" fill="#0b1013" stroke="#ffe7a3" stroke-width="3"/><circle cx="60" cy="40" r="6" fill="#4fe6df"/></svg></div>
+      <button class="wh-hub" type="button" aria-label="Quay"><span class="wh-hub-in"><img src="img/logo-psq.png" alt=""><b>QUAY</b></span></button>
+    </div>`;
+    const face = host.querySelector('.wh-face'), rot = host.querySelector('.wh-rot'), ptr = host.querySelector('.wh-pointer'), hub = host.querySelector('.wh-hub');
+    let segs = [], rotation = 0, spinning = false, kick = 0, lastIdx = -1;
+    const A = () => 360 / Math.max(1, segs.length);
+    const idxAt = r => segs.length ? Math.floor(((((-r) % 360) + 360) % 360) / A()) % segs.length : -1;
+    function draw(list) {
+      segs = list.slice(); const n = segs.length, a = A();
+      if (!n) { face.innerHTML = `<circle cx="500" cy="500" r="440" fill="#0c1316"/><text x="500" y="330" text-anchor="middle" fill="#6f7c80" font-size="34" font-family="Be Vietnam Pro, sans-serif">Chưa có dữ liệu</text>`; rotation = 0; rot.style.transform = 'rotate(0deg)'; return; }
+      const many = n > 40, radial = opt.mode === 'event';
+      let defs = '', body = `<circle cx="500" cy="500" r="440" fill="#090e10"/>`;
+      const colors = segs.map((s, i) => s.color || PAL[i % PAL.length]);
+      if (n > 1 && n % PAL.length === 1 && !segs[n - 1].color) colors[n - 1] = PAL[2];
+      const uniq = [...new Set(colors)];
+      uniq.forEach((c, k) => { defs += `<radialGradient id="${id}s${k}" cx="500" cy="500" r="440" gradientUnits="userSpaceOnUse"><stop offset=".12" stop-color="${c}" stop-opacity="0"/><stop offset=".55" stop-color="${c}" stop-opacity=".1"/><stop offset=".88" stop-color="${c}" stop-opacity=".34"/><stop offset="1" stop-color="${c}" stop-opacity=".62"/></radialGradient>`; });
+      const R = 440;
+      segs.forEach((s, i) => {
+        const a0 = i * a, a1 = (i + 1) * a, [x0, y0] = pt(a0, R), [x1, y1] = pt(a1, R), large = a > 180 ? 1 : 0, k = uniq.indexOf(colors[i]);
+        const d = n === 1 ? `M500 60a440 440 0 1 1-.1 0z` : `M500 500L${f1(x0)} ${f1(y0)}A${R} ${R} 0 ${large} 1 ${f1(x1)} ${f1(y1)}Z`;
+        body += `<path d="${d}" fill="${i % 2 ? '#0f191d' : '#0b1215'}"/><path d="${d}" fill="url(#${id}s${k})"/>`;
+        if (!many || n <= 90) { const [ax, ay] = pt(a0 + a * .06, 426), [bx, by] = pt(a1 - a * .06, 426); body += `<path d="M${f1(ax)} ${f1(ay)}A426 426 0 0 1 ${f1(bx)} ${f1(by)}" fill="none" stroke="${colors[i]}" stroke-opacity=".85" stroke-width="${many ? 4 : 6}" stroke-linecap="round"/>`; }
+      });
+      if (n > 1) segs.forEach((s, i) => { const [x0, y0] = pt(i * a, 118), [x1, y1] = pt(i * a, 438); body += `<line x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}" stroke="#f3c76b" stroke-opacity="${many ? .28 : .6}" stroke-width="${many ? 1.2 : 2.4}"/>`; if (!many) { const [sx, sy] = pt(i * a, 412); body += `<circle cx="${f1(sx)}" cy="${f1(sy)}" r="5" fill="#ffe7a3"/>`; } });
+      // chữ
+      const step = n > 120 ? Math.ceil(n / 60) : 1;
+      segs.forEach((s, i) => {
+        const mid = i * a + a / 2;
+        if (radial) {
+          if (i % step) return;
+          const label = many ? String(s.short || i + 1) : String(s.label);
+          const segW = 2 * 330 * Math.sin(Math.min(a, 90) / 2 * Math.PI / 180);
+          const fs = Math.max(11, Math.min(many ? 26 : 34, segW * (many ? .62 : .5)));
+          const maxCh = Math.floor(270 / (fs * .56)), txt = label.length > maxCh ? label.slice(0, maxCh - 1) + '…' : label;
+          body += `<g transform="rotate(${f1(mid)} 500 500)"><text x="500" y="${many ? 98 : 104}" transform="rotate(-90 500 ${many ? 98 : 104})" text-anchor="end" dominant-baseline="central" class="wh-t" font-size="${f1(fs)}" fill="${many ? colors[i] : '#fff4dc'}">${esc(txt)}</text></g>`;
+        } else {
+          const name = clean(s.label), sample = /\(mẫu\)/.test(s.label);
+          const chord = r => 2 * r * Math.sin(Math.min(a, 120) / 2 * Math.PI / 180) * .8;
+          const L = lines(name, 12), mx = Math.max(...L.map(x => x.length));
+          const fs = Math.max(16, Math.min(36, chord(280) / (mx * .58), a * 1.1));
+          const y0 = 500 - 300;
+          let t = `<g transform="rotate(${f1(mid)} 500 500)">`;
+          t += `<g transform="translate(${500 - 21} ${500 - 392}) scale(1.75)" fill="none" stroke="${colors[i]}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3 8 4s0 4 4 4zM12 8s1.5-5 4-4 0 4-4 4z"/>'}</g>`;
+          L.forEach((ln, k) => { t += `<text x="500" y="${f1(y0 + k * fs * 1.12)}" text-anchor="middle" class="wh-t" font-size="${f1(fs)}">${esc(ln)}</text>`; });
+          if (sample) t += `<text x="500" y="${f1(y0 + L.length * fs * 1.12 + 4)}" text-anchor="middle" class="wh-t wh-tm" font-size="${f1(Math.max(13, fs * .6))}">(mẫu)</text>`;
+          body += t + '</g>';
+        }
+      });
+      // trục giữa
+      body += `<circle cx="500" cy="500" r="122" fill="#0a0f11" stroke="#f3c76b" stroke-opacity=".55" stroke-width="3"/><circle cx="500" cy="500" r="132" fill="none" stroke="#f3c76b" stroke-opacity=".18" stroke-width="10"/>`;
+      face.innerHTML = `<defs>${defs}</defs>${body}`;
+      lastIdx = idxAt(rotation);
+    }
+    function setRot(r) { rotation = r; rot.style.transform = `rotate(${r.toFixed(3)}deg)`; }
+    let ptrRaf = 0, lastT = 0;
+    function ptrLoop(t) {
+      const dt = Math.min(50, t - (lastT || t)); lastT = t;
+      kick *= Math.exp(-dt / 70);
+      ptr.style.transform = `translateX(-50%) rotate(${(-kick * 24).toFixed(2)}deg)`;
+      if (kick > .01 || spinning) ptrRaf = requestAnimationFrame(ptrLoop); else { ptr.style.transform = 'translateX(-50%)'; ptrRaf = 0; lastT = 0; }
+    }
+    function spinTo(index, o = {}) {
+      if (spinning || !segs.length) return Promise.resolve(false);
+      spinning = true; host.classList.add('spinning');
+      const a = A(), f = .2 + Math.random() * .6, target = (index + f) * a;
+      const start = rotation, turns = reduce ? 3 : (o.turns || 8), dur = reduce ? 2600 : (o.duration || 6200);
+      const delta = (((-target - start) % 360) + 360) % 360;
+      const end = start + turns * 360 + delta;
+      const ease = p => p < .06 ? -.012 * Math.sin(p / .06 * Math.PI) : 1 - Math.pow(1 - (p - .06) / .94, 4);
+      return new Promise(res => {
+        const t0 = performance.now();
+        if (!ptrRaf) ptrRaf = requestAnimationFrame(ptrLoop);
+        function frame(t) {
+          const p = Math.min(1, (t - t0) / dur);
+          setRot(start + (end - start) * ease(p));
+          const i = idxAt(rotation);
+          if (i !== lastIdx) { lastIdx = i; kick = Math.min(1, kick + .9); tick(false); opt.onTick && opt.onTick(i, segs[i]); }
+          if (p < 1) requestAnimationFrame(frame);
+          else {
+            setRot(end % 360); spinning = false; host.classList.remove('spinning');
+            const landed = idxAt(rotation); host.dataset.landed = landed; tick(true);
+            res(landed);
+          }
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+    hub.addEventListener('click', () => { if (!spinning && opt.onSpin) opt.onSpin(); });
+    return { draw, spinTo, get spinning() { return spinning; }, get segments() { return segs; }, index: () => idxAt(rotation), hub, host };
+  }
+
+  /* ---------- pháo giấy ---------- */
+  function confetti() {
+    const cv = document.createElement('canvas'); cv.className = 'wh-confetti'; document.body.appendChild(cv);
+    const dpr = Math.min(2, devicePixelRatio || 1), W = innerWidth, H = innerHeight; cv.width = W * dpr; cv.height = H * dpr;
+    const c = cv.getContext('2d'); c.scale(dpr, dpr);
+    const cols = ['#f3c76b', '#ffe7a3', '#4fe6df', '#b98cff', '#ffffff', '#45e08f', '#ff8fb1'];
+    const P = Array.from({ length: reduce ? 70 : (W < 700 ? 110 : 180) }, (_, i) => { const side = i % 2; return { x: side ? W * .1 : W * .9, y: H * .7, vx: (side ? 1 : -1) * (3 + Math.random() * 7), vy: -(9 + Math.random() * 9), w: 6 + Math.random() * 7, h: 3 + Math.random() * 5, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[i % cols.length], o: 1 }; });
+    const t0 = performance.now();
+    (function f(t) {
+      const k = (t - t0) / 1000; c.clearRect(0, 0, W, H);
+      P.forEach(p => { p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.o = Math.max(0, 1 - Math.max(0, k - 2.2) / .9); c.save(); c.globalAlpha = p.o; c.translate(p.x, p.y); c.rotate(p.r); c.fillStyle = p.c; c.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2))); c.restore(); });
+      if (k < 3.2) requestAnimationFrame(f); else cv.remove();
+    })(t0);
+  }
+  function winModal(title, big, sub, extra) {
+    const m = modal(`<div class="wh-win"><span class="wh-win-ico">${icon('gift')}</span><p class="eyebrow">${esc(title)}</p><h2 class="display">${esc(big)}</h2>${sub ? `<p class="muted mt-1">${sub}</p>` : ''}${extra || ''}<button class="btn btn-gold btn-block mt-3" type="button" data-close>Tuyệt vời</button></div>`);
+    m.el.classList.add('wh-modal-back');
+    return m;
+  }
+
+  /* ---------- thẻ chuyển giữa 2 vòng quay ---------- */
+  const PANES = ['khach-hang', 'su-kien'];
+  function tab(id) {
+    if (!PANES.includes(id)) id = 'khach-hang';
+    $$('[data-wh-tab]').forEach(b => { const on = b.dataset.whTab === id; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    $$('[data-wh-pane]').forEach(p => p.hidden = p.dataset.whPane !== id);
+    if (id === 'su-kien') evRender(); else cusRender();
+  }
+  $$('[data-wh-tab]').forEach(b => b.addEventListener('click', () => { history.replaceState(null, '', '#' + b.dataset.whTab); tab(b.dataset.whTab); }));
+
+  /* =====================================================================
+     1. VÒNG QUAY KHÁCH HÀNG
+     ===================================================================== */
+  let armed = null;
+  const cus = Wheel($('#whCus'), { mode: 'prize', onSpin: cusSpin });
+  const status = (el, html, cls = '') => { el.className = 'wh-status ' + cls; el.innerHTML = html; };
+  function cusRender() {
+    const d = ADB.load(), u = auth.user(), W = ADB.wheel(d), list = ADB.wheelPrizes(d);
+    if (!cus.spinning) cus.draw(list.map(p => ({ id: p.id, label: p.name, color: p.color })));
+    $('#whStats').innerHTML = `<span>${icon('check')}<b>100%</b> trúng quà</span><span>${icon('gift')}<b>${list.length}</b> phần quà</span><span>${icon('activity')}<b>${W.spins.length}</b> lượt đã quay</span>`;
+    if (!armed) status($('#whCusStatus'), u ? 'Nhập mã quay hoặc chọn một mã trong “Mã của tôi”, sau đó bấm <b class="gold">QUAY</b>.' : 'Đăng nhập tài khoản nhận mã, nhập mã quay rồi bấm <b class="gold">QUAY</b>.');
+    cus.hub.classList.toggle('wh-armed', !!armed);
+    $('#whLogin').innerHTML = u ? `<p class="dim" style="font-size:12.5px">Đang đăng nhập: <b class="muted">${esc(u.name)}</b></p>` : `<div class="wh-login"><span>Anh chị đăng nhập để dùng mã của mình.</span><a class="btn btn-sm btn-outline-gold" href="thanh-vien.html">${icon('user')} Đăng nhập</a></div>`;
+    // mã của tôi
+    const mine = $('#whMine');
+    if (u && u.role !== 'admin') {
+      const C = ADB.wheelCodesOf(d, u.id), fresh = C.filter(c => c.status === 'new').length;
+      mine.hidden = false;
+      mine.innerHTML = `<div class="card-head"><div><h3>Mã của tôi</h3><div class="sub">${C.length} mã · <span class="${fresh ? 'gold' : ''}">${fresh} chưa dùng</span></div></div></div>
+        ${C.length ? `<div class="wh-codes">${C.map(c => { const f = c.from ? ADB.user(d, c.from) : null, p = W.prizes.find(x => x.id === c.prize); return `<div class="wh-cd ${c.status === 'new' ? 'new' : 'used'}${armed === c.code ? ' on' : ''}">
+          <div style="min-width:0"><b class="wh-mono">${esc(c.code)}</b><small>${f ? 'Giới thiệu: ' + esc(f.name) : esc(c.note || 'Mã tặng')}</small></div>
+          ${c.status === 'new' ? `<button class="btn btn-sm btn-gold" type="button" data-wh-use="${esc(c.code)}">${armed === c.code ? 'Đã chọn' : 'Dùng mã'}</button>` : `<span class="wh-used"><span class="badge ok">Đã quay</span><small>${esc(clean(p ? p.name : c.prizeName || ''))}</small></span>`}</div>`; }).join('')}</div>`
+        : `<p class="dim" style="font-size:13.5px">Anh chị chưa có mã quay. Chia sẻ đường dẫn giới thiệu bên dưới, mỗi người đăng ký là một mã.</p>`}`;
+    } else mine.hidden = true;
+    // cách nhận mã
+    const link = u && u.code ? location.origin + location.pathname.replace(/[^/]*$/, '') + 'thanh-vien.html?ref=' + encodeURIComponent(u.code) : '';
+    $('#whHow').innerHTML = `<div class="card-head"><div><h3>Cách nhận mã quay</h3><div class="sub">Giới thiệu càng nhiều, quay càng nhiều</div></div></div>
+      <ol class="wh-steps">
+        <li><span>1</span><div><b>Chia sẻ đường dẫn giới thiệu</b><small>Gửi cho bạn bè, người thân qua Zalo, Messenger.</small></div></li>
+        <li><span>2</span><div><b>Bạn bè đăng ký thành viên</b><small>Mỗi người đăng ký qua đường dẫn của anh chị = 1 mã quay.</small></div></li>
+        <li><span>3</span><div><b>Nhập mã và quay</b><small>Lượt nào cũng trúng một phần quà trên vòng quay.</small></div></li>
+      </ol>
+      ${link ? `<div class="wh-ref"><input class="input" id="whRef" value="${esc(link)}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" id="whCopy">${icon('check')} Sao chép</button></div>`
+        : `<a class="btn btn-sm btn-outline-gold mt-1" href="thanh-vien.html#dai-ly">${icon('users')} Lấy đường dẫn giới thiệu</a>`}`;
+    const cp = $('#whCopy'); if (cp) cp.onclick = () => { const i = $('#whRef'); i.select(); (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).catch(() => document.execCommand('copy')).finally(() => toast('Đã sao chép đường dẫn giới thiệu')); };
+    // quà
+    $('#whPrizes').innerHTML = list.length ? `<div class="wh-plist">${list.map(p => `<div class="wh-pi" style="--c:${esc(p.color)}"><span class="wh-pdot">${icon('gift')}</span><b>${esc(p.name)}</b><small>${p.stock == null ? 'Không giới hạn' : 'Còn ' + p.stock}</small></div>`).join('')}</div>` : `<div class="empty">${icon('gift')}Vòng quay đang chờ cập nhật quà.</div>`;
+    // người trúng gần đây
+    const S = W.spins.slice(0, 8);
+    $('#whRecent').innerHTML = S.length ? `<div class="wh-recent">${S.map(s => { const x = ADB.user(d, s.user), p = W.prizes.find(q => q.id === s.prize); return `<div class="wh-ri"><span class="avatar">${esc(PSQ.initials(x ? x.name : '?'))}</span><div style="min-width:0"><b>${esc(ADB.wheelMask(x ? x.name : ''))}</b><small>trúng <span style="color:${esc(p ? p.color : '#f3c76b')}">${esc(clean(p ? p.name : s.prizeName))}</span></small></div><time class="dim">${esc(fdate(String(s.date).slice(0, 10)))}</time></div>`; }).join('')}</div>` : `<div class="empty">${icon('star')}Chưa có lượt quay nào. Anh chị là người đầu tiên!</div>`;
+  }
+  function arm(code) {
+    const d = ADB.load(), u = auth.user(), r = ADB.wheelCheck(d, code, u), msg = $('#whCodeMsg');
+    if (r.error) { armed = null; msg.className = 'wh-msg red'; msg.textContent = r.error; cusRender(); return false; }
+    armed = r.code.code; $('#whCode').value = armed;
+    msg.className = 'wh-msg green'; msg.textContent = 'Mã hợp lệ. Bấm QUAY ở giữa vòng quay.';
+    cusRender();
+    status($('#whCusStatus'), `Mã <b class="wh-mono gold">${esc(armed)}</b> sẵn sàng. Bấm <b class="gold">QUAY</b> nhé!`, 'ready');
+    return true;
+  }
+  $('#whCodeForm').addEventListener('submit', e => { e.preventDefault(); if (cus.spinning) return; if (arm($('#whCode').value) && innerWidth < 1100) $('#whCus').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+  $('#whCode').addEventListener('input', e => { const v = e.target.value.toUpperCase(); if (v !== e.target.value) e.target.value = v; });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-wh-use]'); if (!b || cus.spinning) return;
+    if (arm(b.dataset.whUse)) $('#whCus').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  function cusSpin() {
+    if (!armed) { toast('Anh chị nhập mã quay trước khi quay.'); $('#whCode').focus({ preventScroll: innerWidth < 1100 ? false : true }); return; }
+    const d = ADB.load(), u = auth.user(), r = ADB.wheelSpin(d, armed, u);
+    if (r.error) { toast(r.error); armed = null; cusRender(); return; }
+    ADB.log(d, 'Quay thưởng', `${u.name} dùng mã ${armed}: ${r.prize.name}`); ADB.save(d);
+    const code = armed; armed = null;
+    const same = cus.segments.length === r.segments.length && cus.segments.every((s, i) => s.id === r.segments[i].id);
+    if (!same) cus.draw(r.segments.map(p => ({ id: p.id, label: p.name, color: p.color })));
+    cus.hub.classList.remove('wh-armed');
+    status($('#whCusStatus'), 'Vòng quay đang chạy, chúc anh chị may mắn...', 'run');
+    $('#whCodeMsg').textContent = '';
+    cus.spinTo(r.index).then(landed => {
+      cus.host.dataset.result = r.index;
+      confetti(); fanfare();
+      status($('#whCusStatus'), `Anh chị đã trúng <b class="gold">${esc(r.prize.name)}</b>.`, 'ready');
+      const m = winModal('Chúc mừng anh chị', r.prize.name, `Anh chị đã trúng <b class="gold">${esc(r.prize.name)}</b> với mã ${esc(code)}.`, `<p class="dim mt-2" style="font-size:13px">Bộ phận chăm sóc khách hàng sẽ liên hệ anh chị qua số điện thoại đã đăng ký để trao quà. Có thắc mắc anh chị gọi ${esc(SITE.phone)}.</p>`);
+      m.el.dataset.landed = landed;
+      $('#whCode').value = '';
+      cusRender();
+    });
+  }
+
+  /* =====================================================================
+     2. VÒNG QUAY SỰ KIỆN
+     ===================================================================== */
+  const QK = 'psq_wheel_quick_v1';
+  let quick = store.get(QK, null) || { mode: 'list', text: '', count: 30, names: [], winners: [], remove: true, prize: '' };
+  const saveQuick = () => store.set(QK, quick);
+  let evSel = store.get('psq_wheel_ev', 'quick'), pool = [];
+  if (PSQ.qs('ev')) evSel = PSQ.qs('ev');
+  const isAdmin = () => { const u = auth.user(); return !!(u && u.role === 'admin' && u.status !== 'locked'); };
+  const ev = Wheel($('#whEvWheel'), { mode: 'event', onSpin: evSpin, onTick: (i, s) => { $('#whNow').textContent = s ? shown(s.label) : '...'; } });
+  const KIND = { online: 'Zoom online', offline: 'Offline' };
+  function curEvent(d) { return evSel === 'quick' ? null : ADB.wheel(d).events.find(e => e.id === evSel) || null; }
+  function evRender(keepWheel) {
+    const d = ADB.load(), W = ADB.wheel(d);
+    if (evSel !== 'quick' && !W.events.some(e => e.id === evSel)) evSel = 'quick';
+    $('#whEvPick').innerHTML = `<option value="quick">Vòng quay nhanh (tự nhập danh sách)</option>${W.events.length ? `<optgroup label="Sự kiện">${W.events.map(e => `<option value="${esc(e.id)}">${esc(e.name)} · ${KIND[e.kind] || ''}</option>`).join('')}</optgroup>` : ''}`;
+    $('#whEvPick').value = evSel;
+    const E = curEvent(d), admin = isAdmin();
+    let winners, prizeNow = '', slots = [];
+    if (E) {
+      pool = ADB.wheelEventPool(E); winners = E.winners || [];
+      slots = ADB.wheelEventSlots(E); prizeNow = slots[winners.length] || '';
+      $('#whEvTitle').textContent = E.name;
+      $('#whEvSub').innerHTML = `<span class="badge ${E.kind === 'online' ? 'ship' : 'gold'}">${KIND[E.kind] || ''}</span> ${E.date ? fdate(E.date) + ' · ' : ''}${pool.length} người trong vòng`;
+      $('#whQuick').innerHTML = `<div class="wh-evinfo"><div><small>Người tham dự</small><b>${(E.participants || []).length}</b></div><div><small>Giải thưởng</small><b>${slots.length || 'Không giới hạn'}</b></div><div><small>Đã trao</small><b>${winners.length}</b></div></div>
+        ${slots.length ? `<div class="wh-slots">${(E.prizes || []).map(p => `<span class="chip">${esc(p.name)} × ${+p.qty || 0}</span>`).join('')}</div>` : ''}`;
+      $('#whRemove').checked = !!E.removeWinners; $('#whRemove').disabled = !admin;
+      $('#whEvNote').textContent = admin ? 'Anh chị đang đăng nhập quản trị nên quay được sự kiện này. Danh sách và giải thưởng sửa ở trang Quản trị, mục Vòng quay may mắn.' : 'Người tổ chức (tài khoản quản trị) sẽ quay sự kiện này trong buổi giao lưu. Anh chị theo dõi kết quả tại đây.';
+    } else {
+      pool = quick.remove ? quick.names.filter(n => !quick.winners.some(w => w.name === n)) : quick.names.slice();
+      winners = quick.winners; prizeNow = quick.prize;
+      $('#whEvTitle').textContent = 'Vòng quay nhanh';
+      $('#whEvSub').textContent = pool.length ? pool.length + ' người trong vòng' : 'Nhập danh sách tên hoặc số khách để tạo vòng quay';
+      $('#whQuick').innerHTML = `<div class="tabs wh-qtabs"><button type="button" data-wh-q="list" class="${quick.mode === 'list' ? 'on' : ''}">Danh sách tên</button><button type="button" data-wh-q="count" class="${quick.mode === 'count' ? 'on' : ''}">Số lượng khách</button></div>
+        <form id="whQForm" class="mt-2">
+          ${quick.mode === 'list' ? `<label class="sr-only" for="whQText">Danh sách tên</label><textarea class="input" id="whQText" rows="6" placeholder="Mỗi dòng một tên, ví dụ:&#10;Nguyễn Văn A&#10;Trần Thị B">${esc(quick.text)}</textarea>`
+            : `<div class="field"><label for="whQCount">Số khách tham dự (vòng quay đánh số 1 đến N)</label><input class="input" id="whQCount" type="number" min="2" max="1000" value="${+quick.count || 30}"></div>`}
+          <div class="field mt-2"><label for="whQPrize">Giải đang quay (không bắt buộc)</label><input class="input" id="whQPrize" maxlength="60" placeholder="Ví dụ: Giải nhất" value="${esc(quick.prize)}"></div>
+          <button class="btn btn-gold btn-block mt-2" type="submit">${icon('sparkle')} Tạo vòng quay</button>
+        </form>`;
+      $('#whRemove').checked = !!quick.remove; $('#whRemove').disabled = false;
+      $('#whEvNote').textContent = 'Vòng quay nhanh chọn ngẫu nhiên, danh sách chỉ lưu trên máy này.';
+      $('#whQForm').addEventListener('submit', e => {
+        e.preventDefault(); if (ev.spinning) return;
+        quick.prize = $('#whQPrize').value.trim();
+        if (quick.mode === 'list') {
+          quick.text = $('#whQText').value;
+          const seen = new Set(); quick.names = quick.text.split(/\n|;/).map(s => s.trim().replace(/\s+/g, ' ')).filter(s => s && !seen.has(s.toLowerCase()) && seen.add(s.toLowerCase()));
+          if (quick.names.length < 2) { toast('Anh chị nhập ít nhất 2 tên, mỗi dòng một tên.'); return; }
+        } else {
+          const n = Math.round(+$('#whQCount').value);
+          if (!(n >= 2 && n <= 1000)) { toast('Số khách từ 2 đến 1000.'); return; }
+          quick.count = n; quick.names = Array.from({ length: n }, (_, i) => String(i + 1));
+        }
+        quick.winners = []; saveQuick(); evRender(); toast('Đã tạo vòng quay ' + quick.names.length + ' người');
+      });
+      $('#whQPrize').addEventListener('change', e => { quick.prize = e.target.value.trim(); saveQuick(); });
+    }
+    // sau khi quay xong vẫn giữ vòng cũ để mọi người thấy kim chỉ đúng người trúng; lượt sau mới bỏ người đã trúng
+    if (!keepWheel) { evDraw(); $('#whNow').textContent = pool.length ? shown(pool[ev.index()] ?? pool[0]) : '...'; }
+    $('#whNowLbl').textContent = prizeNow ? 'Đang quay: ' + clean(prizeNow) : 'Đang chỉ vào';
+    const canSpin = !E || admin;
+    ev.hub.disabled = !canSpin || !pool.length; ev.hub.classList.toggle('wh-armed', canSpin && pool.length > 0);
+    status($('#whEvStatus'), !pool.length ? (E ? 'Không còn người tham dự trong vòng.' : 'Tạo vòng quay ở khung bên cạnh.') : canSpin ? `Bấm <b class="gold">QUAY</b> để chọn người may mắn${prizeNow ? ' nhận <b class="gold">' + esc(clean(prizeNow)) + '</b>' : ''}.` : 'Đang chờ người tổ chức quay.');
+    $('#whWinSub').textContent = winners.length ? winners.length + ' người' + (slots.length ? ' / ' + slots.length + ' giải' : '') : 'Chưa có ai';
+    $('#whWinAct').innerHTML = !E && winners.length ? `<button class="btn btn-sm btn-ghost" type="button" id="whClear">${icon('trash')} Xóa kết quả</button>` : '';
+    const cl = $('#whClear'); if (cl) cl.onclick = () => { if (!confirm('Xóa danh sách người trúng của vòng quay nhanh?')) return; quick.winners = []; saveQuick(); evRender(); };
+    $('#whWinners').innerHTML = winners.length ? `<ol class="wh-wins">${winners.map((w, i) => `<li><span class="wh-wn">${i + 1}</span><div style="min-width:0"><b>${esc(shown(w.name))}</b>${w.prize ? `<small class="gold">${esc(w.prize)}</small>` : ''}</div><time class="dim">${esc(String(w.at || '').slice(11, 16))}</time></li>`).join('')}</ol>` : `<div class="empty" style="padding:24px 10px">${icon('award')}Người trúng sẽ hiện ở đây.</div>`;
+    $('#whFs').innerHTML = document.body.classList.contains('wh-fs-on') ? `${icon('close')}<span class="wh-fs-t">Thoát toàn màn hình</span>` : `${icon('grid')}<span class="wh-fs-t">Toàn màn hình</span>`;
+  }
+  $('#whEvPick').addEventListener('change', e => { if (ev.spinning) { e.target.value = evSel; return; } evSel = e.target.value; store.set('psq_wheel_ev', evSel); evRender(); });
+  $('#whRemove').addEventListener('change', e => {
+    const d = ADB.load(), E = curEvent(d);
+    if (E) { if (!isAdmin()) return; E.removeWinners = e.target.checked; ADB.log(d, 'Sửa vòng quay sự kiện', `${E.name}: ${E.removeWinners ? 'loại' : 'giữ'} người đã trúng`); ADB.save(d); }
+    else { quick.remove = e.target.checked; saveQuick(); }
+    evRender();
+  });
+  document.addEventListener('click', e => { const q = e.target.closest('[data-wh-q]'); if (!q || ev.spinning) return; quick.mode = q.dataset.whQ; saveQuick(); evRender(); });
+  const segOf = list => list.map((n, i) => ({ label: n, short: isNum(n) ? n : i + 1 }));
+  function evDraw() { if (!pool.length || pool.length !== ev.segments.length || pool.some((n, i) => n !== ev.segments[i].label)) ev.draw(segOf(pool)); }
+  function evSpin() {
+    if (!pool.length) { toast('Chưa có người tham dự trong vòng quay.'); return; }
+    evDraw();
+    const d = ADB.load(), E = curEvent(d);
+    let name, index, prize = '';
+    if (E) {
+      if (!isAdmin()) { toast('Chỉ người tổ chức quay được sự kiện này.'); return; }
+      const r = ADB.wheelEventDraw(d, E.id); if (r.error) { toast(r.error); return; }
+      ADB.log(d, 'Quay sự kiện', `${E.name}: ${shown(r.name)}${r.winner.prize ? ' trúng ' + r.winner.prize : ''}`); ADB.save(d);
+      pool = r.pool; evDraw();
+      name = r.name; index = r.index; prize = r.winner.prize;
+    } else {
+      index = Math.floor(Math.random() * pool.length); name = pool[index]; prize = quick.prize;
+      quick.winners.push({ name, prize, at: new Date().toISOString().slice(0, 10) + ' ' + new Date().toTimeString().slice(0, 5) }); saveQuick();
+    }
+    ev.hub.classList.remove('wh-armed');
+    status($('#whEvStatus'), 'Vòng quay đang chạy...', 'run');
+    $('#whEvPick').disabled = true;
+    ev.spinTo(index, { duration: 6800, turns: 9 }).then(landed => {
+      $('#whEvPick').disabled = false;
+      $('#whNow').textContent = shown(name);
+      ev.host.dataset.result = index; ev.host.dataset.winner = name;
+      confetti(); fanfare();
+      const m = winModal('Xin chúc mừng', shown(name), prize ? `Trúng <b class="gold">${esc(prize)}</b>` : 'Người may mắn của vòng quay');
+      m.el.dataset.landed = landed;
+      evRender(true);
+    });
+  }
+
+  /* ---------- toàn màn hình (chiếu lên Zoom, máy chiếu) ---------- */
+  function fs(on) {
+    document.body.classList.toggle('wh-fs-on', on);
+    try { if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) {}
+    evRender(true);
+  }
+  $('#whFs').addEventListener('click', () => fs(!document.body.classList.contains('wh-fs-on')));
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('wh-fs-on')) fs(false); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('wh-fs-on')) fs(false); });
+
+  window.PSQWheel = { cus, ev, tab };
+  tab(location.hash.slice(1));
+  addEventListener('hashchange', () => tab(location.hash.slice(1)));
+  PSQ.reveal();
+})();
+</script>
+</body>
+</html>

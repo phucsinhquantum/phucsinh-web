@@ -337,6 +337,7 @@
     { id: 'learn', href: 'kien-thuc.html', label: 'Kiến thức trầm', icon: 'book' },
     { id: 'order', href: 'dat-hang.html', label: 'Đặt hàng', icon: 'cart', cart: true },
     { id: 'member', href: 'thanh-vien.html', label: 'Thành viên', icon: 'user' },
+    { id: 'wheel', href: 'vong-quay.html', label: 'Vòng quay may mắn', icon: 'gift' },
     { id: 'contact', href: 'lien-he.html', label: 'Liên hệ', icon: 'chat' }
   ];
   const TABS = ['home', 'shop', 'learn', 'order', 'member'];

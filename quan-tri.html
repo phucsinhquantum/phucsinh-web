@@ -173,6 +173,7 @@
 <script src="js/admin/kho.js"></script>
 <script src="js/admin/tai-chinh.js"></script>
 <script src="js/admin/he-thong.js"></script>
+<script src="js/admin/vong-quay.js"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, memberInfo, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -215,6 +216,7 @@
     ['Kiến thức trầm hương', [['postcats', 'Danh mục kiến thức', 'book', 'content'], ['posts', 'Bài viết kiến thức', 'edit', 'content']]],
     ['Đơn hàng & kho', [['orders', 'Danh sách đơn hàng', 'cart', 'orders'], ['stock', 'Thống kê tồn kho', 'chart', 'stock'], ['receipts', 'Phiếu nhập kho', 'download', 'stock']]],
     ['Tài chính', [['finance', 'Báo cáo tài chính', 'trend', 'finance.view'], ['wallet', 'Đối soát ví & dòng tiền', 'wallet', 'finance'], ['expenses', 'Quản lý chi phí', 'card', 'finance'], ['transactions', 'Lịch sử giao dịch', 'activity', 'finance.view'], ['commissions', 'Lịch sử hoa hồng', 'award', 'finance.view'], ['topups', 'Lịch sử nạp điểm', 'plus', 'finance.view']]],
+    ['Vòng quay may mắn', [['wheel', 'Vòng quay may mắn', 'gift', 'content']]],
     ['Hệ thống', [['logs', 'Nhật ký thao tác', 'eye', 'system'], ['mails', 'Lịch sử gửi mail', 'mail', 'system'], ['messages', 'Tin nhắn liên hệ', 'chat', 'messages'], ['addresses', 'Quản lý địa chỉ', 'pin', 'members'], ['settings', 'Thiết lập hệ thống', 'settings', 'system']]]
   ];
   const ITEMS = {}; NAV.forEach(([g, list]) => list.forEach(([id, label, ic, perm]) => ITEMS[id] = { id, label, ic, perm, group: g }));

@@ -422,5 +422,140 @@
   ADB.commissionKind = { ref: 'Thưởng giới thiệu', direct: 'Hoa hồng bán hàng', override: 'Thu nhập từ đại lý', missed: 'Hoa hồng bỏ lỡ' };
   ADB.commissionStatus.missed = ['Bỏ lỡ', 'failed'];
 
+  /* =====================================================================
+     VÒNG QUAY MAY MẮN
+     - Vòng quay khách hàng: mỗi người đăng ký qua đường dẫn giới thiệu = 1 mã quay
+       cho người giới thiệu, quay là trúng quà (100%).
+     - Vòng quay sự kiện (Zoom online / offline): danh sách người tham dự, quay ngẫu nhiên
+       hoặc theo danh sách người trúng do quản trị chỉ định.
+     Dữ liệu nằm ở d.wheel, tạo mặc định khi chưa có (không cần nâng phiên bản dữ liệu).
+     ===================================================================== */
+  const WHEEL_PRIZES = [
+    ['Vòng tay trầm hương (mẫu)', '#f3c76b', 8, 20],
+    ['Nụ trầm (mẫu)', '#4fe6df', 22, null],
+    ['Voucher 200.000đ (mẫu)', '#b98cff', 14, 50],
+    ['Trà trầm (mẫu)', '#45e08f', 20, null],
+    ['Móc khóa trầm (mẫu)', '#ffb547', 20, null],
+    ['50.000 PS vào ví mua hàng (mẫu)', '#ff8fb1', 16, null]
+  ];
+  const CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function newCode(W) {
+    const taken = new Set(W.codes.map(c => c.code)); let c;
+    do { c = 'PSQ-'; for (let i = 0; i < 6; i++) c += CODE_CH[Math.floor(Math.random() * CODE_CH.length)]; } while (taken.has(c));
+    return c;
+  }
+  const stampNow = () => { const t = new Date(); return t.toISOString().slice(0, 10) + ' ' + t.toTimeString().slice(0, 5); };
+  const inStock = p => p.active !== false && (p.stock == null || p.stock > 0);
+  const normName = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  function wheelData(d) {
+    if (d.wheel && Array.isArray(d.wheel.prizes)) {
+      const W = d.wheel; W.codes = W.codes || []; W.forced = W.forced || {}; W.spins = W.spins || []; W.events = W.events || []; return W;
+    }
+    const W = d.wheel = { prizes: WHEEL_PRIZES.map(([name, color, weight, stock], i) => ({ id: 'qz' + (i + 1), name, color, weight, stock, active: true })), codes: [], forced: {}, spins: [], events: [] };
+    syncCodes(d, W);
+    // vài lượt quay mẫu của thành viên khác để trang có danh sách người trúng
+    const sample = W.codes.filter(c => c.user !== 'u1').slice(0, 5);
+    sample.forEach((c, i) => {
+      const p = W.prizes[[1, 3, 4, 2, 5][i] % W.prizes.length], at = daysAgo(i * 3 + 1) + ' ' + String(9 + i * 2).padStart(2, '0') + ':' + String(i * 13 % 60).padStart(2, '0');
+      c.status = 'used'; c.prize = p.id; c.usedAt = at;
+      W.spins.push({ id: uid('vq'), code: c.code, user: c.user, prize: p.id, prizeName: p.name, date: at, sample: true });
+    });
+    W.events.push({ id: 'sk1', name: 'Giao lưu Zoom tri ân khách hàng (mẫu)', kind: 'online', date: daysAgo(-7), participants: ['Nguyễn Minh Anh', 'Trần Quốc Huy', 'Lê Thu Hà', 'Phạm Gia Bảo', 'Võ Ngọc Lan', 'Đặng Hải Nam', 'Bùi Khánh Linh', 'Hoàng Đức Tín', 'Đỗ Mai Phương', 'Ngô Thành Đạt', 'Lý Bảo Châu', 'Dương Tuấn Kiệt'], prizes: [{ name: 'Nụ trầm (mẫu)', qty: 3 }, { name: 'Vòng tay trầm hương (mẫu)', qty: 1 }], mode: 'random', fixedWinners: [], winners: [], removeWinners: true });
+    W.events.push({ id: 'sk2', name: 'Khai trương showroom (mẫu)', kind: 'offline', date: daysAgo(-20), participants: Array.from({ length: 60 }, (_, i) => String(i + 1)), prizes: [{ name: 'Trà trầm (mẫu)', qty: 5 }, { name: 'Voucher 200.000đ (mẫu)', qty: 2 }], mode: 'random', fixedWinners: [], winners: [], removeWinners: true });
+    return W;
+  }
+  // mỗi người đăng ký qua giới thiệu = đúng 1 mã quay cho người giới thiệu
+  function syncCodes(d, W) {
+    const have = new Set(W.codes.filter(c => c.from).map(c => c.user + '|' + c.from)); let changed = false;
+    d.users.forEach(u => {
+      if (!u.sponsor || u.role === 'admin' || have.has(u.sponsor + '|' + u.id)) return;
+      if (!d.users.some(x => x.id === u.sponsor)) return;
+      W.codes.push({ code: newCode(W), user: u.sponsor, from: u.id, status: 'new', prize: null, usedAt: null, createdAt: u.created || now() });
+      have.add(u.sponsor + '|' + u.id); changed = true;
+    });
+    return changed;
+  }
+  function pickWeighted(list) {
+    const sum = list.reduce((s, p) => s + Math.max(0, +p.weight || 0), 0);
+    if (!(sum > 0)) return list[Math.floor(Math.random() * list.length)];
+    let r = Math.random() * sum;
+    for (const p of list) { r -= Math.max(0, +p.weight || 0); if (r < 0) return p; }
+    return list[list.length - 1];
+  }
+  // người còn trong vòng của một sự kiện (bỏ người đã trúng nếu bật loại người đã trúng)
+  function eventPool(ev) {
+    const won = new Set((ev.winners || []).map(w => normName(w.name)));
+    return (ev.participants || []).map(n => String(n).trim()).filter(Boolean).filter(n => !ev.removeWinners || !won.has(normName(n)));
+  }
+  function eventSlots(ev) { const out = []; (ev.prizes || []).forEach(p => { for (let i = 0; i < (+p.qty || 0); i++) out.push(p.name); }); return out; }
+
+  Object.assign(ADB, {
+    wheel: wheelData,
+    // quà đang hiện trên vòng quay khách hàng (đang bật và còn quà)
+    wheelPrizes(d) { return wheelData(d).prizes.filter(inStock); },
+    wheelChance(d) { const L = ADB.wheelPrizes(d), sum = L.reduce((s, p) => s + Math.max(0, +p.weight || 0), 0); return L.map(p => ({ prize: p, pct: sum > 0 ? Math.max(0, +p.weight || 0) / sum * 100 : 100 / L.length })); },
+    wheelSync(d) { return syncCodes(d, wheelData(d)); },
+    wheelNewCode(d, userId, note) { const W = wheelData(d), c = { code: newCode(W), user: userId, from: null, status: 'new', prize: null, usedAt: null, createdAt: now(), note: note || 'Cấp thủ công' }; W.codes.push(c); return c; },
+    wheelCodesOf(d, userId) { return wheelData(d).codes.filter(c => c.user === userId).sort((a, b) => (a.status === 'new' ? 0 : 1) - (b.status === 'new' ? 0 : 1) || String(b.createdAt).localeCompare(String(a.createdAt))); },
+    // kiểm tra mã trước khi quay
+    wheelCheck(d, code, user) {
+      const W = wheelData(d), k = String(code || '').trim().toUpperCase().replace(/\s+/g, '');
+      if (!k) return { error: 'Anh chị nhập mã quay.' };
+      const c = W.codes.find(x => x.code === k || x.code.replace('-', '') === k.replace('-', ''));
+      if (!c) return { error: 'Mã quay không đúng. Anh chị kiểm tra lại giúp.' };
+      if (!user) return { error: 'Anh chị đăng nhập tài khoản nhận mã để quay.' };
+      if (c.user !== user.id) return { error: 'Mã này thuộc tài khoản khác.' };
+      if (c.status !== 'new') return { error: 'Mã này đã được dùng ngày ' + String(c.usedAt || '').slice(0, 10) + '.' };
+      if (!ADB.wheelPrizes(d).length) return { error: 'Vòng quay đang tạm dừng, chưa có quà.' };
+      return { code: c };
+    },
+    // quay bằng mã: chọn quà (chỉ định trước, nếu không thì ngẫu nhiên theo tỉ lệ), trừ số lượng, đánh dấu mã đã dùng
+    wheelSpin(d, code, user) {
+      const r = ADB.wheelCheck(d, code, user); if (r.error) return r;
+      const W = wheelData(d), c = r.code, list = ADB.wheelPrizes(d);
+      let p = null, forced = false;
+      for (const key of [c.code, user.id]) {
+        const id = W.forced[key]; if (!id) continue;
+        const f = list.find(x => x.id === id); if (f) { p = f; forced = true; delete W.forced[key]; break; }
+      }
+      if (!p) p = pickWeighted(list);
+      const index = list.indexOf(p);
+      if (p.stock != null) p.stock = Math.max(0, p.stock - 1);
+      const at = stampNow();
+      c.status = 'used'; c.prize = p.id; c.usedAt = at;
+      const spin = { id: uid('vq'), code: c.code, user: user.id, prize: p.id, prizeName: p.name, date: at, forced };
+      W.spins.unshift(spin);
+      return { prize: p, index, spin, segments: list };
+    },
+    wheelEventPool: eventPool,
+    wheelEventSlots: eventSlots,
+    // quay một lượt sự kiện: trả về tên người trúng
+    wheelEventDraw(d, eventId) {
+      const ev = wheelData(d).events.find(e => e.id === eventId); if (!ev) return { error: 'Không tìm thấy sự kiện.' };
+      const pool = eventPool(ev); if (!pool.length) return { error: 'Không còn người tham dự trong vòng quay.' };
+      const slots = eventSlots(ev); ev.winners = ev.winners || [];
+      if (slots.length && ev.winners.length >= slots.length) return { error: 'Đã trao hết giải của sự kiện này.' };
+      let name = null;
+      if (ev.mode === 'fixed') {
+        const won = new Set(ev.winners.map(w => normName(w.name)));
+        const next = (ev.fixedWinners || []).map(n => String(n).trim()).filter(Boolean).find(n => !won.has(normName(n)) && pool.some(p => normName(p) === normName(n)));
+        if (next) name = pool.find(p => normName(p) === normName(next));
+      }
+      if (name == null) name = pool[Math.floor(Math.random() * pool.length)];
+      const w = { name, prize: slots[ev.winners.length] || '', at: stampNow() };
+      ev.winners.push(w);
+      return { name, winner: w, index: pool.indexOf(name), pool, event: ev };
+    },
+    wheelMask(name) {
+      const w = String(name || '').trim().split(/\s+/); if (!w[0]) return 'Khách hàng';
+      const f = w[0], head = f.length > 2 ? f.slice(0, 2) + '***' + f.slice(-1) : f[0] + '***';
+      return head + (w.length > 1 ? ' ' + w[w.length - 1][0].toUpperCase() + '.' : '');
+    }
+  });
+  {
+    const baseLoad = ADB.load;
+    ADB.load = function () { const d = baseLoad(); const had = !!d.wheel; wheelData(d); if (syncCodes(d, d.wheel) || !had) db.save(d); return d; };
+  }
+
   ADB.load(); // nâng cấp dữ liệu ngay khi nạp trang (để tài khoản nhân viên mẫu đăng nhập được)
 })();
