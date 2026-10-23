@@ -524,7 +524,7 @@
       <a class="p-img" href="san-pham-chi-tiet.html?id=${p.id}">${art(p)}${p.old ? `<span class="badge gold tag">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : p.hot ? '<span class="badge violet tag">Bán chạy</span>' : ''}</a>
       <div class="p-body"><h3><a href="san-pham-chi-tiet.html?id=${p.id}">${esc(p.name)}</a></h3>
         <div class="row" style="gap:8px;flex-wrap:wrap"><span class="p-price">${money(p.price)}</span>${p.old ? `<s class="dim" style="font-size:12px">${money(p.old)}</s>` : ''}</div>
-        <span class="p-points">+${money(p.price * (S.pointRate || .1)).replace('đ', '')} điểm PS</span></div>
+</div>
       <div class="p-actions"><button class="btn btn-outline-gold btn-sm" type="button" data-add="${p.id}">${icon('cart')} Thêm</button><button class="btn btn-gold btn-sm" type="button" data-add="${p.id}" data-go="1">Mua ngay</button></div>
     </article>`;
   }

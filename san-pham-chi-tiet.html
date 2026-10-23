@@ -5,7 +5,7 @@
 <style>html{background:#06080a}</style>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chi tiết sản phẩm · Phúc Sinh QuanTum</title>
-<meta name="description" content="Thông tin chi tiết sản phẩm trầm hương Phúc Sinh QuanTum: giá, điểm PS, thông số và hướng dẫn bảo quản.">
+<meta name="description" content="Thông tin chi tiết sản phẩm trầm hương Phúc Sinh QuanTum: giá, thông số và hướng dẫn bảo quản.">
 <meta name="theme-color" content="#06080a">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
@@ -118,7 +118,6 @@
   $('.topbar h1').textContent = p.name;
   const crumb = $('.topbar .crumb'); if (crumb) crumb.textContent = `${S.brand} / Sản phẩm / ${cat.name}`;
 
-  const rate = S.pointRate || .1;
   const off = p.old ? Math.round((1 - p.price / p.old) * 100) : 0;
   const isBead = ['bracelet', 'mala', 'necklace', 'car'].includes(p.art);
   const size = p.spec ? p.spec : p.bead ? p.bead + ' li (mm)' : p.art === 'mala' ? '8 li, 108 hạt' : p.art === 'necklace' ? '6 li, mặt ngọc 18 mm' : p.art === 'car' ? 'Hạt 10 li, dây dài 28 cm' : p.art === 'statue' ? 'Cao khoảng 12 cm' : p.art === 'cone' ? 'Không áp dụng' : 'Hộp 30 x 22 cm';
@@ -135,7 +134,7 @@
         <div class="row wrap" style="gap:8px"><a class="badge ship" href="san-pham.html?cat=${p.cat}">${esc(cat.name)}</a>${p.hot ? '<span class="badge violet">Bán chạy</span>' : ''}<span class="badge ok">Còn hàng</span></div>
         <h2 class="display">${esc(p.name)}</h2>
         <div class="price-row"><span class="now">${money(p.price)}</span>${p.old ? `<s class="dim">${money(p.old)}</s><span class="badge gold">Tiết kiệm ${money(p.old - p.price)}</span>` : ''}</div>
-        <div class="pts">${icon('sparkle')}<span>Thành viên nhận <b id="ptsVal">+${money(p.price * rate).replace('đ', '')} điểm PS</b> cho đơn này</span></div>
+        <div class="pts">${icon('sparkle')}<span>Thanh toán bằng ví điểm hoặc chuyển khoản. Đơn của thành viên được cộng <b id="ptsVal">${money(p.price)}</b> vào doanh số mua hàng để lên Đại lý.</span></div>
         <p class="muted">${esc(p.desc)}</p>
         <div class="divider" style="margin:2px 0"></div>
         <div class="buy">
@@ -196,7 +195,7 @@
   // số lượng
   const qi = $('#qty');
   const getQ = () => Math.max(1, Math.min(99, parseInt(qi.value, 10) || 1));
-  const upd = () => { $('#ptsVal').textContent = '+' + money(p.price * rate * getQ()).replace('đ', '') + ' điểm PS'; };
+  const upd = () => { $('#ptsVal').textContent = money(p.price * getQ()); };
   $$('[data-step]').forEach(b => b.addEventListener('click', () => { qi.value = Math.max(1, Math.min(99, getQ() + +b.dataset.step)); upd(); }));
   qi.addEventListener('input', upd); qi.addEventListener('blur', () => { qi.value = getQ(); upd(); });
   $('#addBtn').addEventListener('click', () => { cart.add(p.id, getQ()); toast(`Đã thêm ${getQ()} sản phẩm vào giỏ`); });
