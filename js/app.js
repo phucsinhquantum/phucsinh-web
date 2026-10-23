@@ -152,7 +152,15 @@
       d.users.push(u); db.save(d); store.set(SES_KEY, u.id); return { user: u };
     },
     update(patch) { const d = db.load(), u = d.users.find(x => x.id === store.get(SES_KEY)); if (!u) return; Object.assign(u, patch); db.save(d); return u; },
-    logout() { store.set(SES_KEY, null); }
+    logout() { store.set(SES_KEY, null); },
+    // đổi mật khẩu: kiểm tra mật khẩu hiện tại
+    changePass(oldPass, newPass) {
+      const d = db.load(), u = d.users.find(x => x.id === store.get(SES_KEY)); if (!u) return { error: 'Anh chị chưa đăng nhập.' };
+      if (u.pass !== hash(oldPass)) return { error: 'Mật khẩu hiện tại chưa đúng.' };
+      if (String(newPass || '').length < 6) return { error: 'Mật khẩu mới cần ít nhất 6 ký tự.' };
+      if (hash(newPass) === u.pass) return { error: 'Mật khẩu mới cần khác mật khẩu cũ.' };
+      u.pass = hash(newPass); u.passChanged = today(); db.save(d); return { ok: true };
+    }
   };
   // tổng chi tiêu, điểm và hạng của một khách
   function memberInfo(u) {
@@ -344,7 +352,7 @@
   function shell() {
     const page = $('#page'); if (!page) return;
     const cur = document.body.dataset.page, u = auth.user();
-    const link = n => `<a href="${n.href}" class="${n.id === cur ? 'active' : ''}"${n.id === cur ? ' aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span>${n.cart ? '<span class="badge gold" data-cart-count hidden>0</span>' : ''}</a>`;
+    const link = (n, i = 9) => `<a href="${n.href}" style="--i:${i}" class="${n.id === cur ? 'active' : ''}"${n.id === cur ? ' aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span>${n.cart ? '<span class="badge gold" data-cart-count hidden>0</span>' : ''}</a>`;
     const app = document.createElement('div'); app.className = 'app';
     try { if (localStorage.getItem('psq_side_pin') === '1') app.classList.add('side-pinned'); } catch (e) {}
     app.innerHTML = `
@@ -377,7 +385,7 @@
             <form class="search" action="san-pham.html" role="search">${icon('search')}<input name="q" placeholder="Tìm sản phẩm, bài viết..." aria-label="Tìm kiếm"></form>
             ${window.PSQLang ? `<button class="icon-btn lang-btn notranslate" type="button" translate="no" aria-label="Chọn ngôn ngữ" aria-haspopup="dialog" data-lang-open>${icon('globe')}<b>${esc(PSQLang.info.tag)}</b></button>` : ''}
             <button class="icon-btn" type="button" aria-label="Giỏ hàng" data-cart-open>${icon('cart')}<span class="count" data-cart-count hidden>0</span></button>
-            <a class="icon-btn" href="thanh-vien.html" aria-label="Tài khoản">${icon('user')}</a>
+            <button class="icon-btn user-btn${u ? ' on' : ''}" type="button" aria-label="Tài khoản" aria-haspopup="menu" aria-expanded="false" data-user-open>${u ? `<span class="avatar">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials(u.name))}</span>` : icon('user')}</button>
           </div>
         </header>
         <div class="content"></div>
@@ -390,7 +398,7 @@
           <div class="copy"><span>© ${new Date().getFullYear()} ${esc(S.brand)}. Mọi quyền được bảo lưu.</span><span>Sản phẩm không phải là thuốc, không thay thế thuốc chữa bệnh.</span></div>
         </footer>
       </div>
-      <nav class="tabbar" aria-label="Điều hướng nhanh">${TABS.map(id => { const n = NAV.find(x => x.id === id); return `<a href="${n.href}" class="${id === cur ? 'active' : ''}">${icon(n.icon)}<span>${n.label.replace(' trầm', '')}</span></a>`; }).join('')}</nav>`;
+      <nav class="tabbar" aria-label="Điều hướng nhanh">${TABS.map((id, i) => { const n = NAV.find(x => x.id === id); return `<a href="${n.href}" style="--i:${i}" class="${id === cur ? 'active' : ''}">${icon(n.icon)}<span>${n.label.replace(' trầm', '')}</span></a>`; }).join('')}</nav>`;
     page.parentNode.insertBefore(app, page);
     $('.content', app).appendChild(page);
     // giỏ hàng dạng ngăn kéo
@@ -407,7 +415,15 @@
         <a class="cd-btn cd-mess" href="${S.messenger ? 'https://m.me/' + esc(S.messenger) : 'lien-he.html'}"${S.messenger ? ' target="_blank" rel="noopener"' : ''} aria-label="Nhắn tin Messenger"><span class="cd-ico">${icon('messenger')}</span><span class="cd-tip">Nhắn Messenger</span></a>
         <a class="cd-btn cd-call" href="tel:${esc(String(S.phone || '').replace(/[^\d+]/g, ''))}" aria-label="Gọi ${esc(S.phone || '')}"><span class="cd-ico">${icon('phone')}</span><span class="cd-tip">Gọi ${esc(S.phone || '')}</span></a>
       </div>`}`);
+    // các icon thanh bên nhấp nháy đỏ một lúc khi vào trang để khách chú ý
+    const attn = () => { app.classList.remove('nav-attn'); void app.offsetWidth; app.classList.add('nav-attn'); setTimeout(() => app.classList.remove('nav-attn'), 7000); };
+    if (document.documentElement.classList.contains('intro-cover') || document.documentElement.classList.contains('intro-lock')) document.addEventListener('psq:intro-leave', attn, { once: true }); else attn();
     document.addEventListener('click', e => {
+      const ub = e.target.closest('[data-user-open]');
+      if (ub) { e.stopPropagation(); if (document.querySelector('.user-pop')) return closeUser(); userMenu(ub); return; }
+      const ua = e.target.closest('[data-user-act]');
+      if (ua) { e.preventDefault(); const a = ua.dataset.userAct; closeUser(); if (a === 'logout') { auth.logout(); toast('Đã đăng xuất'); setTimeout(() => location.href = cur === 'admin' ? 'index.html' : location.href.split('#')[0], 300); } if (a === 'pass') passModal(); return; }
+      if (!e.target.closest('.user-pop')) closeUser();
       const lb = e.target.closest('[data-lang-open]');
       if (lb) { e.stopPropagation(); if (document.querySelector('.lang-pop')) return PSQLang.close(); PSQLang.menu(lb); return; }
       const pin = e.target.closest('[data-side-pin]');
@@ -421,7 +437,35 @@
       if (t.matches('[data-add]')) { e.preventDefault(); cart.add(t.dataset.add, +(t.dataset.n || 1)); toast('Đã thêm vào giỏ: ' + product(t.dataset.add).name); if (t.dataset.go) location.href = 'dat-hang.html'; }
       if (t.matches('[data-qty]')) { const [id, d] = t.dataset.qty.split('|'); const it = cart.items().find(x => x.id === id); if (it) cart.set(id, d === 'x' ? 0 : it.qty + +d); }
     });
-    addEventListener('keydown', e => { if (e.key === 'Escape') { openCart(false); app.classList.remove('nav-open'); } });
+    addEventListener('keydown', e => { if (e.key === 'Escape') { openCart(false); app.classList.remove('nav-open'); closeUser(); } });
+    // menu tài khoản ở góc trên
+    function closeUser() { document.querySelectorAll('.user-pop').forEach(p => p.remove()); document.querySelectorAll('[data-user-open]').forEach(b => b.setAttribute('aria-expanded', 'false')); }
+    function userMenu(btn) {
+      const u = auth.user(), pop = document.createElement('div'); pop.className = 'user-pop'; pop.setAttribute('role', 'menu');
+      const it = (href, ic, label, act) => `<a role="menuitem" href="${href}"${act ? ` data-user-act="${act}"` : ''}>${icon(ic)}<span>${label}</span></a>`;
+      pop.innerHTML = u ? `<div class="up-head"><span class="avatar">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials(u.name))}</span><div><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></div></div>
+        ${it('thanh-vien.html#ho-so', 'user', 'Hồ sơ của tôi')}${it('thanh-vien.html#vi', 'wallet', 'Ví của tôi')}${it('#', 'lock', 'Đổi mật khẩu', 'pass')}${u.role === 'admin' ? it('quan-tri.html', 'grid', 'Trang quản trị') : ''}<div class="up-sep"></div>${it('#', 'logout', 'Đăng xuất', 'logout')}`
+        : `<div class="up-head"><span class="avatar">${icon('user')}</span><div><b>Khách</b><small>Đăng nhập để xem ví, đơn hàng</small></div></div>${it('thanh-vien.html', 'user', 'Đăng nhập')}${it('thanh-vien.html?dang-ky=1', 'plus', 'Đăng ký thành viên')}`;
+      document.body.appendChild(pop);
+      const r = btn.getBoundingClientRect(); pop.style.top = (r.bottom + 8) + 'px'; pop.style.left = Math.max(12, Math.min(innerWidth - pop.offsetWidth - 12, r.right - pop.offsetWidth)) + 'px';
+      btn.setAttribute('aria-expanded', 'true'); const f = pop.querySelector('a'); f && f.focus();
+    }
+    function passModal() {
+      const m = modal(`<form id="cpF" novalidate><div class="card-head"><div><h3>Đổi mật khẩu</h3><div class="sub">Mật khẩu mới ít nhất 6 ký tự</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+        <div class="field"><label for="cpO">Mật khẩu hiện tại</label><input class="input" id="cpO" type="password" autocomplete="current-password"></div>
+        <div class="field mt-2"><label for="cpN">Mật khẩu mới</label><input class="input" id="cpN" type="password" autocomplete="new-password"></div>
+        <div class="field mt-2"><label for="cpR">Nhập lại mật khẩu mới</label><input class="input" id="cpR" type="password" autocomplete="new-password"></div>
+        <p class="red mt-1" id="cpE" style="font-size:13px;min-height:18px"></p>
+        <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">${icon('check')} Lưu mật khẩu</button></div></form>`);
+      const $m = s => m.el.querySelector(s);
+      $m('#cpF').addEventListener('submit', e => {
+        e.preventDefault(); const n = $m('#cpN').value;
+        if (n !== $m('#cpR').value) return $m('#cpE').textContent = 'Hai lần nhập mật khẩu mới chưa giống nhau.';
+        const r = auth.changePass($m('#cpO').value, n); if (r.error) return $m('#cpE').textContent = r.error;
+        m.close(); toast('Đã đổi mật khẩu');
+      });
+      setTimeout(() => $m('#cpO').focus(), 60);
+    }
     cart.changed();
   }
   function openCart(on) { $('.drawer')?.classList.toggle('open', on); $('.drawer-back')?.classList.toggle('open', on); $('.drawer')?.setAttribute('aria-hidden', String(!on)); }
