@@ -232,7 +232,7 @@
     ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng và khi chuyển điểm thưởng sang khả dụng.'],
     ['agentThreshold', 'Mốc lên đại lý', 'money', 'Tổng tiền mua đã thanh toán cộng dồn để tự lên đại lý.'],
     ['pkgCountsAs', 'Phần của gói tính vào doanh số mua hàng', 'money', 'Khi tính mốc lên đại lý, mỗi gói kích hoạt chỉ được tính số tiền này.'],
-    ['activeDays', 'Chu kỳ xét điều kiện đại lý', 'days', 'Trong số ngày này, đại lý phải có đơn tự mua và đơn bán mới nhận thu nhập từ đại lý tuyến dưới.'],
+    ['activeDays', 'Chu kỳ xét điều kiện đại lý', 'days', 'Trong số ngày này, đại lý phải có đơn tự mua hoặc đơn bán (theo quy tắc bên dưới) mới nhận thu nhập từ đại lý tuyến dưới.'],
     ['activeMinBuy', 'Đơn tự mua tối thiểu', 'money', 'Giá trị tối thiểu của đơn tự mua để tính là đủ điều kiện. 0 là đơn nào cũng tính.'],
     ['activeMinSell', 'Đơn bán tối thiểu', 'money', 'Giá trị tối thiểu của đơn do người mình giới thiệu trực tiếp mua. 0 là đơn nào cũng tính.'],
     ['holdDays', 'Thời gian giữ chờ', 'days', 'Áp dụng khi chọn giữ chờ: quá số ngày này mà chưa đủ điều kiện thì khoản đó bị hủy.']
@@ -255,6 +255,7 @@
           <div class="ht-sec full mt-2">Kế hoạch trả thưởng</div>
           <p class="dim full" style="font-size:12.5px;margin:0">1 điểm PS = 1 đồng. Thay đổi chỉ áp dụng cho đơn hàng ghi nhận sau khi lưu, không tính lại các khoản đã trả.</p>
           ${PLAN_FIELDS.map(([k, label, kind, help]) => pf(k, label, P[k], kind, help)).join('')}
+          <div class="field"><label for="hs-p_activeRule">Quy tắc điều kiện đại lý</label><select class="input" id="hs-p_activeRule" name="p_activeRule"${dis}>${[['any', 'Chỉ cần 1 trong 2: tự mua hoặc có đơn bán'], ['all', 'Phải có cả tự mua và đơn bán']].map(([k, l]) => `<option value="${k}"${(P.activeRule || 'any') === k ? ' selected' : ''}>${l}</option>`).join('')}</select><small class="dim ht-help">Xét trong chu kỳ ở trên.</small></div>
           <div class="field"><label for="hs-p_overrideMode">Đại lý chưa đủ điều kiện</label><select class="input" id="hs-p_overrideMode" name="p_overrideMode"${dis}>${MODES.map(([k, l]) => `<option value="${k}"${P.overrideMode === k ? ' selected' : ''}>${l}</option>`).join('')}</select><small class="dim ht-help">Cách xử lý khoản thu nhập từ đại lý tuyến dưới khi đại lý chưa đủ điều kiện.</small></div>
           <div class="ht-sec full mt-2">Ví và điểm</div>
           ${f('minWithdraw', 'Rút tiền tối thiểu (đồng)', S.minWithdraw, 'number', ' min="0" step="10000"')}
@@ -288,7 +289,7 @@
         if (plan.pkgCountsAs > plan.pkgPrice) return fail('Phần của gói tính vào doanh số không được lớn hơn giá gói.', 'p_pkgCountsAs');
         if (plan.pkgPoints > plan.pkgPrice) return fail('Điểm nhận khi kích hoạt không được lớn hơn giá gói.', 'p_pkgPoints');
         if (plan.ctvRate > plan.agentRate) return fail('Hoa hồng của cộng tác viên đang cao hơn của đại lý. Anh chị kiểm tra lại.', 'p_ctvRate');
-        plan.overrideMode = form.p_overrideMode.value;
+        plan.overrideMode = form.p_overrideMode.value; plan.activeRule = form.p_activeRule.value;
         err.textContent = '';
         const d2 = ADB.load();
         d2.settings = Object.assign({}, ADB.DEFAULT_SETTINGS, d2.settings || {}, {

@@ -224,7 +224,7 @@
     agentThreshold: 16800000,                      // tổng mua cộng dồn để lên đại lý
     pkgCountsAs: 346000,                           // phần của gói tính vào doanh số mua hàng (mốc đại lý)
     // điều kiện để đại lý nhận thu nhập từ đại lý tuyến dưới: trong activeDays ngày gần nhất có đơn tự mua và đơn bán
-    activeDays: 30, activeMinBuy: 0, activeMinSell: 0,
+    activeDays: 30, activeMinBuy: 0, activeMinSell: 0, activeRule: 'any', // any: 1 trong 2 việc · all: cả hai
     holdDays: 30,                                  // khoản bị giữ chờ quá số ngày này mà chưa đủ điều kiện thì hủy
     overrideMode: 'lose'                           // hold: giữ chờ · lose: mất ngay · up: chuyển cho đại lý đủ điều kiện ở tuyến trên
   };
@@ -277,7 +277,7 @@
       if (r && r.tier === 'daily' && up && up.tier === 'daily' && depth <= 30 && amount >= 1) {
         const ok = ADB.activity(d, up.id, date).ok, status = ok ? 'paid' : P.overrideMode === 'lose' ? 'missed' : 'hold';
         addCommission(d, { kind: 'override', order: c.order, user: up.id, from: r.id, level: depth + 1, depth, rate: P.overrideRate, base: c.amount, amount, date, status,
-          note: ok ? (hops ? 'Chuyển lên từ đại lý chưa đủ điều kiện' : '') : status === 'hold' ? 'Đang giữ, chờ đủ điều kiện nhận' : 'Chưa đủ điều kiện nhận (mua và bán trong ' + P.activeDays + ' ngày)' });
+          note: ok ? (hops ? 'Chuyển lên từ đại lý chưa đủ điều kiện' : '') : status === 'hold' ? 'Đang giữ, chờ đủ điều kiện nhận' : 'Chưa đủ điều kiện nhận (' + (P.activeRule === 'all' ? 'tự mua và có đơn bán' : 'tự mua hoặc có đơn bán') + ' trong ' + P.activeDays + ' ngày)' });
       }
     }
   }
@@ -375,8 +375,9 @@
       const sells = d.orders.filter(o => { const b = o.userId && ADB.user(d, o.userId); return b && b.sponsor === id && inWin(o) && itemsTotal(o) >= (P.activeMinSell || 0); });
       const part = (list, label) => { const last = lastOf(list), left = last ? P.activeDays - dd(last) : 0; return { ok: list.length > 0, last, count: list.length, amount: list.reduce((s, o) => s + o.total, 0), left, label }; };
       const buy = part(buys, 'Tự mua hàng'), sell = part(sells, 'Có đơn bán từ người mình giới thiệu');
-      const ok = buy.ok && sell.ok, left = ok ? Math.min(buy.left, sell.left) : 0;
-      return { ok, buy, sell, left, days: P.activeDays, minBuy: P.activeMinBuy || 0, minSell: P.activeMinSell || 0, missing: [buy, sell].filter(x => !x.ok) };
+      const all = P.activeRule === 'all', ok = all ? buy.ok && sell.ok : buy.ok || sell.ok;
+      const left = !ok ? 0 : all ? Math.min(buy.left, sell.left) : Math.max(buy.ok ? buy.left : 0, sell.ok ? sell.left : 0);
+      return { ok, all, buy, sell, left, days: P.activeDays, minBuy: P.activeMinBuy || 0, minSell: P.activeMinSell || 0, missing: ok ? [] : [buy, sell].filter(x => !x.ok) };
     },
     // nhả các khoản đang giữ khi đại lý đủ điều kiện; quá hạn thì hủy. Trả về true nếu có thay đổi
     releaseHeld(d) {

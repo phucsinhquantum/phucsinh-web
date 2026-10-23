@@ -79,6 +79,7 @@
   .act-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
   .act-list li { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, .18); }
   .act-list li > i { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 700; }
+    .act-list li.na > i { background: rgba(255, 255, 255, .06); color: var(--text-3); }
   .act-list li.ok > i { background: rgba(69, 224, 143, .15); color: #45e08f; } .act-list li.no > i { background: rgba(255, 107, 107, .15); color: #ff6b6b; }
   .act-list li > div { display: grid; gap: 2px; min-width: 0; } .act-list small { color: var(--text-3); font-size: 12.5px; }
   .act-list li > .badge { margin-left: auto; flex: none; }
@@ -296,22 +297,22 @@
 
   /* ---------- điều kiện nhận thu nhập từ đại lý tuyến dưới ---------- */
   const MODE_NOTE = { hold: n => `Chưa đủ điều kiện thì khoản 40% được giữ lại tối đa ${n} ngày, đủ điều kiện trong thời gian này sẽ tự vào ví.`, lose: () => 'Chưa đủ điều kiện thì khoản 40% phát sinh trong thời gian đó không được nhận.', up: () => 'Chưa đủ điều kiện thì khoản 40% chuyển cho đại lý đủ điều kiện ở tuyến trên.' };
-  const actItem = (x, P) => `<li class="${x.ok ? 'ok' : 'no'}"><i>${x.ok ? '✓' : '!'}</i><div><b>${esc(x.label)}${x === 'buy' ? '' : ''}</b><small>${x.ok ? `Gần nhất ${fdate(x.last)} · ${x.count} đơn trong ${P.activeDays} ngày` : `Chưa có trong ${P.activeDays} ngày gần nhất`}</small></div>${x.ok ? `<span class="badge ${x.left <= 7 ? 'pending' : 'paid'}">Còn ${x.left} ngày</span>` : '<span class="badge failed">Thiếu</span>'}</li>`;
+  const actItem = (x, P, a) => { const na = !x.ok && a && a.ok && !a.all; return `<li class="${x.ok ? 'ok' : na ? 'na' : 'no'}"><i>${x.ok ? '✓' : na ? '–' : '!'}</i><div><b>${esc(x.label)}${x === 'buy' ? '' : ''}</b><small>${x.ok ? `Gần nhất ${fdate(x.last)} · ${x.count} đơn trong ${P.activeDays} ngày` : `Chưa có trong ${P.activeDays} ngày gần nhất`}</small></div>${x.ok ? `<span class="badge ${x.left <= 7 ? 'pending' : 'paid'}">Còn ${x.left} ngày</span>` : a && a.ok && !a.all ? '<span class="badge">Không bắt buộc</span>' : '<span class="badge failed">Thiếu</span>'}</li>`; };
   function actCard(d, me) {
     const a = ADB.activity(d, me.id), P = ADB.plan(d), e = ADB.earnings(d, me.id);
     const min = [P.activeMinBuy ? `đơn tự mua từ ${money(P.activeMinBuy)}` : '', P.activeMinSell ? `đơn bán từ ${money(P.activeMinSell)}` : ''].filter(Boolean).join(', ');
-    return `<div class="card ${a.ok ? 'glow-cyan' : 'glow-gold'} mt-2" id="dieu-kien">${head('Điều kiện nhận thu nhập từ đại lý tuyến dưới', a.ok ? `Đang đủ điều kiện · còn ${a.left} ngày` : `Còn thiếu ${a.missing.length} điều kiện`)}
-      <ul class="act-list">${actItem(a.buy, P)}${actItem(a.sell, P)}</ul>
+    return `<div class="card ${a.ok ? 'glow-cyan' : 'glow-gold'} mt-2" id="dieu-kien">${head('Điều kiện nhận thu nhập từ đại lý tuyến dưới', a.ok ? `Đang đủ điều kiện · còn ${a.left} ngày` : a.all ? `Còn thiếu ${a.missing.length} điều kiện` : 'Chưa đủ điều kiện, cần 1 trong 2 việc bên dưới')}
+      <ul class="act-list">${actItem(a.buy, P, a)}${actItem(a.sell, P, a)}</ul>
       ${e.held ? `<p class="mt-2" style="font-size:13.5px">Đang giữ chờ <b class="gold">${ps(e.held)}</b>. <a class="cyan" href="#hoa-hong">Xem chi tiết</a></p>` : ''}
-      <p class="dim mt-2" style="font-size:12.5px">Trong ${P.activeDays} ngày gần nhất, đại lý cần có cả đơn tự mua và đơn bán (người mình giới thiệu trực tiếp mua) đã thanh toán${min ? ` (${min})` : ''}. ${MODE_NOTE[P.overrideMode] ? MODE_NOTE[P.overrideMode](P.holdDays) : ''} Hoa hồng bán hàng ${P.agentRate}% không bị ảnh hưởng.</p></div>`;
+      <p class="dim mt-2" style="font-size:12.5px">Trong ${P.activeDays} ngày gần nhất, đại lý cần có ${a.all ? 'cả đơn tự mua và đơn bán' : 'đơn tự mua hoặc đơn bán (chỉ cần 1 trong 2)'} (đơn bán là người mình giới thiệu trực tiếp mua), đã thanh toán${min ? ` (${min})` : ''}. ${MODE_NOTE[P.overrideMode] ? MODE_NOTE[P.overrideMode](P.holdDays) : ''} Hoa hồng bán hàng ${P.agentRate}% không bị ảnh hưởng.</p></div>`;
   }
   // cảnh báo đầu trang khi thiếu điều kiện hoặc sắp hết hạn
   function actAlert(d, me) {
     if ((me.tier || '') !== 'daily') return '';
     const a = ADB.activity(d, me.id), e = ADB.earnings(d, me.id);
     if (a.ok && a.left > 7) return '';
-    if (a.ok) return `<div class="act-alert warn">${icon('clock')}<div>Còn <b>${a.left} ngày</b> là hết điều kiện nhận thu nhập từ đại lý tuyến dưới. Anh chị cần thêm: <ul>${[a.buy, a.sell].filter(x => x.left === a.left).map(x => `<li>${esc(x.label)}</li>`).join('')}</ul><a class="gold" href="#tong-quan" data-goact>Xem điều kiện</a></div></div>`;
-    return `<div class="act-alert">${icon('info')}<div><b>Anh chị chưa đủ điều kiện nhận thu nhập từ đại lý tuyến dưới.</b>${e.held ? ` Đang giữ chờ ${ps(e.held)}.` : ''} Còn thiếu:<ul>${a.missing.map(x => `<li>${esc(x.label)} trong ${a.days} ngày gần nhất</li>`).join('')}</ul><a class="gold" href="san-pham.html">Mua hàng</a> · <a class="gold" href="#tong-quan" data-goact>Xem điều kiện</a></div></div>`;
+    if (a.ok) return `<div class="act-alert warn">${icon('clock')}<div>Còn <b>${a.left} ngày</b> là hết điều kiện nhận thu nhập từ đại lý tuyến dưới. Để giữ điều kiện, anh chị cần ${a.all ? 'thêm' : '1 trong 2 việc'}: <ul>${(a.all ? [a.buy, a.sell].filter(x => x.left === a.left) : [a.buy, a.sell]).map(x => `<li>${esc(x.label)}</li>`).join('')}</ul><a class="gold" href="#tong-quan" data-goact>Xem điều kiện</a></div></div>`;
+    return `<div class="act-alert">${icon('info')}<div><b>Anh chị chưa đủ điều kiện nhận thu nhập từ đại lý tuyến dưới.</b>${e.held ? ` Đang giữ chờ ${ps(e.held)}.` : ''} ${a.all ? 'Còn thiếu' : 'Anh chị cần 1 trong 2 việc'}:<ul>${a.missing.map(x => `<li>${esc(x.label)} trong ${a.days} ngày gần nhất</li>`).join('')}</ul><a class="gold" href="san-pham.html">Mua hàng</a> · <a class="gold" href="#tong-quan" data-goact>Xem điều kiện</a></div></div>`;
   }
 
   /* ---------- TỔNG QUAN ---------- */
