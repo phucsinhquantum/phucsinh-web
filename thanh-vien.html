@@ -30,6 +30,15 @@
   .auth-art { position: relative; overflow: hidden; min-height: 520px; display: grid; align-content: end; isolation: isolate; }
   .auth-art .hero-bg { position: absolute; inset: 0; z-index: -2; background: url(img/intro/canh-1-may-nui-ngay.jpg) center / cover; animation: heroDrift 24s ease-in-out infinite alternate; }
   .auth-art::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(rgba(6,8,10,0) 30%, rgba(6,8,10,.9) 85%); }
+  /* máy tính: khung ảnh đứng yên bên trái, chữ nằm giữa khung trên nền tối dịu để cân với cột đăng nhập */
+  @media (min-width: 1100px) {
+    .auth-art { position: sticky; top: calc(var(--top-h) + 8px); align-self: start; height: calc(100vh - var(--top-h) - 28px); min-height: 560px; max-height: 860px; align-content: center; padding: 48px 44px; }
+    .auth-art::after { background: radial-gradient(90% 60% at 30% 55%, rgba(6,8,10,.82), rgba(6,8,10,.35) 70%, rgba(6,8,10,.1)), linear-gradient(rgba(6,8,10,.15), rgba(6,8,10,.55)); }
+    .auth-art .aa-in { max-width: 540px; }
+    .auth-art .aa-in p { font-size: 15px; line-height: 1.6; color: var(--text-2); max-width: 40ch; }
+    .auth-art .aa-feats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; grid-template-columns: none; }
+    .auth-art .aa-feats > div { padding: 10px 14px; border-radius: 14px; background: rgba(6,8,10,.5); border: 1px solid var(--line); width: max-content; max-width: 100%; }
+  }
   .rank-line { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .rank-line:last-child { border-bottom: 0; }
   .rank-gem { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; grid-row: span 2; box-shadow: 0 0 14px -2px currentColor; border: 1px solid currentColor; }
@@ -776,9 +785,12 @@
     ];
     view.innerHTML = `<div class="auth-wrap">
       <div class="card glow-mix auth-art"><div class="hero-bg"></div>
+        <div class="aa-in">
         <span class="eyebrow">Thành viên Phúc Sinh QuanTum</span>
         <h2 class="display mt-1" style="font-size:clamp(30px,3.6vw,46px);line-height:1.08">Mỗi đơn hàng là một bước <span class="gold">lên hạng</span>.</h2>
-        <div class="grid g-3 mt-3" style="gap:10px">
+        <p class="mt-2">Đăng ký miễn phí, kích hoạt cộng tác viên để nhận hoa hồng, mua cộng dồn để lên đại lý.</p>
+        </div>
+        <div class="grid g-3 mt-3 aa-feats" style="gap:10px">
           ${[['wallet', 'Ví điểm PS và ví tiền mặt'], ['bag', 'Gian hàng online'], ['shield', 'Bảo hành trọn đời']].map(([i, t]) => `<div class="row" style="gap:8px;font-size:13px"><span class="stat-ico gold">${icon(i)}</span>${t}</div>`).join('')}
         </div>
       </div>

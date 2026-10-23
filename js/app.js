@@ -412,6 +412,7 @@
           <button class="icon-btn menu-btn" type="button" aria-label="Mở menu" data-nav-open>${icon('menu')}</button>
           <div><div class="crumb">${esc(S.brand)} / ${esc(page.dataset.crumb || page.dataset.title || '')}</div><h1>${esc(page.dataset.title || '')}</h1></div>
           <div class="top-actions">
+            ${ctvCta()}
             <form class="search" action="san-pham.html" role="search">${icon('search')}<input name="q" placeholder="Tìm sản phẩm, bài viết..." aria-label="Tìm kiếm"></form>
             ${window.PSQLang ? `<button class="icon-btn lang-btn notranslate" type="button" translate="no" aria-label="Chọn ngôn ngữ" aria-haspopup="dialog" data-lang-open>${icon('globe')}<b>${esc(PSQLang.info.tag)}</b></button>` : ''}
             <a class="icon-btn gift-btn gift-blink" href="vong-quay.html" aria-label="Vòng quay may mắn">${icon('gift')}</a>
@@ -446,8 +447,8 @@
         <a class="cd-btn cd-mess" href="${S.messenger ? esc(S.messLink()) : 'lien-he.html'}"${S.messenger ? ' target="_blank" rel="noopener"' : ''} aria-label="Nhắn tin Messenger"><span class="cd-ico">${icon('messenger')}</span><span class="cd-tip">Nhắn Messenger</span></a>
         <a class="cd-btn cd-call" href="tel:${esc(String(S.phone || '').replace(/[^\d+]/g, ''))}" aria-label="Gọi ${esc(S.phone || '')}"><span class="cd-ico">${icon('phone')}</span><span class="cd-tip">Gọi ${esc(S.phone || '')}</span></a>
       </div>`}`);
-    // các icon thanh bên nhấp nháy đỏ một lúc khi vào trang để khách chú ý
-    const attn = () => { app.classList.remove('nav-attn'); void app.offsetWidth; app.classList.add('nav-attn'); setTimeout(() => app.classList.remove('nav-attn'), 7000); };
+    // các icon thanh bên nhấp nháy đỏ một lúc khi vào trang để khách chú ý; khách lần đầu thấy thêm lời nhắc đăng ký CTV
+    const attn = () => { app.classList.remove('nav-attn'); void app.offsetWidth; app.classList.add('nav-attn'); setTimeout(() => app.classList.remove('nav-attn'), 7000); ctvTip(); };
     if (document.documentElement.classList.contains('intro-cover') || document.documentElement.classList.contains('intro-lock')) document.addEventListener('psq:intro-leave', attn, { once: true }); else attn();
     document.addEventListener('click', e => {
       const ub = e.target.closest('[data-user-open]');
@@ -511,6 +512,25 @@
   function footSocial() {
     const so = S.social || {}, L = [['facebook', 'Facebook', so.facebook], ['messenger', 'Messenger', S.messenger ? S.messLink() : ''], ['zalo', 'Zalo', so.zalo || (S.zalo ? 'https://zalo.me/' + String(S.zalo).replace(/\D/g, '') : '')], ['youtube', 'YouTube', so.youtube], ['tiktok', 'TikTok', so.tiktok]].filter(x => x[2]);
     return L.length ? `<div class="foot-social">${L.map(([i, n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener" aria-label="${n}" title="${n}">${icon(i)}</a>`).join('')}</div>` : '';
+  }
+  // nút "Đăng ký CTV" nổi bật trên thanh trên cùng (ẩn khi đã là CTV, đại lý hoặc quản trị)
+  const ctvRate = () => ((((store.get(DB_KEY, {}) || {}).settings || {}).plan || {}).ctvRate) || 10;
+  const ctvHref = () => auth.user() ? 'thanh-vien.html#kich-hoat' : 'thanh-vien.html?dang-ky=1';
+  function ctvCta() {
+    const u = auth.user(); if (u && (u.role === 'admin' || u.tier === 'ctv' || u.tier === 'daily')) return '';
+    return `<a class="ctv-cta" href="${ctvHref()}" title="Đăng ký cộng tác viên, nhận hoa hồng ${ctvRate()}%"><span class="ctv-hot">HOT</span><span class="ctv-txt"><b>Đăng ký CTV</b><small>Nhận hoa hồng ${ctvRate()}%</small></span><span class="ctv-short">CTV</span></a>`;
+  }
+  // khách lần đầu: bong bóng nhắc dưới nút, đóng rồi thì không hiện lại
+  function ctvTip() {
+    const a = $('.ctv-cta'); if (!a || store.get('psq_ctv_tip', 0)) return;
+    const t = document.createElement('div'); t.className = 'ctv-tip'; t.setAttribute('role', 'status');
+    t.innerHTML = `<button type="button" class="ctv-x" aria-label="Đóng">${icon('close')}</button><b>${icon('sparkle')} Cơ hội cho anh chị</b><p>Đăng ký cộng tác viên để bán hàng nhận hoa hồng ${ctvRate()}% và lên đại lý hưởng thu nhập không giới hạn.</p><a class="btn btn-gold btn-sm" href="${ctvHref()}">Đăng ký ngay</a>`;
+    document.body.appendChild(t);
+    const place = () => { const r = a.getBoundingClientRect(); t.style.top = (r.bottom + 12) + 'px'; t.style.left = Math.max(12, Math.min(innerWidth - t.offsetWidth - 12, r.left + r.width / 2 - t.offsetWidth / 2)) + 'px'; t.style.setProperty('--ax', (r.left + r.width / 2 - t.getBoundingClientRect().left) + 'px'); };
+    place(); addEventListener('resize', place);
+    const close = () => { store.set('psq_ctv_tip', 1); t.classList.add('out'); setTimeout(() => t.remove(), 300); removeEventListener('resize', place); };
+    t.addEventListener('click', e => { if (e.target.closest('.ctv-x') || e.target.closest('a')) close(); });
+    a.addEventListener('click', close, { once: true });
   }
   function toast(msg, kind) { const box = $('.toasts'); if (!box) return; const t = document.createElement('div'); t.className = 'toast' + (kind === 'err' ? ' toast-err' : ''); t.textContent = msg; if (kind === 'err') t.setAttribute('role', 'alert'); box.appendChild(t); setTimeout(() => t.remove(), kind === 'err' ? 6000 : 2600); }
   function modal(html) {

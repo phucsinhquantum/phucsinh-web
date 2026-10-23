@@ -945,3 +945,28 @@ html.reduce-motion .gift-blink svg { animation: none !important; color: #ff4d4d;
 .nm-row small { font-size: 12px; color: var(--text-3); }
 .pwa-steps { margin: 14px 0 0; padding-left: 22px; display: grid; gap: 8px; font-size: 14px; color: var(--text-2); }
 .saved-addr { margin-bottom: 14px; }
+/* thanh trên cùng: nút Đăng ký CTV (HOT) và lời nhắc cho khách lần đầu */
+.ctv-cta { position: relative; display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 16px 0 8px; border-radius: 14px; flex: none; color: #1d1507;
+  background: linear-gradient(135deg, #ffe09a, var(--gold) 45%, var(--gold-2)); box-shadow: 0 0 0 1px rgba(255, 224, 154, .5), 0 0 22px -4px var(--gold-glow); animation: ctvPulse 2.2s ease-in-out infinite; overflow: hidden; }
+.ctv-cta::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, .55) 50%, transparent 65%); transform: translateX(-120%); animation: ctvShine 3.2s ease-in-out infinite; pointer-events: none; }
+.ctv-cta:hover { filter: brightness(1.06); }
+.ctv-hot { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: #fff; padding: 4px 7px; border-radius: 8px; background: linear-gradient(135deg, #ff5a5a, #ff2d55); box-shadow: 0 0 12px rgba(255, 60, 80, .7); animation: ctvHot 1s ease-in-out infinite; }
+.ctv-txt { display: grid; line-height: 1.15; }
+.ctv-txt b { font-size: 13.5px; font-weight: 700; white-space: nowrap; }
+.ctv-txt small { font-size: 11px; font-weight: 600; opacity: .75; white-space: nowrap; }
+.ctv-short { display: none; font-weight: 800; font-size: 13px; }
+@keyframes ctvPulse { 50% { box-shadow: 0 0 0 1px rgba(255, 224, 154, .7), 0 0 34px 2px var(--gold-glow); } }
+@keyframes ctvShine { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+@keyframes ctvHot { 50% { transform: scale(1.12); background: linear-gradient(135deg, #ff8a5a, #ff2d55); } }
+.ctv-tip { position: fixed; z-index: 60; width: min(320px, calc(100vw - 24px)); padding: 16px 16px 14px; border-radius: 16px; background: rgba(14, 20, 23, .97); border: 1px solid rgba(243, 199, 107, .55); box-shadow: 0 0 30px -6px var(--gold-glow), var(--shadow); animation: tipIn .45s cubic-bezier(.2, .9, .3, 1.3); }
+.ctv-tip::before { content: ""; position: absolute; top: -7px; left: calc(var(--ax, 50%) - 7px); width: 12px; height: 12px; transform: rotate(45deg); background: inherit; border-left: 1px solid rgba(243, 199, 107, .55); border-top: 1px solid rgba(243, 199, 107, .55); }
+.ctv-tip b { display: flex; align-items: center; gap: 6px; color: var(--gold); font-size: 14px; }
+.ctv-tip b svg { width: 16px; height: 16px; }
+.ctv-tip p { font-size: 13px; color: var(--text-2); margin: 6px 0 12px; line-height: 1.5; }
+.ctv-tip .ctv-x { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: 0; background: none; color: var(--text-3); display: grid; place-items: center; }
+.ctv-tip .ctv-x svg { width: 14px; height: 14px; }
+.ctv-tip.out { opacity: 0; transform: translateY(-6px); transition: .3s; }
+@keyframes tipIn { from { opacity: 0; transform: translateY(-10px) scale(.96); } }
+@media (max-width: 1280px) { .ctv-txt small { display: none; } }
+@media (max-width: 760px) { .ctv-cta { height: 40px; padding: 0 10px 0 6px; gap: 6px; border-radius: 12px; } .ctv-txt { display: none; } .ctv-short { display: inline; } .ctv-hot { font-size: 10px; padding: 3px 5px; } }
+@media (prefers-reduced-motion: reduce) { html.reduce-motion .ctv-cta, html.reduce-motion .ctv-cta::after, html.reduce-motion .ctv-hot { animation: none; } }
