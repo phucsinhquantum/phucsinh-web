@@ -515,11 +515,26 @@ html.reduce-motion .reveal { opacity: 1; transform: none; }
 }
 
 /* ---------- danh mục nhỏ: 6 ô một hàng, dư thì trượt ngang ---------- */
-.cat-row { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 10px; scrollbar-width: thin; scrollbar-color: rgba(243, 199, 107, .35) transparent; }
+.cat-row { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 10px 2px 12px; scrollbar-width: thin; scrollbar-color: rgba(243, 199, 107, .35) transparent; }
 .cat-row::-webkit-scrollbar { height: 6px; } .cat-row::-webkit-scrollbar-thumb { background: rgba(243, 199, 107, .35); border-radius: 6px; }
 /* thẻ danh mục: bằng 80% cỡ cũ (6 thẻ một hàng x 0,8); hàng không đầy thì căn giữa */
-.cat-item { flex: 0 0 calc((100% - 14px * 5) / 6 * .8); scroll-snap-align: start; padding: 0; overflow: hidden; }
+.cat-item { flex: 1 1 0; min-width: 150px; max-width: calc((100% - 14px * 5) / 6 * .8); scroll-snap-align: start; padding: 0; overflow: hidden; position: relative;
+  transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s, border-color .35s; }
+/* ít danh mục: cỡ tối đa, căn giữa; nhiều hơn: các thẻ co đều cho kín hàng; quá nhiều: trượt ngang bằng nút */
 .cat-item:first-child { margin-left: auto; } .cat-item:last-child { margin-right: auto; }
+.cat-item .p-img { overflow: hidden; position: relative; }
+.cat-item .p-img > * { transition: transform .7s cubic-bezier(.2, .8, .2, 1), filter .5s; }
+.cat-item .p-img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 45%, rgba(6, 8, 10, .75)); opacity: 0; transition: opacity .4s; pointer-events: none; }
+.cat-go { position: absolute; left: 50%; bottom: 14px; z-index: 2; transform: translate(-50%, 12px); opacity: 0; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #2a1a05; background: linear-gradient(145deg, #ffe7a8, var(--gold) 60%, #c8923a); box-shadow: 0 6px 18px rgba(243, 199, 107, .4); transition: opacity .35s, transform .35s cubic-bezier(.2, .8, .2, 1); pointer-events: none; }
+.cat-go svg { width: 13px; height: 13px; }
+.cat-item h3 { transition: color .3s; }
+@media (hover: hover) {
+  .cat-item:hover, .cat-item:focus-visible { transform: translateY(-6px); border-color: rgba(243, 199, 107, .85); box-shadow: 0 22px 40px -16px rgba(0, 0, 0, .9), 0 0 28px -6px rgba(243, 199, 107, .55); outline: none; }
+  .cat-item:hover .p-img > *, .cat-item:focus-visible .p-img > * { transform: scale(1.1); filter: brightness(1.08) saturate(1.1); }
+  .cat-item:hover .p-img::after, .cat-item:focus-visible .p-img::after { opacity: 1; }
+  .cat-item:hover .cat-go, .cat-item:focus-visible .cat-go { opacity: 1; transform: translate(-50%, 0); }
+  .cat-item:hover h3, .cat-item:focus-visible h3 { color: var(--gold); }
+}
 .cat-item .p-img { aspect-ratio: 1; }
 .cat-item .cat-name { padding: 10px 12px 12px; }
 .cat-item h3 { font-size: 13.5px; line-height: 1.3; }
@@ -527,8 +542,8 @@ html.reduce-motion .reveal { opacity: 1; transform: none; }
 .cat-nav { display: flex; gap: 8px; margin-left: auto; }
 .cat-nav button { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .03); color: var(--text-2); cursor: pointer; }
 .cat-nav button:hover { border-color: var(--gold); color: var(--gold); }
-@media (max-width: 1099px) { .cat-item { flex-basis: calc((100% - 14px * 3) / 4 * .8); } }
-@media (max-width: 699px) { .cat-row { gap: 10px; } .cat-item { flex-basis: calc((100% - 10px * 2) / 2.6); } .cat-nav { display: none; } }
+@media (max-width: 1099px) { .cat-item { min-width: 140px; max-width: calc((100% - 14px * 3) / 4 * .8); } }
+@media (max-width: 699px) { .cat-row { gap: 10px; } .cat-item { flex: 0 0 calc((100% - 10px * 2) / 2.6); min-width: 0; max-width: none; } .cat-row { padding-top: 8px; } .cat-nav { display: none; } }
 .foot .brand { align-items: flex-start; text-align: left; } .foot .brand img { width: 84px; }
 
 /* ---------- thanh bên thu gọn dạng biểu tượng (máy tính) ----------

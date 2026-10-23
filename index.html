@@ -103,7 +103,7 @@
   $('#stats').innerHTML = STATS.map((s, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat reveal"><div class="stat-top"><span class="stat-ico ${ico[i]}">${icon(s.icon)}</span>${esc(s.label)}</div><div class="stat-val">${esc(s.value)}</div></div>`).join('');
   $('#cats').innerHTML = CATEGORIES.map((c, i) => {
     const n = PRODUCTS.filter(p => p.cat === c.id).length, p = PRODUCTS.find(x => x.cat === c.id);
-    return `<a class="card ${['glow-cyan', 'glow-gold', 'glow-mix'][i % 3]} cat-item" href="san-pham.html?cat=${c.id}"><div class="p-img">${p ? PSQ.art(p) : ''}</div><div class="cat-name"><h3>${esc(c.name)}</h3><span>${n} sản phẩm</span></div></a>`;
+    return `<a class="card ${['glow-cyan', 'glow-gold', 'glow-mix'][i % 3]} cat-item" href="san-pham.html?cat=${c.id}"><div class="p-img">${p ? PSQ.art(p) : ''}<span class="cat-go">Xem sản phẩm ${icon('arrow')}</span></div><div class="cat-name"><h3>${esc(c.name)}</h3><span>${n} sản phẩm</span></div></a>`;
   }).join('');
   // nút trượt chỉ hiện khi danh mục nhiều hơn số ô nhìn thấy
   const row = $('#cats'), nav = $('#catNav');
