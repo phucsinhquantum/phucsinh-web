@@ -4,7 +4,7 @@
    Cảnh 2 (4,2s→)    Mặt trời trong núi ló dần, tia sáng chiếu tới logo PSQ,
                      logo sáng lên, nút "Khám phá" nhấp nháy.
                      Khách bấm "Khám phá" mới vào trang web.
-   Nhạc nền: audio/intro.mp3 (lặp lại). Trình duyệt chặn tự phát tiếng
+   Nhạc nền: audio/intro-full.mp3, nguyên bài, hết bài thì phát lại. Trình duyệt chặn tự phát tiếng
    nên nhạc bắt đầu ngay khi được phép, hoặc ở lần chạm/bấm đầu tiên.
    (Code cảnh lửa khói và cổng sáng vẫn giữ, đang tắt: o2, o3 trong frame().)
 
@@ -24,7 +24,7 @@
     footer: 'Hít thở chậm • Cảm nhận • Khám phá',
     // 'ngay' = bản ban ngày, 'binh-minh' = bản bình minh. Xem thử bản khác: index.html?intro=1&canh=binh-minh
     theme: 'ngay',
-    music: 'audio/intro.mp3',   // để '' nếu không muốn nhạc
+    music: 'audio/intro-full.mp3',   // nguyên bài (13 phút 37 giây); để '' nếu không muốn nhạc
     volume: 0.7,
     oncePerSession: true,
     respectReducedMotion: false,
@@ -522,7 +522,7 @@
   const unlock = e => { if (!e.target.closest || !e.target.closest('.intro-sound, #introEnter, .intro-skip')) playMusic(); };
   const unhook = () => ['pointerdown', 'touchend', 'keydown'].forEach(n => removeEventListener(n, unlock, true));
   if (audio) {
-    audio.loop = true; audio.preload = 'auto';
+    audio.loop = true; audio.preload = 'metadata'; // phát dần khi tải, không tải hết trước
     sndBtn.hidden = false; sndBtn.classList.add('off');
     ['pointerdown', 'touchend', 'keydown'].forEach(n => addEventListener(n, unlock, true));
     sndBtn.addEventListener('click', () => {

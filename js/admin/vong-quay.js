@@ -51,16 +51,18 @@
         <div class="field"><label for="wqC">Màu ô trên vòng</label><div class="row" style="gap:8px"><input type="color" class="wh-color" id="wqC" value="${esc(p ? p.color : '#f3c76b')}"><span class="dim" style="font-size:12px">Nên chọn vàng, xanh ngọc, tím để hợp tông web</span></div></div>
         <div class="field"><label for="wqW">Trọng số (tỉ lệ trúng)</label><input class="input" id="wqW" type="number" min="0" max="10000" step="1" value="${p ? +p.weight || 0 : 10}"></div>
         <div class="field"><label for="wqS">Số lượng còn (để trống = không giới hạn)</label><input class="input" id="wqS" type="number" min="0" step="1" value="${p && p.stock != null ? p.stock : ''}"></div>
+        <div class="field"><label for="wqP">Điểm tự cộng vào ví khi trúng (0 = quà hiện vật)</label><input class="input" id="wqP" type="number" min="0" step="1000" value="${p && +p.points > 0 ? +p.points : 0}"></div>
+        <div class="field"><label for="wqV">Ví nhận điểm</label><select class="input" id="wqV">${[['shop', 'Ví điểm mua hàng'], ['avail', 'Ví điểm khả dụng']].map(([k, l]) => `<option value="${k}"${(p && p.wallet || 'shop') === k ? ' selected' : ''}>${l}</option>`).join('')}</select><small class="dim">Điểm trừ từ quỹ kế toán và ghi vào sổ quỹ.</small></div>
         <div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" id="wqA" ${!p || p.active !== false ? 'checked' : ''}> Đang bật trên vòng quay</label></div>
         <div class="field full"><button class="btn btn-gold" type="submit">${icon('check')} Lưu quà</button></div>
       </form>`);
     $('#wqForm', m.el).addEventListener('submit', e => {
       e.preventDefault();
       const d = ADB.load(), W = ADB.wheel(d), s = $('#wqS', m.el).value.trim();
-      const v = { name: $('#wqN', m.el).value.trim(), color: $('#wqC', m.el).value, weight: Math.max(0, +$('#wqW', m.el).value || 0), stock: s === '' ? null : Math.max(0, Math.round(+s)), active: $('#wqA', m.el).checked };
+      const v = { name: $('#wqN', m.el).value.trim(), color: $('#wqC', m.el).value, weight: Math.max(0, +$('#wqW', m.el).value || 0), stock: s === '' ? null : Math.max(0, Math.round(+s)), active: $('#wqA', m.el).checked, points: Math.max(0, Math.round(+$('#wqP', m.el).value || 0)), wallet: $('#wqV', m.el).value };
       if (!v.name) return toast('Anh chị nhập tên quà.');
       if (p) Object.assign(W.prizes.find(x => x.id === p.id) || {}, v); else W.prizes.push({ id: ADB.uid('qz'), ...v });
-      commit(d, p ? 'Sửa quà vòng quay' : 'Thêm quà vòng quay', `${v.name}: trọng số ${v.weight}, số lượng ${v.stock == null ? 'không giới hạn' : v.stock}`, 'Đã lưu quà');
+      commit(d, p ? 'Sửa quà vòng quay' : 'Thêm quà vòng quay', `${v.name}: trọng số ${v.weight}, số lượng ${v.stock == null ? 'không giới hạn' : v.stock}${v.points ? `, tự cộng ${v.points.toLocaleString('vi-VN')} PS` : ''}`, 'Đã lưu quà');
       m.close(); draw();
     });
   }
@@ -133,9 +135,9 @@
     box.innerHTML = `<div class="card glow-gold"><div class="card-head"><div><h3>Lịch sử quay</h3><div class="sub">${S.length} lượt · ${S.filter(s => !s.given).length} quà chưa trao</div></div><button class="btn btn-sm" type="button" id="wsCsv" style="margin-left:auto">${icon('download')} Tải Excel (CSV)</button></div>
       ${S.length ? `<div class="table-wrap"><table class="tbl" style="min-width:760px"><thead><tr><th>Thời gian</th><th>Thành viên</th><th>Mã</th><th>Quà trúng</th><th>Cách chọn</th><th>Trao quà</th></tr></thead><tbody>
       ${S.map(s => { const u = ADB.user(d, s.user) || {}; return `<tr><td class="dim nowrap">${esc(s.date)}</td><td><b>${esc(u.name || '')}</b><br><small class="dim">${esc(u.phone || '')}</small></td><td class="wh-mono nowrap">${esc(s.code)}</td><td class="gold">${esc(s.prizeName || '')}</td><td>${s.forced ? '<span class="badge violet">Chỉ định</span>' : '<span class="badge ship">Ngẫu nhiên</span>'}</td>
-        <td><button class="btn btn-sm ${s.given ? 'btn-ghost' : 'btn-outline-gold'}" type="button" data-ws="${s.id}">${s.given ? icon('check') + ' Đã trao' : 'Đánh dấu đã trao'}</button></td></tr>`; }).join('')}</tbody></table></div>` : `<div class="empty">${icon('activity')}Chưa có lượt quay nào.</div>`}</div>`;
+        <td>${s.auto ? `<span class="badge paid nowrap">Đã tự cộng ${(+s.points).toLocaleString('vi-VN')} PS</span>` : `<button class="btn btn-sm ${s.given ? 'btn-ghost' : 'btn-outline-gold'}" type="button" data-ws="${s.id}">${s.given ? icon('check') + ' Đã trao' : 'Đánh dấu đã trao'}</button>`}</td></tr>`; }).join('')}</tbody></table></div>` : `<div class="empty">${icon('activity')}Chưa có lượt quay nào.</div>`}</div>`;
     $('#wsCsv').onclick = () => ADB.csv('lich-su-vong-quay', [['Thời gian', 'Thành viên', 'Điện thoại', 'Mã', 'Quà', 'Cách chọn', 'Đã trao'], ...S.map(s => { const u = ADB.user(d, s.user) || {}; return [s.date, u.name, u.phone, s.code, s.prizeName, s.forced ? 'Chỉ định' : 'Ngẫu nhiên', s.given ? 'Có' : 'Chưa']; })]);
-    box.onclick = e => { const b = e.target.closest('[data-ws]'); if (!b) return; const d2 = ADB.load(), s = ADB.wheel(d2).spins.find(x => x.id === b.dataset.ws); if (!s) return; s.given = !s.given; commit(d2, 'Trao quà vòng quay', `${uname(d2, s.user)}: ${s.prizeName} (${s.given ? 'đã trao' : 'chưa trao'})`, s.given ? 'Đã đánh dấu trao quà' : 'Đã bỏ đánh dấu'); draw(); };
+    box.onclick = e => { const b = e.target.closest('[data-ws]'); if (!b) return; const d2 = ADB.load(), s = ADB.wheel(d2).spins.find(x => x.id === b.dataset.ws); if (!s || s.auto) return; s.given = !s.given; commit(d2, 'Trao quà vòng quay', `${uname(d2, s.user)}: ${s.prizeName} (${s.given ? 'đã trao' : 'chưa trao'})`, s.given ? 'Đã đánh dấu trao quà' : 'Đã bỏ đánh dấu'); draw(); };
   }
 
   /* ---------- sự kiện ---------- */

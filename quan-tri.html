@@ -174,6 +174,7 @@
 <script src="js/admin/tai-chinh.js"></script>
 <script src="js/admin/he-thong.js"></script>
 <script src="js/admin/vong-quay.js"></script>
+<script src="js/admin/quy-diem.js"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, memberInfo, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -215,7 +216,7 @@
     ['Sản phẩm', [['categories', 'Danh mục sản phẩm', 'grid', 'products'], ['products', 'Quản lý sản phẩm', 'bag', 'products']]],
     ['Kiến thức trầm hương', [['postcats', 'Danh mục kiến thức', 'book', 'content'], ['posts', 'Bài viết kiến thức', 'edit', 'content']]],
     ['Đơn hàng & kho', [['orders', 'Danh sách đơn hàng', 'cart', 'orders'], ['stock', 'Thống kê tồn kho', 'chart', 'stock'], ['receipts', 'Phiếu nhập kho', 'download', 'stock']]],
-    ['Tài chính', [['finance', 'Báo cáo tài chính', 'trend', 'finance.view'], ['wallet', 'Đối soát ví & dòng tiền', 'wallet', 'finance'], ['expenses', 'Quản lý chi phí', 'card', 'finance'], ['transactions', 'Lịch sử giao dịch', 'activity', 'finance.view'], ['commissions', 'Lịch sử hoa hồng', 'award', 'finance.view'], ['topups', 'Lịch sử nạp tiền', 'plus', 'finance.view']]],
+    ['Tài chính', [['finance', 'Báo cáo tài chính', 'trend', 'finance.view'], ['fund', 'Quỹ điểm kế toán', 'shield', 'finance.view'], ['wallet', 'Đối soát ví & dòng tiền', 'wallet', 'finance'], ['expenses', 'Quản lý chi phí', 'card', 'finance'], ['transactions', 'Lịch sử giao dịch', 'activity', 'finance.view'], ['commissions', 'Lịch sử hoa hồng', 'award', 'finance.view'], ['topups', 'Lịch sử nạp tiền', 'plus', 'finance.view']]],
     ['Vòng quay may mắn', [['wheel', 'Vòng quay may mắn', 'gift', 'content']]],
     ['Hệ thống', [['logs', 'Nhật ký thao tác', 'eye', 'system'], ['mails', 'Lịch sử gửi mail', 'mail', 'system'], ['messages', 'Tin nhắn liên hệ', 'chat', 'messages'], ['addresses', 'Quản lý địa chỉ', 'pin', 'members'], ['settings', 'Thiết lập hệ thống', 'settings', 'system']]]
   ];
@@ -233,6 +234,7 @@
     if (id === 'messages') return (d.messages || []).filter(m => m.status === 'new').length;
     if (id === 'topups') return (d.topups || []).filter(t => t.status === 'pending').length;
     if (id === 'orders') return d.orders.filter(o => o.status === 'pending').length;
+    if (id === 'fund') return ADB.fund(d).checks.length;
     return 0;
   }
   function buildNav(u) {

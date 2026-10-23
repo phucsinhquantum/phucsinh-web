@@ -35,10 +35,10 @@ Toàn bộ chữ, sản phẩm, bài viết, số liệu nằm trong `js/data.js
 Hiện tài khoản, đơn hàng và tin nhắn chỉ lưu trên trình duyệt của từng máy (localStorage) để chạy thử giao diện. Muốn khách đăng ký thật, quản trị thấy đơn từ mọi khách, thanh toán online, gửi email xác nhận thì cần nối máy chủ (backend) và cơ sở dữ liệu. Mật khẩu quản trị dùng thử không an toàn, chỉ để xem thử.
 
 ## Màn hình mở đầu (intro)
-- File: `js/intro.js`, `css/intro.css`, nhạc `audio/intro.mp3`, ảnh trong `img/intro/`: `canh-1-may-nui.jpg` (cảnh 1), `phuc-sinh-canh-nen.jpg` (cảnh 2), `logo-psq.png`. Mỗi ảnh có bản `-m.jpg` nhẹ hơn cho điện thoại. Chỉ gắn ở trang chủ.
+- File: `js/intro.js`, `css/intro.css`, nhạc `audio/intro-full.mp3`, ảnh trong `img/intro/`: `canh-1-may-nui.jpg` (cảnh 1), `phuc-sinh-canh-nen.jpg` (cảnh 2), `logo-psq.png`. Mỗi ảnh có bản `-m.jpg` nhẹ hơn cho điện thoại. Chỉ gắn ở trang chủ.
 - Có 2 bản: ban ngày (ảnh `*-ngay.jpg`, đang dùng) và bình minh. Chọn bằng `theme: 'ngay'` hoặc `theme: 'binh-minh'` trong mục `INTRO`. Xem thử bản kia: `index.html?intro=1&canh=binh-minh`.
 - Cảnh 1 (0–5,4s): tia nắng, mây bay bồng bềnh. Cảnh 2 (4,2s trở đi): mặt trời ló dần sau núi, tia sáng chiếu tới logo, logo sáng lên, nút Khám phá nhấp nháy (khoảng giây thứ 8). Khách bấm nút mới vào trang.
-- Nhạc nền: đoạn 0:01–0:43 của file nhạc anh gửi, lặp lại, nhỏ dần khi bấm Khám phá. Trình duyệt chặn tự phát tiếng khi khách chưa chạm vào trang, nên nhạc phát ngay khi được phép hoặc ở lần chạm/bấm đầu tiên. Nút loa góc trên bên trái để bật/tắt. Đổi nhạc: thay `audio/intro.mp3`; tắt nhạc: `music: ''`; âm lượng: `volume`.
+- Nhạc nền: nguyên bài anh gửi ngày 23/10 (13 phút 37 giây, nén 96 kbps, khoảng 9,8 MB), phát dần khi tải, hết bài thì phát lại, nhỏ dần khi bấm Khám phá. Trình duyệt chặn tự phát tiếng khi khách chưa chạm vào trang, nên nhạc phát ngay khi được phép hoặc ở lần chạm/bấm đầu tiên. Nút loa góc trên bên trái để bật/tắt. Đổi nhạc: thay `audio/intro.mp3`; tắt nhạc: `music: ''`; âm lượng: `volume`.
 - Thời gian từng cảnh: mục `T`. Đường đi máy quay: `CAM`. Vị trí mặt trời, vòng sáng trên ảnh: `IMG`. (Code cảnh lửa khói và cổng sáng vẫn còn nhưng đang tắt.)
 - Tự chỉnh theo máy tính, iPad (dọc, ngang), điện thoại: mục `PROFILES` trong `js/intro.js`, cỡ chữ và logo trong `css/intro.css`.
 - Đổi logo: thay `img/intro/logo-psq.png` (PNG nền trong suốt). Đổi chữ: mục `INTRO`. Mỗi phiên trình duyệt khách thấy 1 lần; xem lại bằng `index.html?intro=1`; tắt bằng `enabled: false`.

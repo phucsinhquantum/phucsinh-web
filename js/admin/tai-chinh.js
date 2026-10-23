@@ -137,7 +137,7 @@
         <div class="form-grid"><div class="field full"><label>Thành viên</label><select class="input" name="user" required>${mem.map(u => `<option value="${u.id}">${esc(u.name)} (@${esc(u.username || u.code || '')})</option>`).join('')}</select></div>
         <div class="field"><label>Ví</label><select class="input" name="wallet">${WK.map(k => `<option value="${k}">${esc(ADB.WALLETS[k].name)}</option>`).join('')}</select></div>
         <div class="field"><label>Loại</label><select class="input" name="type"><option value="adjust">Điều chỉnh</option><option value="bonus">Thưởng</option></select></div>
-        <div class="field full"><label>Số tiền hoặc điểm (âm để trừ)</label><input class="input" name="amount" type="number" step="1000" required placeholder="vd 200000 hoặc -50000"><small class="tc-note" id="tcAb"></small></div>
+        <div class="field full"><label>Số tiền hoặc điểm (âm để trừ)</label><input class="input" name="amount" type="number" step="1000" required placeholder="vd 200000 hoặc -50000"><small class="tc-note" id="tcAb"></small><small class="tc-note">Cộng thì trừ từ quỹ kế toán (còn ${money(ADB.fundKT(d))}), trừ thì trả về quỹ kế toán. Ghi vào sổ quỹ.</small></div>
         <div class="field full"><label>Ghi chú</label><input class="input" name="note" required placeholder="Lý do điều chỉnh"></div></div>
         <p class="red mt-1" id="tcAe" style="font-size:13px;min-height:18px"></p>
         <div class="row mt-2" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu</button></div></form>`);
@@ -147,6 +147,7 @@
         if (!a) return $('#tcAe', md.el).textContent = 'Anh chị nhập số tiền khác 0.';
         const dd = ADB.load();
         if (ADB.balances(dd, f.user)[f.wallet] + a < 0) return $('#tcAe', md.el).textContent = 'Số dư ví không đủ để trừ khoản này.';
+        const kt = ADB.fundKT(dd); if (a > 0 && a > kt) return $('#tcAe', md.el).textContent = 'Quỹ kế toán chỉ còn ' + money(kt) + '. Chủ sở hữu cần chuyển thêm điểm cho quỹ kế toán trước.';
         ADB.credit(dd, f.user, f.wallet, f.type, a, f.note.trim(), '');
         commit(dd, 'Điều chỉnh ví', `${uname(dd, f.user)} · ${ADB.WALLETS[f.wallet].name}: ${a > 0 ? '+' : ''}${money(a)} (${f.note.trim()})`, 'Đã điều chỉnh ví ' + uname(dd, f.user)); md.close(); M.wallet.render(el); });
     });

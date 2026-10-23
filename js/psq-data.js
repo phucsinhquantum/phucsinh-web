@@ -4,7 +4,7 @@
    Cần nạp sau js/data.js và js/app.js. */
 (function () {
   const { db, today } = PSQ;
-  const VERSION = 5;
+  const VERSION = 6;
 
   const DEFAULT_SETTINGS = {
     shopName: SITE.brand, hotline: SITE.phone, email: SITE.email, address: SITE.address,
@@ -151,6 +151,7 @@
     if (d.v < 3) migrateV3(d);
     if (d.v < 4) migrateV4(d);
     if (d.v < 5) migrateV5(d);
+    if (d.v < 6) migrateV6(d);
     d.v = VERSION; return true;
   }
 
@@ -363,7 +364,88 @@
     (d.wallet || []).forEach(w => { if (w.type === 'withdraw' && w.status === 'pending' && ADB.walletOf(w) === 'sales') { w.status = 'rejected'; w.note = (w.note || '') + ' · Đã hủy do đổi sang quy trình rút mới, tiền trả lại ví'; } });
   }
 
+  // v6: mở sổ quỹ điểm. Số dư đầu kỳ: phát hành đủ cho mọi khoản đã trả trước đó + dự phòng, kế toán còn 100 triệu
+  function migrateV6(d) {
+    if ((d.fundbook || []).length) return;
+    const r = ADB.fund(d), paid = -r.kt, first = (d.wallet || []).map(w => w.date || '').filter(Boolean).sort()[0] || now();
+    const ktOpen = paid + 100000000, phOpen = 400000000;
+    d.fundbook = [
+      { id: uid('qd'), date: first, from: null, to: 'ph', amount: ktOpen + phOpen, note: 'Số dư đầu kỳ khi mở sổ quỹ điểm', actor: 'Hệ thống', opening: true },
+      { id: uid('qd'), date: first, from: 'ph', to: 'kt', amount: ktOpen, note: 'Cấp đầu kỳ cho quỹ kế toán (gồm các khoản đã trả trước khi mở sổ)', actor: 'Hệ thống', opening: true }
+    ];
+  }
+
+  /* =====================================================================
+     QUỸ ĐIỂM (1 PS = 1đ). Luồng: Chủ sở hữu tạo điểm vào Quỹ phát hành, chuyển cho Quỹ kế toán.
+     Mọi khoản cộng vào ví thành viên (hoa hồng, thưởng, điểm gói, nạp tiền, quà vòng quay, điều chỉnh)
+     đều trừ từ Quỹ kế toán. Tiền điểm rời ví thành viên đi về: thuế giữ lại, doanh thu đơn trả bằng ví,
+     đã chi trả về ngân hàng. Sổ ghi thêm, không sửa, không xóa. Cân đối luôn phải bằng 0.
+     ===================================================================== */
+  const FUND_IN = ['commission', 'referral', 'override', 'package', 'topup', 'bonus', 'adjust', 'prize'];   // trừ quỹ kế toán
+  const FUND_PAIR = ['tocash', 'convert', 'toshop', 'transfer', 'topoints'];                                // chuyển nội bộ, chỉ phần thuế rời ví
+  const FUND_ACC = { ph: 'Quỹ phát hành', kt: 'Quỹ kế toán' };
+  const djb = s => { let h = 5381; for (const c of String(s)) h = (h * 33 + c.charCodeAt(0)) >>> 0; return 'h' + h.toString(36); };
+  const isOwner = u => !!u && u.role === 'admin' && (u.adminRole || 'owner') === 'owner' && u.status !== 'locked';
+
   Object.assign(ADB, {
+    FUND_ACC, FUND_IN, isOwner,
+    // báo cáo quỹ: số dư các quỹ, sổ quỹ kế toán (có số dư sau), các kiểm tra cân đối
+    fund(d) {
+      const book = (d.fundbook || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date))), name = id => (ADB.user(d, id) || {}).name || '';
+      let issued = 0, ph = 0, kt = 0, thue = 0, dtv = 0, paid = 0, held = 0, commIn = 0;
+      const rows = [], unknown = [], groups = {}, mem = new Set(d.users.filter(u => u.role !== 'admin').map(u => u.id));
+      book.forEach(b => {
+        if (!b.from && b.to === 'ph') issued += b.amount; if (b.from === 'ph' && !b.to) issued -= b.amount;
+        if (b.to === 'ph') ph += b.amount; if (b.from === 'ph') ph -= b.amount;
+        if (b.to === 'kt' || b.from === 'kt') rows.push({ date: b.date, kind: 'book', amount: b.to === 'kt' ? b.amount : -b.amount, note: b.note, who: b.actor, src: b });
+        if (b.to === 'kt') kt += b.amount; if (b.from === 'kt') kt -= b.amount;
+      });
+      (d.wallet || []).forEach((w, i) => {
+        if (!mem.has(w.user) || w.status === 'rejected' || (w.status === 'pending' && w.amount > 0)) return;
+        const t = w.type, a = w.amount;
+        if (FUND_IN.includes(t)) { kt -= a; rows.push({ date: w.date, kind: t, amount: -a, note: w.note, user: w.user, wallet: ADB.walletOf(w), src: w, i }); if (['commission', 'referral', 'override'].includes(t)) commIn += a; }
+        else if (t === 'refund') dtv -= a;
+        else if (t === 'spend') dtv -= a;
+        else if (t === 'withdraw') { if (w.status === 'done') paid -= a; else held -= a; }
+        else if (FUND_PAIR.includes(t)) { thue -= a; const g = groups[w.ref || w.id] = groups[w.ref || w.id] || { sum: 0, tax: 0, list: [] }; g.sum += a; g.tax = Math.max(g.tax, +w.tax || 0); g.list.push(w); }
+        else unknown.push(w);
+      });
+      rows.sort((x, y) => String(x.date).localeCompare(String(y.date)) || (x.kind === 'book' ? -1 : 1) || (x.i || 0) - (y.i || 0));
+      let run = 0; rows.forEach(r => { run += r.amount; r.bal = run; });
+      let members = 0; mem.forEach(id => { members += ADB.balance(d, id); });
+      const diff = issued - (ph + kt + members + thue + dtv + paid + held);
+      const P = plan(d), warnAt = (d.settings || {}).fundWarn ?? 20000000, checks = [];
+      const add = (lv, t, x) => checks.push({ lv, t, x: x || '' });
+      if (ph < 0) add('red', 'Quỹ phát hành bị âm', PSQ.money(ph));
+      if (kt < 0) add('red', 'Quỹ kế toán bị âm: đã cộng cho thành viên nhiều hơn số được cấp', 'Chủ sở hữu cần chuyển thêm ít nhất ' + PSQ.money(-kt));
+      else if (kt < warnAt) add('gold', 'Quỹ kế toán sắp hết', 'Còn ' + PSQ.money(kt) + ', dưới mức cảnh báo ' + PSQ.money(warnAt));
+      if (diff) add('red', 'Lệch cân đối điểm', 'Tổng phát hành khác tổng các quỹ và ví ' + PSQ.money(diff));
+      if (unknown.length) add('red', unknown.length + ' giao dịch ví không rõ nguồn', unknown.slice(0, 3).map(w => `${name(w.user)} ${PSQ.money(w.amount)} (${w.type})`).join('; '));
+      const bad = Object.values(groups).filter(g => g.sum + g.tax !== 0);
+      if (bad.length) add('red', bad.length + ' lần chuyển điểm không khớp hai đầu', bad.slice(0, 3).map(g => g.list.map(w => `${name(w.user)} ${PSQ.money(w.amount)}`).join(' / ')).join('; '));
+      const commPaid = (d.commissions || []).filter(c => c.status === 'paid' && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
+      if (Math.abs(commPaid - commIn) > 0) add('red', 'Hoa hồng đã duyệt khác số đã cộng vào ví', `Sổ hoa hồng ${PSQ.money(commPaid)}, ví nhận ${PSQ.money(commIn)}`);
+      const neg = [...mem].map(id => ({ id, b: ADB.balances(d, id) })).filter(x => Object.values(x.b).some(v => v < 0));
+      if (neg.length) add('gold', neg.length + ' thành viên có ví bị âm', neg.slice(0, 3).map(x => name(x.id)).join(', '));
+      void P;
+      return { issued, ph, kt, members, thue, dtv, paid, held, diff, rows, book, checks, warnAt, ok: !checks.some(c => c.lv === 'red') };
+    },
+    // chủ sở hữu tạo điểm vào quỹ phát hành, hoặc chuyển giữa các quỹ. Cần nhập lại mật khẩu.
+    fundAction(d, actor, kind, amount, note, pass) {
+      const u = actor && ADB.user(d, actor.id); amount = Math.round(+amount);
+      if (!isOwner(u)) return { error: 'Chỉ chủ sở hữu mới được tạo điểm và chuyển quỹ.' };
+      if (!u.pass || u.pass !== djb(pass || '')) return { error: 'Mật khẩu xác nhận chưa đúng.' };
+      if (!(amount > 0)) return { error: 'Anh nhập số điểm lớn hơn 0.' };
+      if (!String(note || '').trim()) return { error: 'Anh nhập lý do để lưu vào sổ.' };
+      const r = ADB.fund(d), M = { mint: [null, 'ph'], give: ['ph', 'kt'], back: ['kt', 'ph'], burn: ['ph', null] }[kind];
+      if (!M) return { error: 'Thao tác không hợp lệ.' };
+      if (M[0] === 'ph' && amount > r.ph) return { error: 'Quỹ phát hành chỉ còn ' + PSQ.money(r.ph) + '.' };
+      if (M[0] === 'kt' && amount > r.kt) return { error: 'Quỹ kế toán chỉ còn ' + PSQ.money(r.kt) + '.' };
+      const t = new Date(), e = { id: uid('qd'), date: now(), time: t.toTimeString().slice(0, 5), from: M[0], to: M[1], amount, note: String(note).trim(), actor: u.name, actorId: u.id };
+      (d.fundbook = d.fundbook || []).push(e); return { entry: e };
+    },
+    // số dư quỹ kế toán hiện tại (để chặn khoản cộng tay vượt quỹ)
+    fundKT(d) { return ADB.fund(d).kt; },
     PLAN, PKG_ID, WALLETS, TIERS, plan, settleOrder, addCommission, payCommission, credit, legacyWallet,
     tierOf(u) { return TIERS[(u && u.tier) || 'khach'] || TIERS.khach; },
     // điều kiện nhận thu nhập từ đại lý tuyến dưới tính tại ngày asOf: có đơn tự mua và đơn bán (người mình giới thiệu mua) trong activeDays ngày
@@ -505,7 +587,7 @@
       d.orders.unshift(o); return o;
     }
   });
-  ADB.walletType = Object.assign(ADB.walletType, { commission: 'Hoa hồng bán hàng', referral: 'Thưởng giới thiệu CTV', override: 'Thu nhập từ đại lý tuyến dưới', package: 'Gói kích hoạt CTV', convert: 'Chuyển điểm thưởng', tocash: 'Rút sang ví tiền mặt', toshop: 'Chuyển sang ví mua hàng', transfer: 'Chuyển điểm', topup: 'Nạp tiền', topoints: 'Đổi sang điểm PS', spend: 'Thanh toán đơn hàng', refund: 'Hoàn tiền đơn hủy' });
+  ADB.walletType = Object.assign(ADB.walletType, { commission: 'Hoa hồng bán hàng', referral: 'Thưởng giới thiệu CTV', override: 'Thu nhập từ đại lý tuyến dưới', package: 'Gói kích hoạt CTV', convert: 'Chuyển điểm thưởng', tocash: 'Rút sang ví tiền mặt', toshop: 'Chuyển sang ví mua hàng', transfer: 'Chuyển điểm', topup: 'Nạp tiền', topoints: 'Đổi sang điểm PS', spend: 'Thanh toán đơn hàng', refund: 'Hoàn tiền đơn hủy', prize: 'Quà vòng quay' });
   ADB.commissionKind = { ref: 'Thưởng giới thiệu', direct: 'Hoa hồng bán hàng', override: 'Thu nhập từ đại lý', missed: 'Hoa hồng bỏ lỡ' };
   ADB.commissionStatus.missed = ['Bỏ lỡ', 'failed'];
   ADB.commissionStatus.hold = ['Đang giữ, chờ đủ điều kiện', 'pending'];
@@ -540,19 +622,21 @@
   const unSample = s => String(s || '').replace(/\s*\(mẫu\)/g, '').trim();
   function wheelFix(d, W) {
     W.settings = Object.assign({}, WHEEL_SET, W.settings || {});
+    if (W.rv === 2) { W.prizes.forEach(p => { const m = /([\d.]+)\s*PS/i.exec(p.name || ''); if (m && p.points == null) { p.points = +m[1].replace(/\./g, ''); p.wallet = /khả dụng/i.test(p.name) ? 'avail' : 'shop'; } }); W.rv = 3; }
     if (W.rv >= 2) return;
     // v2: bỏ chữ (mẫu); CTV và đại lý không nhận mã quay nữa (hủy mã tự cấp chưa dùng)
     W.prizes.forEach(p => p.name = unSample(p.name));
     W.spins.forEach(x => x.prizeName = unSample(x.prizeName));
     W.events.forEach(e => { e.name = unSample(e.name); (e.prizes || []).forEach(p => p.name = unSample(p.name)); (e.winners || []).forEach(w => { if (w.prize) w.prize = unSample(w.prize); }); });
     W.codes = W.codes.filter(c => !(c.from && c.status === 'new' && !W.settings.tiers.includes((ADB.user(d, c.user) || {}).tier || 'khach')));
-    W.rv = 2;
+    W.rv = 2; wheelFix(d, W);
   }
   function wheelData(d) {
     if (d.wheel && Array.isArray(d.wheel.prizes)) {
       const W = d.wheel; W.codes = W.codes || []; W.forced = W.forced || {}; W.spins = W.spins || []; W.events = W.events || []; wheelFix(d, W); return W;
     }
-    const W = d.wheel = { prizes: WHEEL_PRIZES.map(([name, color, weight, stock], i) => ({ id: 'qz' + (i + 1), name, color, weight, stock, active: true })), codes: [], forced: {}, spins: [], events: [], settings: Object.assign({}, WHEEL_SET), rv: 2 };
+    const W = d.wheel = { prizes: WHEEL_PRIZES.map(([name, color, weight, stock], i) => ({ id: 'qz' + (i + 1), name, color, weight, stock, active: true })), codes: [], forced: {}, spins: [], events: [], settings: Object.assign({}, WHEEL_SET), rv: 3 };
+    W.prizes.forEach(p => { const m = /([\d.]+)\s*PS/i.exec(p.name); if (m) { p.points = +m[1].replace(/\./g, ''); p.wallet = 'shop'; } });
     syncCodes(d, W);
     // vài lượt quay mẫu của thành viên khác để trang có danh sách người trúng
     const sample = W.codes.filter(c => c.user !== 'u1').slice(0, 5);
@@ -634,6 +718,8 @@
       const at = stampNow();
       c.status = 'used'; c.prize = p.id; c.usedAt = at;
       const spin = { id: uid('vq'), code: c.code, user: user.id, prize: p.id, prizeName: p.name, date: at, forced };
+      // quà dạng điểm: cộng thẳng vào ví (trừ từ quỹ kế toán), tự đánh dấu đã trao
+      if (+p.points > 0 && ADB.user(d, user.id)) { credit(d, user.id, p.wallet || 'shop', 'prize', +p.points, 'Quà vòng quay: ' + p.name + ' (mã ' + c.code + ')', spin.id); spin.points = +p.points; spin.given = true; spin.givenAt = at; spin.auto = true; }
       W.spins.unshift(spin);
       return { prize: p, index, spin, segments: list };
     },
