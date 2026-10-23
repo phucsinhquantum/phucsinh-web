@@ -45,7 +45,8 @@
   .tl-item p { margin-top: 6px; color: var(--text-2); font-size: 14px; }
 
   .team { text-align: center; display: grid; justify-items: center; gap: 6px; padding: 24px 16px; }
-  .team .avatar.lg { width: 76px; height: 76px; font-family: var(--display); font-size: 26px; margin-bottom: 8px; box-shadow: 0 0 22px -6px currentColor; }
+  .team .avatar.lg { width: 96px; height: 96px; font-family: var(--display); font-size: 26px; margin-bottom: 8px; box-shadow: 0 0 22px -6px currentColor; }
+  .team .avatar.lg img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
   .team b { font-size: 15px; }
   .team small { color: var(--text-3); font-size: 12px; }
 
@@ -148,7 +149,7 @@
 
   $('#timeline').innerHTML = TIMELINE.map(t => `<div class="tl-item"><div class="tl-year">${esc(t.year)}</div><p>${esc(t.text)}</p></div>`).join('');
 
-  $('#team').innerHTML = TEAM.map((m, i) => `<div class="card team" style="box-shadow:none"><span class="avatar lg ${['g', '', 'v', 'g'][i % 4]}">${esc(m.initials)}</span><b>${esc(m.name)}</b><small>${esc(m.role)}</small></div>`).join('');
+  $('#team').innerHTML = TEAM.map((m, i) => `<div class="card team" style="box-shadow:none"><span class="avatar lg ${['g', '', 'v', 'g'][i % 4]}">${m.photo ? `<img src="${esc(m.photo)}" alt="${esc(m.name)}">` : esc(m.initials)}</span><b>${esc(m.name)}</b><small>${esc(m.role)}</small></div>`).join('');
 
   const SICO = [['leaf', 'green'], ['eye', ''], ['sparkle', 'gold'], ['shield', 'violet'], ['gift', 'gold']];
   const steps = (A.steps || []).map((s, i) => ({ ...s, ico: SICO[i % 5][0], c: SICO[i % 5][1] }));

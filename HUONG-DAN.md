@@ -44,4 +44,4 @@ Hiện tài khoản, đơn hàng và tin nhắn chỉ lưu trên trình duyệt 
 - Đổi logo: thay `img/intro/logo-psq.png` (PNG nền trong suốt). Đổi chữ: mục `INTRO`. Mỗi phiên trình duyệt khách thấy 1 lần; xem lại bằng `index.html?intro=1`; tắt bằng `enabled: false`.
 
 ## Sửa trang Giới thiệu
-Quản trị > Trang web > Trang giới thiệu: sửa đầu trang, câu chuyện, cam kết, giá trị, số liệu (dùng chung trang chủ), cột mốc, đội ngũ, quy trình, khung cuối. Lưu trên trình duyệt (psq_about_v1); mặc định nằm ở window.ABOUT trong js/data.js. Mã: js/admin/gioi-thieu.js.
+Quản trị > Trang web > Trang giới thiệu: sửa đầu trang, câu chuyện, cam kết, giá trị, số liệu (dùng chung trang chủ), cột mốc, đội ngũ (có tải ảnh từng người, cắt vuông 360px), quy trình, khung cuối. Lưu trên trình duyệt (psq_about_v1); mặc định nằm ở window.ABOUT trong js/data.js. Mã: js/admin/gioi-thieu.js.
