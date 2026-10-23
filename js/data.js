@@ -221,6 +221,8 @@ window.ABOUT_DEFAULT = JSON.parse(JSON.stringify({ about: window.ABOUT, team: wi
   use(window.CATEGORIES, 'psq_cats_v1');
   use(window.POST_CATS, 'psq_postcats_v1');
   use(window.POSTS, 'psq_posts_v1', p => !p.hidden);
+  // đánh giá khách hàng (Quản trị > Trang web > Khách hàng nói gì); đánh giá ẩn không hiện ra ngoài
+  try { const v = JSON.parse(localStorage.getItem('psq_reviews_v1')); if (Array.isArray(v)) window.REVIEWS.splice(0, window.REVIEWS.length, ...v.filter(r => r && r.name && !r.hidden)); } catch (e) {}
   // trang giới thiệu: nội dung chữ, đội ngũ, cột mốc, số liệu (số liệu dùng chung với trang chủ)
   try {
     const a = JSON.parse(localStorage.getItem('psq_about_v1'));

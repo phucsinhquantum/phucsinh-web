@@ -79,7 +79,7 @@
       <div class="grid g-3" id="posts"></div>
     </div>
     <div class="card reveal">
-      <div class="card-head"><h3>Khách hàng nói gì</h3></div>
+      <div class="card-head"><h3>Khách hàng nói gì</h3><button class="card-link" type="button" id="revAll" hidden style="background:none;border:0;cursor:pointer;font:inherit">Xem tất cả</button></div>
       <div class="feed" id="reviews"></div>
     </div>
   </section>
@@ -183,7 +183,10 @@
   donut($('#rankDonut'), { segments: seg, center: '12.000+', sub: 'thành viên' });
   $('#rankLegend').innerHTML = seg.map(s => `<div class="legend-row"><span class="dot" style="color:${s.color}"></span><span>${s.name}</span><span>${s.value}%</span></div>`).join('');
   $('#posts').innerHTML = POSTS.slice(0, 3).map(p => `<a class="card post-card" href="bai-viet.html?id=${p.id}" style="box-shadow:none"><div class="post-cover" style="background-image:url(${p.cover})"></div><div class="post-body"><div class="post-meta"><span class="badge gold">${esc(POST_CATS.find(c => c.id === p.cat).name)}</span></div><h3>${esc(p.title)}</h3><div class="post-meta">${p.date} · ${p.read} phút đọc</div></div></a>`).join('');
-  $('#reviews').innerHTML = REVIEWS.map((r, i) => `<div class="feed-item"><span class="avatar ${['', 'v', 'g'][i % 3]}">${PSQ.initials(r.name)}</span><div><b>${esc(r.name)} <span class="gold" style="font-size:12px">★★★★★</span></b><small>${esc(r.place)}</small><p class="muted mt-1" style="font-size:14px">${esc(r.text)}</p></div></div>`).join('');
+  // đánh giá: hiện 3 đánh giá đầu, còn lại xem trong "Xem tất cả"
+  const revItem = (r, i) => { const n = Math.min(5, Math.max(1, +r.stars || 5)); return `<div class="feed-item"><span class="avatar ${['', 'v', 'g'][i % 3]}">${r.photo ? `<img src="${esc(r.photo)}" alt="">` : esc(PSQ.initials(r.name))}</span><div><b>${esc(r.name)} <span class="gold" style="font-size:12px" aria-label="${n} sao">${'★'.repeat(n)}<span style="opacity:.25">${'★'.repeat(5 - n)}</span></span></b><small>${esc(r.place || '')}</small><p class="muted mt-1" style="font-size:14px">${esc(r.text)}</p></div></div>`; };
+  $('#reviews').innerHTML = REVIEWS.slice(0, 3).map(revItem).join('') || '<p class="dim" style="font-size:14px">Đánh giá của khách hàng đang được cập nhật.</p>';
+  if (REVIEWS.length > 3) { const ra = $('#revAll'); ra.hidden = false; ra.addEventListener('click', () => modal(`<div class="card-head"><h3>Khách hàng nói gì</h3><span class="sub">${REVIEWS.length} đánh giá</span><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div><div class="feed" style="max-height:70vh;overflow:auto">${REVIEWS.map(revItem).join('')}</div>`)); }
   PSQ.reveal();
 })();
 </script>

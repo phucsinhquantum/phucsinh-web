@@ -54,3 +54,6 @@ Quản trị > Video khách hàng có thêm khung "Thêm nhiều video cùng lú
 
 ## Soạn bài viết kiến thức
 Quản trị > Kiến thức trầm hương > Bài viết kiến thức > Viết bài mới / Sửa: trang soạn bài đầy đủ (tiêu đề, tóm tắt, thanh công cụ: tiêu đề mục, đậm, nghiêng, danh sách, trích dẫn, liên kết, chèn ảnh, chế độ HTML), ảnh bìa tải lên tự cắt 1600 × 900 (16:9), ảnh trong bài tự thu về ngang 1200 px, tự lưu nháp, xem trước, Lưu nháp (ẩn) hoặc Đăng bài. Dán từ Word tự làm sạch.
+
+## Khách hàng nói gì
+Quản trị > Trang web > Khách hàng nói gì: thêm, sửa (ảnh khách 300 × 300, tên, nơi ở, số sao, nội dung), ẩn/hiện, sắp xếp, xóa. Trang chủ hiện 3 đánh giá đầu, có nút Xem tất cả khi nhiều hơn. Lưu psq_reviews_v1, mặc định window.REVIEWS trong js/data.js.
