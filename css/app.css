@@ -970,11 +970,3 @@ html.reduce-motion .gift-blink svg { animation: none !important; color: #ff4d4d;
 @media (max-width: 1280px) { .ctv-txt small { display: none; } }
 @media (max-width: 760px) { .ctv-cta { height: 40px; padding: 0 10px 0 6px; gap: 6px; border-radius: 12px; } .ctv-txt { display: none; } .ctv-short { display: inline; } .ctv-hot { font-size: 10px; padding: 3px 5px; } }
 @media (prefers-reduced-motion: reduce) { html.reduce-motion .ctv-cta, html.reduce-motion .ctv-cta::after, html.reduce-motion .ctv-hot { animation: none; } }
-/* điều khoản khi đăng ký */
-.terms-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
-.terms-h small { font-size: 12px; color: var(--gold); }
-.terms { margin-top: 8px; max-height: 220px; overflow-y: auto; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .28); font-size: 13px; line-height: 1.6; color: var(--text-2); scrollbar-width: thin; }
-.terms h4 { font-size: 13.5px; color: var(--text); margin: 12px 0 4px; }
-.terms h4:first-child { margin-top: 0; }
-.terms p { margin: 0 0 6px; }
-.terms-ok:has(input:disabled) { opacity: .55; }

@@ -22,10 +22,24 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css">
-<script src="js/lang.js"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024a">
+<script src="js/lang.js?v=20261024a"></script>
 <style>
   /* đăng nhập, đăng ký */
+  .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+  .terms-h b { display: flex; align-items: center; gap: 8px; }
+  .terms-h b svg { width: 16px; height: 16px; color: var(--gold); }
+  .terms-h small { font-size: 12px; color: var(--gold); padding: 3px 9px; border-radius: 999px; border: 1px solid rgba(243, 199, 107, .35); background: rgba(243, 199, 107, .08); }
+  .terms-h small.green { color: var(--green); border-color: rgba(69, 224, 143, .35); background: rgba(69, 224, 143, .08); }
+  .terms-box { position: relative; margin-top: 8px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .3); }
+  .terms-box::after { content: ""; position: absolute; left: 1px; right: 10px; bottom: 1px; height: 34px; border-radius: 0 0 12px 12px; background: linear-gradient(transparent, rgba(8, 11, 13, .95)); pointer-events: none; transition: opacity .3s; }
+  .terms-box.end::after { opacity: 0; }
+  .terms { height: 150px; overflow-y: auto; padding: 12px 14px 18px; font-size: 12.5px; line-height: 1.55; color: var(--text-2); scrollbar-width: thin; scrollbar-color: rgba(243, 199, 107, .5) transparent; overscroll-behavior: contain; }
+  .terms::-webkit-scrollbar { width: 6px; } .terms::-webkit-scrollbar-thumb { background: rgba(243, 199, 107, .45); border-radius: 6px; }
+  .terms h4 { font-size: 13px; font-weight: 600; color: var(--text); margin: 10px 0 3px; }
+  .terms h4:first-child { margin-top: 0; }
+  .terms p { margin: 0 0 5px; }
+  .terms-ok:has(input:disabled) { opacity: .55; }
   .auth-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 18px; align-items: stretch; }
   .auth-art { position: relative; overflow: hidden; min-height: 520px; display: grid; align-content: end; isolation: isolate; }
   .auth-art .hero-bg { position: absolute; inset: 0; z-index: -2; background: url(img/intro/canh-1-may-nui-ngay.jpg) center / cover; animation: heroDrift 24s ease-in-out infinite alternate; }
@@ -202,9 +216,9 @@
   <div id="view"></div>
 </div>
 
-<script src="js/data.js"></script>
-<script src="js/app.js"></script>
-<script src="js/psq-data.js"></script>
+<script src="js/data.js?v=20261024a"></script>
+<script src="js/app.js?v=20261024a"></script>
+<script src="js/psq-data.js?v=20261024a"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -776,20 +790,12 @@
   const PANES = { 'tong-quan': pOverview, 'kich-hoat': pActivate, 'dai-ly': pTeam, 'khach-hang': pCustomers, 'lanh-dao': pLeader, 'don-hang': pOrders, vi: pWallet, 'giao-dich': pTx, 'hoa-hong': pCom, 'nap-diem': pTopup, 'ho-so': pProfile, 'dia-chi': pAddr };
 
   /* ---------- chưa đăng nhập ---------- */
-  // nội dung điều khoản khi đăng ký (bản soạn sẵn, cần luật sư xem lại trước khi chạy thật)
+  // nội dung điều khoản khi đăng ký: window.TERMS (sửa ở Quản trị > Trang web > Điều khoản), thay số liệu theo Thiết lập
   function termsHtml(P) {
-    const B = SITE.brand, sec = (t, ps) => `<h4>${t}</h4>${ps.map(x => `<p>${x}</p>`).join('')}`;
-    return sec('1. Phạm vi áp dụng', [`Điều khoản này áp dụng cho mọi tài khoản đăng ký trên website và ứng dụng ${esc(B)}. Khi tích vào ô đồng ý, anh chị xác nhận đã đọc, hiểu và chấp nhận toàn bộ nội dung dưới đây.`])
-      + sec('2. Tài khoản', ['Anh chị cung cấp họ tên, số điện thoại, email đúng sự thật và tự bảo mật mật khẩu. Mỗi người chỉ dùng một tài khoản. Tên truy cập và mã thành viên dùng để giới thiệu, chuyển điểm và đối soát, không đổi được sau khi tạo.', 'Công ty có quyền tạm khóa tài khoản có dấu hiệu gian lận, giả mạo thông tin hoặc dùng sai mục đích.'])
-      + sec('3. Cấp bậc thành viên', [`Khách hàng: đăng ký miễn phí, mua hàng như khách thông thường.`, `Cộng tác viên: kích hoạt gói ${money(P.pkgPrice)}, nhận ${ps(P.pkgPoints)} vào ví điểm mua hàng. Phần còn lại là phí dịch vụ nền tảng (gian hàng online, khóa học, công cụ) và không hoàn lại sau khi đã kích hoạt.`, `Đại lý: tổng tiền mua hàng đã thanh toán cộng dồn đạt ${money(P.agentThreshold)}. Gói kích hoạt cộng tác viên không tính vào mốc này.`])
-      + sec('4. Hoa hồng và thu nhập', [`Hoa hồng tính trên đơn mua hàng của người do anh chị giới thiệu trực tiếp: cộng tác viên ${P.ctvRate}%, đại lý ${P.agentRate}%. Hoa hồng chỉ ghi nhận khi đơn hàng ở trạng thái Hoàn thành.`, `Thưởng giới thiệu ${money(P.refBonus)} khi người được giới thiệu kích hoạt cộng tác viên. Đại lý nhận thêm ${P.overrideRate}% thu nhập từ đơn mua hàng của đại lý do mình giới thiệu, khi đủ điều kiện hoạt động trong ${P.activeDays} ngày gần nhất.`, 'Thu nhập phụ thuộc vào kết quả bán hàng thực tế của mỗi người. Công ty không cam kết mức thu nhập cố định nào.'])
-      + sec('5. Ví, điểm và rút tiền', [`1 điểm PS tương đương 1 đồng và chỉ dùng trong hệ thống ${esc(B)}. Điểm mua hàng chỉ dùng để thanh toán đơn hàng.`, `Khi rút hoa hồng hoặc chuyển điểm thưởng, hệ thống khấu trừ thuế thu nhập cá nhân ${P.taxRate}% theo quy định. Số tiền rút tối thiểu mỗi lần là ${money(d0().settings.minWithdraw || 0)}. Lệnh rút được kế toán duyệt và chuyển khoản về tài khoản ngân hàng đúng tên chủ tài khoản.`])
-      + sec('6. Đơn hàng, đổi sản phẩm', ['Đơn đã thanh toán không hủy được vì hoa hồng và điểm đã được ghi nhận. Anh chị có thể đổi sang sản phẩm cùng giá, hoặc sản phẩm giá cao hơn và chuyển bù phần chênh lệch.', 'Sản phẩm lỗi do sản xuất hoặc giao sai mẫu được đổi trong 7 ngày theo chính sách đổi trả. Sản phẩm trầm hương không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.'])
-      + sec('7. Hành vi không được phép', ['Đưa thông tin sai về sản phẩm, công dụng hoặc thu nhập; tự ý hứa hẹn lợi nhuận với người khác; mua bán, chuyển nhượng tài khoản; tạo nhiều tài khoản để hưởng hoa hồng; dùng tên, logo công ty khi chưa được phép. Vi phạm có thể bị thu hồi hoa hồng chưa rút và khóa tài khoản.'])
-      + sec('8. Chính sách bảo mật', ['Công ty thu thập họ tên, số điện thoại, email, địa chỉ giao hàng và lịch sử giao dịch để xử lý đơn hàng, tính hoa hồng, chăm sóc khách hàng và thực hiện nghĩa vụ thuế. Thông tin không được bán hay chia sẻ cho bên thứ ba, trừ đơn vị vận chuyển, ngân hàng và cơ quan nhà nước khi pháp luật yêu cầu.', 'Anh chị có quyền xem, sửa thông tin cá nhân trong trang Hồ sơ và yêu cầu xóa tài khoản qua hotline hoặc email của công ty.'])
-      + sec('9. Thay đổi điều khoản', [`Công ty có thể cập nhật điều khoản và tỉ lệ hoa hồng. Thay đổi được thông báo trên website và áp dụng cho giao dịch phát sinh sau thời điểm thông báo. Mọi thắc mắc xin liên hệ ${esc(SITE.phone)} hoặc ${esc(SITE.email)}.`]);
+    const st = ADB.load().settings, V = { gia_goi: money(P.pkgPrice), diem_goi: ps(P.pkgPoints), moc_dai_ly: money(P.agentThreshold), hh_ctv: P.ctvRate + '%', hh_daily: P.agentRate + '%', thuong_gt: money(P.refBonus), thu_nhap_daily: P.overrideRate + '%', so_ngay: P.activeDays, thue: P.taxRate + '%', rut_toi_thieu: money(st.minWithdraw || 0), ten: SITE.brand, hotline: SITE.phone, email: SITE.email };
+    const fill = t => esc(t).replace(/\{(\w+)\}/g, (m, k) => k in V ? esc(String(V[k])) : m);
+    return (window.TERMS || []).map((x, i) => `<h4>${i + 1}. ${fill(x.t || '')}</h4>${String(x.b || '').split(/\n+/).filter(Boolean).map(p => `<p>${fill(p)}</p>`).join('')}`).join('');
   }
-  const d0 = () => ADB.load();
   function guest(mode = 'login') {
     const d = ADB.load(), P = ADB.plan(d), T = ADB.TIERS;
     const tiers = [
@@ -817,8 +823,8 @@
           <div class="field mt-2"><label for="fe">Email</label><input class="input" id="fe" name="email" type="email" autocomplete="email" required></div>
           <div class="field mt-2"><label for="fw">Mật khẩu</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>
           ${mode === 'register' ? `<div class="field mt-2"><label for="fr">Mã giới thiệu (nếu có)</label><input class="input" id="fr" name="ref" autocomplete="off" placeholder="Ví dụ PS1001" value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>
-          <div class="terms-h mt-2"><b>Điều khoản sử dụng và chính sách bảo mật</b><small id="termsHint">Kéo xuống đọc hết để đồng ý</small></div>
-          <div class="terms" id="terms" tabindex="0" role="document" aria-label="Điều khoản sử dụng">${termsHtml(P)}</div>
+          <div class="terms-h mt-2"><b>${icon('shield')} Điều khoản sử dụng</b><small id="termsHint">Cuộn đọc hết để đồng ý</small></div>
+          <div class="terms-box" id="termsBox"><div class="terms" id="terms" tabindex="0" role="document" aria-label="Điều khoản sử dụng">${termsHtml(P)}</div></div>
           <label class="check mt-2 terms-ok"><input type="checkbox" name="agree" id="agree" required disabled> Tôi đã đọc và đồng ý với điều khoản sử dụng và chính sách bảo mật</label>` : ''}
           <p class="red mt-1" id="err" style="font-size:13px;min-height:20px"></p>
           <button class="btn btn-gold btn-block btn-lg" type="submit">${mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</button>
@@ -838,7 +844,7 @@
     if (fu) fu.addEventListener('input', () => { const v = fu.value.trim().toLowerCase(), er = unameErr(v);
       $('#fuHint').innerHTML = !v ? 'Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.' : er ? `<span class="red">${er}</span>` : `<span class="green">Dùng được: @${esc(v)}</span>`; });
     // điều khoản: phải kéo đọc tới cuối thì ô đồng ý mới bấm được
-    const tm = $('#terms'); if (tm) { const ag = $('#agree'), seen = () => { if (tm.scrollTop + tm.clientHeight >= tm.scrollHeight - 12) { ag.disabled = false; $('#termsHint').textContent = 'Đã đọc hết'; $('#termsHint').classList.add('green'); tm.removeEventListener('scroll', seen); } }; tm.addEventListener('scroll', seen, { passive: true }); seen(); }
+    const tm = $('#terms'); if (tm) { const ag = $('#agree'), seen = () => { if (tm.scrollTop + tm.clientHeight >= tm.scrollHeight - 12) { ag.disabled = false; $('#termsBox').classList.add('end'); $('#termsHint').textContent = 'Đã đọc hết ✓'; $('#termsHint').classList.add('green'); tm.removeEventListener('scroll', seen); } }; tm.addEventListener('scroll', seen, { passive: true }); seen(); }
     $('#af').addEventListener('submit', e => {
       e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), err = $('#err');
       let wanted;

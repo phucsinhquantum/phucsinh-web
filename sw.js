@@ -1,7 +1,7 @@
 /* Phúc Sinh QuanTum: service worker để cài web như ứng dụng (PWA).
    Luôn lấy bản mới nhất từ mạng; chỉ khi mất mạng mới dùng bản đã lưu, nên sửa web xong là khách thấy ngay. */
-const CACHE = 'psq-v1';
-const CORE = ['./', './index.html', './san-pham.html', './dat-hang.html', './thanh-vien.html', './lien-he.html', './css/app.css', './js/lang.js', './js/data.js', './js/app.js', './js/psq-data.js', './img/logo-psq.png', './img/icon-192.png', './manifest.webmanifest'];
+const CACHE = 'psq-v2';
+const CORE = ['./', './index.html', './san-pham.html', './dat-hang.html', './thanh-vien.html', './lien-he.html', './img/logo-psq.png', './img/icon-192.png', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).catch(() => {}).then(() => self.skipWaiting()));

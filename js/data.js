@@ -237,3 +237,22 @@ window.ABOUT_DEFAULT = JSON.parse(JSON.stringify({ about: window.ABOUT, team: wi
 // đường dẫn Messenger: nhận tên trang (m.me/ten-trang) hoặc link đầy đủ
 SITE.messLink = () => !SITE.messenger ? '' : /^https?:\/\//i.test(SITE.messenger) ? SITE.messenger : 'https://m.me/' + SITE.messenger.replace(/^@/, '');
 
+// Điều khoản sử dụng hiện ở form đăng ký. Sửa trong Quản trị > Trang web > Điều khoản (lưu psq_terms_v1).
+// Các chữ trong ngoặc nhọn tự thay bằng số liệu trong Thiết lập: {gia_goi} {diem_goi} {moc_dai_ly} {hh_ctv} {hh_daily}
+// {thuong_gt} {thu_nhap_daily} {so_ngay} {thue} {rut_toi_thieu} {ten} {hotline} {email}
+window.TERMS_DEFAULT = [
+  { t: 'Phạm vi áp dụng', b: 'Điều khoản này áp dụng cho mọi tài khoản đăng ký trên website và ứng dụng {ten}. Khi tích vào ô đồng ý, anh chị xác nhận đã đọc, hiểu và chấp nhận toàn bộ nội dung dưới đây.' },
+  { t: 'Tài khoản', b: 'Anh chị cung cấp họ tên, số điện thoại, email đúng sự thật và tự bảo mật mật khẩu. Mỗi người chỉ dùng một tài khoản. Tên truy cập và mã thành viên dùng để giới thiệu, chuyển điểm và đối soát, không đổi được sau khi tạo.\nCông ty có quyền tạm khóa tài khoản có dấu hiệu gian lận, giả mạo thông tin hoặc dùng sai mục đích.' },
+  { t: 'Cấp bậc thành viên', b: 'Khách hàng: đăng ký miễn phí, mua hàng như khách thông thường.\nCộng tác viên: kích hoạt gói {gia_goi}, nhận {diem_goi} vào ví điểm mua hàng. Phần còn lại là phí dịch vụ nền tảng (gian hàng online, khóa học, công cụ) và không hoàn lại sau khi đã kích hoạt.\nĐại lý: tổng tiền mua hàng đã thanh toán cộng dồn đạt {moc_dai_ly}. Gói kích hoạt cộng tác viên không tính vào mốc này.' },
+  { t: 'Hoa hồng và thu nhập', b: 'Hoa hồng tính trên đơn mua hàng của người do anh chị giới thiệu trực tiếp: cộng tác viên {hh_ctv}, đại lý {hh_daily}. Hoa hồng chỉ ghi nhận khi đơn hàng ở trạng thái Hoàn thành.\nThưởng giới thiệu {thuong_gt} khi người được giới thiệu kích hoạt cộng tác viên. Đại lý nhận thêm {thu_nhap_daily} thu nhập từ đơn mua hàng của đại lý do mình giới thiệu, khi đủ điều kiện hoạt động trong {so_ngay} ngày gần nhất.\nThu nhập phụ thuộc vào kết quả bán hàng thực tế của mỗi người. Công ty không cam kết mức thu nhập cố định nào.' },
+  { t: 'Ví, điểm và rút tiền', b: '1 điểm PS tương đương 1 đồng và chỉ dùng trong hệ thống {ten}. Điểm mua hàng chỉ dùng để thanh toán đơn hàng.\nKhi rút hoa hồng hoặc chuyển điểm thưởng, hệ thống khấu trừ thuế thu nhập cá nhân {thue} theo quy định. Số tiền rút tối thiểu mỗi lần là {rut_toi_thieu}. Lệnh rút được kế toán duyệt và chuyển khoản về tài khoản ngân hàng đúng tên chủ tài khoản.' },
+  { t: 'Đơn hàng, đổi sản phẩm', b: 'Đơn đã thanh toán không hủy được vì hoa hồng và điểm đã được ghi nhận. Anh chị có thể đổi sang sản phẩm cùng giá, hoặc sản phẩm giá cao hơn và chuyển bù phần chênh lệch.\nSản phẩm lỗi do sản xuất hoặc giao sai mẫu được đổi trong 7 ngày theo chính sách đổi trả. Sản phẩm trầm hương không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.' },
+  { t: 'Hành vi không được phép', b: 'Đưa thông tin sai về sản phẩm, công dụng hoặc thu nhập; tự ý hứa hẹn lợi nhuận với người khác; mua bán, chuyển nhượng tài khoản; tạo nhiều tài khoản để hưởng hoa hồng; dùng tên, logo công ty khi chưa được phép. Vi phạm có thể bị thu hồi hoa hồng chưa rút và khóa tài khoản.' },
+  { t: 'Chính sách bảo mật', b: 'Công ty thu thập họ tên, số điện thoại, email, địa chỉ giao hàng và lịch sử giao dịch để xử lý đơn hàng, tính hoa hồng, chăm sóc khách hàng và thực hiện nghĩa vụ thuế. Thông tin không được bán hay chia sẻ cho bên thứ ba, trừ đơn vị vận chuyển, ngân hàng và cơ quan nhà nước khi pháp luật yêu cầu.\nAnh chị có quyền xem, sửa thông tin cá nhân trong trang Hồ sơ và yêu cầu xóa tài khoản qua hotline hoặc email của công ty.' },
+  { t: 'Thay đổi điều khoản', b: 'Công ty có thể cập nhật điều khoản và tỉ lệ hoa hồng. Thay đổi được thông báo trên website và áp dụng cho giao dịch phát sinh sau thời điểm thông báo. Mọi thắc mắc xin liên hệ {hotline} hoặc {email}.' }
+];
+window.TERMS = (function () {
+  try { const v = JSON.parse(localStorage.getItem('psq_terms_v1')); if (Array.isArray(v) && v.length) return v.filter(x => x && (x.t || x.b)); } catch (e) {}
+  return window.TERMS_DEFAULT.map(x => ({ ...x }));
+})();
+
