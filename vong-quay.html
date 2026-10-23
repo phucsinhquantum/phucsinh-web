@@ -298,10 +298,11 @@
   const cus = Wheel($('#whCus'), { mode: 'prize', onSpin: cusSpin });
   const status = (el, html, cls = '') => { el.className = 'wh-status ' + cls; el.innerHTML = html; };
   function cusRender() {
-    const d = ADB.load(), u = auth.user(), W = ADB.wheel(d), list = ADB.wheelPrizes(d);
+    const d = ADB.load(), u = auth.user(), W = ADB.wheel(d), list = ADB.wheelPrizes(d), S0 = W.settings || {}, elig = !u || u.role === 'admin' || ADB.wheelEligible(d, ADB.user(d, u.id));
     if (!cus.spinning) cus.draw(list.map(p => ({ id: p.id, label: p.name, color: p.color })));
     $('#whStats').innerHTML = `<span>${icon('check')}<b>100%</b> trúng quà</span><span>${icon('gift')}<b>${list.length}</b> phần quà</span><span>${icon('activity')}<b>${W.spins.length}</b> lượt đã quay</span>`;
-    if (!armed) status($('#whCusStatus'), u ? 'Nhập mã quay hoặc chọn một mã trong “Mã của tôi”, sau đó bấm <b class="gold">QUAY</b>.' : 'Đăng nhập tài khoản nhận mã, nhập mã quay rồi bấm <b class="gold">QUAY</b>.');
+    if (!armed && S0.enabled === false) status($('#whCusStatus'), 'Vòng quay khách hàng đang tạm dừng.');
+    else if (!armed) status($('#whCusStatus'), u ? 'Nhập mã quay hoặc chọn một mã trong “Mã của tôi”, sau đó bấm <b class="gold">QUAY</b>.' : 'Đăng nhập tài khoản nhận mã, nhập mã quay rồi bấm <b class="gold">QUAY</b>.');
     cus.hub.classList.toggle('wh-armed', !!armed);
     $('#whLogin').innerHTML = u ? `<p class="dim" style="font-size:12.5px">Đang đăng nhập: <b class="muted">${esc(u.name)}</b></p>` : `<div class="wh-login"><span>Anh chị đăng nhập để dùng mã của mình.</span><a class="btn btn-sm btn-outline-gold" href="thanh-vien.html">${icon('user')} Đăng nhập</a></div>`;
     // mã của tôi
@@ -313,17 +314,19 @@
         ${C.length ? `<div class="wh-codes">${C.map(c => { const f = c.from ? ADB.user(d, c.from) : null, p = W.prizes.find(x => x.id === c.prize); return `<div class="wh-cd ${c.status === 'new' ? 'new' : 'used'}${armed === c.code ? ' on' : ''}">
           <div style="min-width:0"><b class="wh-mono">${esc(c.code)}</b><small>${f ? 'Giới thiệu: ' + esc(f.name) : esc(c.note || 'Mã tặng')}</small></div>
           ${c.status === 'new' ? `<button class="btn btn-sm btn-gold" type="button" data-wh-use="${esc(c.code)}">${armed === c.code ? 'Đã chọn' : 'Dùng mã'}</button>` : `<span class="wh-used"><span class="badge ok">Đã quay</span><small>${esc(clean(p ? p.name : c.prizeName || ''))}</small></span>`}</div>`; }).join('')}</div>`
-        : `<p class="dim" style="font-size:13.5px">Anh chị chưa có mã quay. Chia sẻ đường dẫn giới thiệu bên dưới, mỗi người đăng ký là một mã.</p>`}`;
+        : `<p class="dim" style="font-size:13.5px">${elig ? 'Anh chị chưa có mã quay. Chia sẻ đường dẫn giới thiệu bên dưới, mỗi người đăng ký là một mã.' : 'Anh chị chưa có mã quay.'}</p>`}`;
     } else mine.hidden = true;
     // cách nhận mã
     const link = u && u.code ? location.origin + location.pathname.replace(/[^/]*$/, '') + 'thanh-vien.html?ref=' + encodeURIComponent(u.code) : '';
     $('#whHow').innerHTML = `<div class="card-head"><div><h3>Cách nhận mã quay</h3><div class="sub">Giới thiệu càng nhiều, quay càng nhiều</div></div></div>
       <ol class="wh-steps">
         <li><span>1</span><div><b>Chia sẻ đường dẫn giới thiệu</b><small>Gửi cho bạn bè, người thân qua Zalo, Messenger.</small></div></li>
-        <li><span>2</span><div><b>Bạn bè đăng ký thành viên</b><small>Mỗi người đăng ký qua đường dẫn của anh chị = 1 mã quay.</small></div></li>
+        <li><span>2</span><div><b>Bạn bè đăng ký thành viên</b><small>Mỗi người đăng ký thành công qua đường dẫn của anh chị = ${+S0.perRef > 1 ? S0.perRef + ' mã quay' : '1 mã quay'}${S0.expireDays > 0 ? `, dùng trong ${S0.expireDays} ngày` : ''}.</small></div></li>
         <li><span>3</span><div><b>Nhập mã và quay</b><small>Lượt nào cũng trúng một phần quà trên vòng quay.</small></div></li>
       </ol>
-      ${link ? `<div class="wh-ref"><input class="input" id="whRef" value="${esc(link)}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" id="whCopy">${icon('check')} Sao chép</button></div>`
+      ${!elig ? `<p class="dim mt-1" style="font-size:13px">Chương trình dành cho khách hàng. Cộng tác viên và đại lý đã nhận thưởng theo hoa hồng nên không nhận mã quay khi giới thiệu. Mã đã nhận trước đây vẫn dùng được.</p>` : ''}
+      ${S0.rules ? `<details class="mt-2"><summary class="gold" style="cursor:pointer;font-size:13.5px">Thể lệ chương trình</summary><p class="dim mt-1" style="font-size:13px;white-space:pre-line">${esc(S0.rules)}</p></details>` : ''}
+      ${!elig ? '' : link ? `<div class="wh-ref"><input class="input" id="whRef" value="${esc(link)}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" id="whCopy">${icon('check')} Sao chép</button></div>`
         : `<a class="btn btn-sm btn-outline-gold mt-1" href="thanh-vien.html#dai-ly">${icon('users')} Lấy đường dẫn giới thiệu</a>`}`;
     const cp = $('#whCopy'); if (cp) cp.onclick = () => { const i = $('#whRef'); i.select(); (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).catch(() => document.execCommand('copy')).finally(() => toast('Đã sao chép đường dẫn giới thiệu')); };
     // quà

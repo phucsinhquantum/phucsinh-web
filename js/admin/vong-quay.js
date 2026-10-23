@@ -3,7 +3,7 @@
 (function () {
   const { $, $$, esc, icon, toast, modal, fdate } = PSQ;
   window.ADMIN_MODULES = window.ADMIN_MODULES || {};
-  const TABS = [['prizes', 'Quà tặng', 'gift'], ['codes', 'Mã quay', 'card'], ['forced', 'Chỉ định quà', 'star'], ['spins', 'Lịch sử quay', 'activity'], ['events', 'Sự kiện', 'users']];
+  const TABS = [['prizes', 'Quà tặng', 'gift'], ['codes', 'Mã quay', 'card'], ['forced', 'Chỉ định quà', 'star'], ['spins', 'Lịch sử quay', 'activity'], ['events', 'Sự kiện', 'users'], ['settings', 'Cài đặt', 'settings']];
   const KIND = { online: 'Zoom online', offline: 'Offline' };
   const LAW = `<div class="wh-law">${icon('info')}<span>Chương trình khuyến mại có quay số trúng thưởng phải minh bạch theo quy định (Nghị định 81/2018/NĐ-CP); chế độ chỉ định người trúng chỉ nên dùng cho trao quà nội bộ hoặc đã công bố trước.</span></div>`;
   const closeBtn = `<button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button>`;
@@ -72,7 +72,7 @@
     const rows = W.codes.filter(c => (!cf.st || c.status === cf.st) && (!q || [c.code, uname(d, c.user), c.from ? uname(d, c.from) : ''].join(' ').toLowerCase().includes(q))).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
     const pz = id => (W.prizes.find(p => p.id === id) || {}).name || '';
     box.innerHTML = `<div class="grid g-3">${[['Tổng mã', W.codes.length, 'gold'], ['Chưa dùng', W.codes.filter(c => c.status === 'new').length, 'cyan'], ['Đã quay', W.codes.filter(c => c.status === 'used').length, 'green']].map(([l, v, c]) => `<div class="card stat"><div class="stat-top"><span class="stat-ico ${c}">${icon('card')}</span><span class="dim">${l}</span></div><div class="stat-val">${v}</div></div>`).join('')}</div>
-      <div class="card glow-gold mt-2"><div class="card-head"><div><h3>Mã quay</h3><div class="sub">Tự cấp 1 mã cho người giới thiệu mỗi khi có người đăng ký qua đường dẫn giới thiệu</div></div></div>
+      <div class="card glow-gold mt-2"><div class="card-head"><div><h3>Mã quay</h3><div class="sub">Tự cấp mã cho khách hàng mỗi khi có người đăng ký qua đường dẫn giới thiệu của họ (xem tab Cài đặt)</div></div></div>
         <div class="toolbar row wrap" style="gap:10px;margin-bottom:12px">
           <input class="input" id="wcQ" placeholder="Tìm mã, tên thành viên" value="${esc(cf.q)}" style="flex:1 1 200px;width:auto">
           <select class="input" id="wcS" style="flex:0 1 170px;width:auto"><option value="">Tất cả trạng thái</option><option value="new"${cf.st === 'new' ? ' selected' : ''}>Chưa dùng</option><option value="used"${cf.st === 'used' ? ' selected' : ''}>Đã quay</option></select>
@@ -193,10 +193,37 @@
   }
 
   let root = null;
+  /* ---------- cài đặt vòng quay khách hàng ---------- */
+  function settings(box, d) {
+    const S = ADB.wheel(d).settings, edit = ADMIN.can('content'), dis = edit ? '' : ' disabled';
+    const TI = [['khach', 'Khách hàng'], ['ctv', 'Cộng tác viên'], ['daily', 'Đại lý']];
+    box.innerHTML = `<form class="card glow-gold" id="wsForm" novalidate><div class="card-head"><div><h3>Cài đặt vòng quay khách hàng</h3><div class="sub">Ai được nhận mã, số mã, hạn dùng và thể lệ hiện trên trang vòng quay</div></div></div>
+      <div class="form-grid">
+        <label class="check field full"><input type="checkbox" id="wsOn"${S.enabled !== false ? ' checked' : ''}${dis}> Bật vòng quay khách hàng (tắt thì không cấp mã mới và không quay được)</label>
+        <div class="field full"><label>Cấp bậc được nhận mã khi giới thiệu</label><div class="row wrap" style="gap:16px">${TI.map(([k, l]) => `<label class="check"><input type="checkbox" name="wsT" value="${k}"${S.tiers.includes(k) ? ' checked' : ''}${dis}> ${l}</label>`).join('')}</div>
+          <small class="dim">Mặc định chỉ khách hàng. Cộng tác viên và đại lý đã hưởng hoa hồng nên không nhận mã. Chỉ áp dụng cho người đăng ký từ lúc lưu trở đi.</small></div>
+        <div class="field"><label for="wsN">Số mã cho mỗi người đăng ký thành công</label><input class="input" id="wsN" type="number" min="1" max="10" step="1" value="${+S.perRef || 1}"${dis}></div>
+        <div class="field"><label for="wsE">Hạn dùng mã (ngày, 0 là không hạn)</label><input class="input" id="wsE" type="number" min="0" max="365" step="1" value="${+S.expireDays || 0}"${dis}></div>
+        <div class="field full"><label for="wsR">Thể lệ chương trình (hiện trên trang vòng quay)</label><textarea class="input" id="wsR" rows="5" maxlength="2000" placeholder="Thời gian chương trình, cơ cấu giải, cách nhận quà, liên hệ khi có thắc mắc">${esc(S.rules || '')}</textarea></div>
+      </div>
+      <p class="red mt-1" id="wsErr" style="font-size:13px;min-height:1em"></p>
+      ${edit ? `<div class="row" style="justify-content:flex-end"><button class="btn btn-gold" type="submit">${icon('check')} Lưu cài đặt</button></div>` : '<p class="dim" style="font-size:13px">Vai trò của anh chị chỉ được xem.</p>'}</form>`;
+    if (!edit) return;
+    $('#wsForm', box).addEventListener('submit', e => {
+      e.preventDefault();
+      const tiers = $$('[name=wsT]:checked', box).map(x => x.value), n = Math.round(+$('#wsN', box).value), ex = Math.round(+$('#wsE', box).value);
+      if (!(n >= 1 && n <= 10)) return $('#wsErr', box).textContent = 'Số mã mỗi người từ 1 đến 10.';
+      if (!(ex >= 0 && ex <= 365)) return $('#wsErr', box).textContent = 'Hạn dùng từ 0 đến 365 ngày.';
+      const dd = ADB.load(), W = ADB.wheel(dd);
+      W.settings = Object.assign({}, W.settings, { enabled: $('#wsOn', box).checked, tiers, perRef: n, expireDays: ex, rules: $('#wsR', box).value.trim() });
+      commit(dd, 'Cài đặt vòng quay', `${W.settings.enabled ? 'Bật' : 'Tắt'}; nhận mã: ${tiers.map(k => (TI.find(t => t[0] === k) || [])[1]).join(', ') || 'không ai'}; ${n} mã/người; hạn ${ex || 'không giới hạn'}${ex ? ' ngày' : ''}`, 'Đã lưu cài đặt vòng quay');
+    });
+  }
+
   function draw() {
     if (!root) return; const d = ADB.load(), box = $('#whAdmBody', root);
     $$('[data-wt]', root).forEach(b => b.classList.toggle('on', b.dataset.wt === cur));
-    ({ prizes, codes, forced, spins, events })[cur](box, d);
+    ({ prizes, codes, forced, spins, events, settings })[cur](box, d);
   }
   ADMIN_MODULES.wheel = {
     render(el) {

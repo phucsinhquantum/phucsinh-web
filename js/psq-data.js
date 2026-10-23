@@ -519,12 +519,12 @@
      Dữ liệu nằm ở d.wheel, tạo mặc định khi chưa có (không cần nâng phiên bản dữ liệu).
      ===================================================================== */
   const WHEEL_PRIZES = [
-    ['Vòng tay trầm hương (mẫu)', '#f3c76b', 8, 20],
-    ['Nụ trầm (mẫu)', '#4fe6df', 22, null],
-    ['Voucher 200.000đ (mẫu)', '#b98cff', 14, 50],
-    ['Trà trầm (mẫu)', '#45e08f', 20, null],
-    ['Móc khóa trầm (mẫu)', '#ffb547', 20, null],
-    ['50.000 PS vào ví mua hàng (mẫu)', '#ff8fb1', 16, null]
+    ['Vòng tay trầm hương', '#f3c76b', 8, 20],
+    ['Nụ trầm', '#4fe6df', 22, null],
+    ['Voucher 200.000đ', '#b98cff', 14, 50],
+    ['Trà trầm', '#45e08f', 20, null],
+    ['Móc khóa trầm', '#ffb547', 20, null],
+    ['50.000 PS vào ví mua hàng', '#ff8fb1', 16, null]
   ];
   const CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   function newCode(W) {
@@ -535,11 +535,24 @@
   const stampNow = () => { const t = new Date(); return t.toISOString().slice(0, 10) + ' ' + t.toTimeString().slice(0, 5); };
   const inStock = p => p.active !== false && (p.stock == null || p.stock > 0);
   const normName = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  // cài đặt vòng quay khách hàng: chỉ cấp mã cho người giới thiệu thuộc các cấp bậc trong tiers (mặc định chỉ Khách hàng)
+  const WHEEL_SET = { enabled: true, tiers: ['khach'], perRef: 1, expireDays: 0, rules: '' };
+  const unSample = s => String(s || '').replace(/\s*\(mẫu\)/g, '').trim();
+  function wheelFix(d, W) {
+    W.settings = Object.assign({}, WHEEL_SET, W.settings || {});
+    if (W.rv >= 2) return;
+    // v2: bỏ chữ (mẫu); CTV và đại lý không nhận mã quay nữa (hủy mã tự cấp chưa dùng)
+    W.prizes.forEach(p => p.name = unSample(p.name));
+    W.spins.forEach(x => x.prizeName = unSample(x.prizeName));
+    W.events.forEach(e => { e.name = unSample(e.name); (e.prizes || []).forEach(p => p.name = unSample(p.name)); (e.winners || []).forEach(w => { if (w.prize) w.prize = unSample(w.prize); }); });
+    W.codes = W.codes.filter(c => !(c.from && c.status === 'new' && !W.settings.tiers.includes((ADB.user(d, c.user) || {}).tier || 'khach')));
+    W.rv = 2;
+  }
   function wheelData(d) {
     if (d.wheel && Array.isArray(d.wheel.prizes)) {
-      const W = d.wheel; W.codes = W.codes || []; W.forced = W.forced || {}; W.spins = W.spins || []; W.events = W.events || []; return W;
+      const W = d.wheel; W.codes = W.codes || []; W.forced = W.forced || {}; W.spins = W.spins || []; W.events = W.events || []; wheelFix(d, W); return W;
     }
-    const W = d.wheel = { prizes: WHEEL_PRIZES.map(([name, color, weight, stock], i) => ({ id: 'qz' + (i + 1), name, color, weight, stock, active: true })), codes: [], forced: {}, spins: [], events: [] };
+    const W = d.wheel = { prizes: WHEEL_PRIZES.map(([name, color, weight, stock], i) => ({ id: 'qz' + (i + 1), name, color, weight, stock, active: true })), codes: [], forced: {}, spins: [], events: [], settings: Object.assign({}, WHEEL_SET), rv: 2 };
     syncCodes(d, W);
     // vài lượt quay mẫu của thành viên khác để trang có danh sách người trúng
     const sample = W.codes.filter(c => c.user !== 'u1').slice(0, 5);
@@ -548,18 +561,22 @@
       c.status = 'used'; c.prize = p.id; c.usedAt = at;
       W.spins.push({ id: uid('vq'), code: c.code, user: c.user, prize: p.id, prizeName: p.name, date: at, sample: true });
     });
-    W.events.push({ id: 'sk1', name: 'Giao lưu Zoom tri ân khách hàng (mẫu)', kind: 'online', date: daysAgo(-7), participants: ['Nguyễn Minh Anh', 'Trần Quốc Huy', 'Lê Thu Hà', 'Phạm Gia Bảo', 'Võ Ngọc Lan', 'Đặng Hải Nam', 'Bùi Khánh Linh', 'Hoàng Đức Tín', 'Đỗ Mai Phương', 'Ngô Thành Đạt', 'Lý Bảo Châu', 'Dương Tuấn Kiệt'], prizes: [{ name: 'Nụ trầm (mẫu)', qty: 3 }, { name: 'Vòng tay trầm hương (mẫu)', qty: 1 }], mode: 'random', fixedWinners: [], winners: [], removeWinners: true });
-    W.events.push({ id: 'sk2', name: 'Khai trương showroom (mẫu)', kind: 'offline', date: daysAgo(-20), participants: Array.from({ length: 60 }, (_, i) => String(i + 1)), prizes: [{ name: 'Trà trầm (mẫu)', qty: 5 }, { name: 'Voucher 200.000đ (mẫu)', qty: 2 }], mode: 'random', fixedWinners: [], winners: [], removeWinners: true });
+    W.events.push({ id: 'sk1', name: 'Giao lưu Zoom tri ân khách hàng', kind: 'online', date: daysAgo(-7), participants: ['Nguyễn Minh Anh', 'Trần Quốc Huy', 'Lê Thu Hà', 'Phạm Gia Bảo', 'Võ Ngọc Lan', 'Đặng Hải Nam', 'Bùi Khánh Linh', 'Hoàng Đức Tín', 'Đỗ Mai Phương', 'Ngô Thành Đạt', 'Lý Bảo Châu', 'Dương Tuấn Kiệt'], prizes: [{ name: 'Nụ trầm', qty: 3 }, { name: 'Vòng tay trầm hương', qty: 1 }], mode: 'random', fixedWinners: [], winners: [], removeWinners: true });
+    W.events.push({ id: 'sk2', name: 'Khai trương showroom', kind: 'offline', date: daysAgo(-20), participants: Array.from({ length: 60 }, (_, i) => String(i + 1)), prizes: [{ name: 'Trà trầm', qty: 5 }, { name: 'Voucher 200.000đ', qty: 2 }], mode: 'random', fixedWinners: [], winners: [], removeWinners: true });
     return W;
   }
-  // mỗi người đăng ký qua giới thiệu = đúng 1 mã quay cho người giới thiệu
+  // mỗi người đăng ký qua giới thiệu = perRef mã quay cho người giới thiệu, nếu người giới thiệu thuộc cấp bậc được nhận
+  // (mặc định chỉ Khách hàng; CTV và đại lý đã hưởng hoa hồng). Người đã được xét thì ghi vào W.seen để không cấp lại.
   function syncCodes(d, W) {
-    const have = new Set(W.codes.filter(c => c.from).map(c => c.user + '|' + c.from)); let changed = false;
+    const S = W.settings || WHEEL_SET, seen = W.seen = W.seen || {}; let changed = false;
+    W.codes.forEach(c => { if (c.from && !seen[c.from]) { seen[c.from] = 1; changed = true; } });
     d.users.forEach(u => {
-      if (!u.sponsor || u.role === 'admin' || have.has(u.sponsor + '|' + u.id)) return;
-      if (!d.users.some(x => x.id === u.sponsor)) return;
-      W.codes.push({ code: newCode(W), user: u.sponsor, from: u.id, status: 'new', prize: null, usedAt: null, createdAt: u.created || now() });
-      have.add(u.sponsor + '|' + u.id); changed = true;
+      if (!u.sponsor || u.role === 'admin' || seen[u.id]) return;
+      const sp = ADB.user(d, u.sponsor); if (!sp) return;
+      seen[u.id] = 1; changed = true;
+      if (S.enabled === false || !S.tiers.includes(sp.tier || 'khach')) return;
+      const at = u.created || now(), exp = S.expireDays > 0 ? new Date(new Date(at.slice(0, 10) + 'T00:00:00').getTime() + S.expireDays * 864e5).toISOString().slice(0, 10) : null;
+      for (let i = 0; i < Math.max(1, +S.perRef || 1); i++) W.codes.push({ code: newCode(W), user: sp.id, from: u.id, status: 'new', prize: null, usedAt: null, createdAt: at, expires: exp });
     });
     return changed;
   }
@@ -583,6 +600,9 @@
     wheelPrizes(d) { return wheelData(d).prizes.filter(inStock); },
     wheelChance(d) { const L = ADB.wheelPrizes(d), sum = L.reduce((s, p) => s + Math.max(0, +p.weight || 0), 0); return L.map(p => ({ prize: p, pct: sum > 0 ? Math.max(0, +p.weight || 0) / sum * 100 : 100 / L.length })); },
     wheelSync(d) { return syncCodes(d, wheelData(d)); },
+    WHEEL_SET,
+    // cấp bậc này có được nhận mã quay khi giới thiệu không
+    wheelEligible(d, u) { return !!u && wheelData(d).settings.tiers.includes(u.tier || 'khach'); },
     wheelNewCode(d, userId, note) { const W = wheelData(d), c = { code: newCode(W), user: userId, from: null, status: 'new', prize: null, usedAt: null, createdAt: now(), note: note || 'Cấp thủ công' }; W.codes.push(c); return c; },
     wheelCodesOf(d, userId) { return wheelData(d).codes.filter(c => c.user === userId).sort((a, b) => (a.status === 'new' ? 0 : 1) - (b.status === 'new' ? 0 : 1) || String(b.createdAt).localeCompare(String(a.createdAt))); },
     // kiểm tra mã trước khi quay
@@ -594,6 +614,8 @@
       if (!user) return { error: 'Anh chị đăng nhập tài khoản nhận mã để quay.' };
       if (c.user !== user.id) return { error: 'Mã này thuộc tài khoản khác.' };
       if (c.status !== 'new') return { error: 'Mã này đã được dùng ngày ' + String(c.usedAt || '').slice(0, 10) + '.' };
+      if (W.settings.enabled === false) return { error: 'Vòng quay khách hàng đang tạm dừng.' };
+      if (c.expires && c.expires < now()) return { error: 'Mã này đã hết hạn ngày ' + c.expires.split('-').reverse().join('/') + '.' };
       if (!ADB.wheelPrizes(d).length) return { error: 'Vòng quay đang tạm dừng, chưa có quà.' };
       return { code: c };
     },
