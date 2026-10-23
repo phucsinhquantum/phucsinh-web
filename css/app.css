@@ -892,3 +892,11 @@ html.reduce-motion .gift-blink svg { animation: none !important; color: #ff4d4d;
 @media (max-width: 899px) { .dealer-row { grid-auto-columns: calc((100% - 14px) / 2); } }
 @media (max-width: 599px) { .dealer-row { grid-auto-columns: 82%; } }
 @media (max-width: 699px) { .dl-nav { display: flex; } .dl-nav[hidden] { display: none; } }
+.dealer-code { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--text-3); }
+.dealer-code b { color: var(--cyan); letter-spacing: .08em; font-size: 13.5px; }
+.dealer-copy { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; cursor: pointer; color: var(--text-2); background: rgba(255, 255, 255, .04); border: 1px solid var(--line-2); padding: 0; }
+.dealer-copy:hover { color: var(--gold); border-color: var(--gold); }
+.dealer-copy svg { width: 13px; height: 13px; }
+.dealer-reg { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--gold); padding: 8px 10px; border-radius: 10px; border: 1px dashed rgba(243, 199, 107, .4); background: rgba(243, 199, 107, .05); }
+.dealer-reg:hover { background: rgba(243, 199, 107, .12); }
+.dealer-reg svg { width: 14px; height: 14px; flex: none; }

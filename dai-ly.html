@@ -33,7 +33,7 @@
   </section>
   <div class="card glow-gold mt-3">
     <div class="dl-tools">
-      <input class="input" id="dlQ" type="search" placeholder="Tìm theo tên đại lý, địa chỉ, số điện thoại" aria-label="Tìm đại lý">
+      <input class="input" id="dlQ" type="search" placeholder="Tìm theo tên, mã số đại lý, địa chỉ, số điện thoại" aria-label="Tìm đại lý">
       <select class="input" id="dlA" aria-label="Lọc theo khu vực"><option value="">Tất cả khu vực</option></select>
       <span class="dl-count" id="dlC"></span>
     </div>
@@ -51,7 +51,7 @@
   const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
   function draw() {
     const q = fold($('#dlQ').value.trim()), a = $('#dlA').value;
-    const rows = all.filter(x => (!a || x.area === a) && (!q || fold([x.name, x.area, x.address, x.phone, x.note].join(' ')).includes(q)));
+    const rows = all.filter(x => (!a || x.area === a) && (!q || fold([x.name, x.code, x.area, x.address, x.phone, x.note].join(' ')).includes(q)));
     $('#dlC').textContent = `${rows.length} / ${all.length} đại lý`;
     $('#dlGrid').innerHTML = rows.length ? rows.map((x, i) => D.card(x, i)).join('') : `<div class="card empty" style="grid-column:1/-1">${icon('search')}${all.length ? 'Chưa có đại lý phù hợp. Anh chị thử từ khóa hoặc khu vực khác.' : 'Danh sách đại lý đang được cập nhật.'}</div>`;
   }

@@ -50,6 +50,7 @@
     map: '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>',
     flame: '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.5 2-5 .8 1.6 2 2 2 2s-1-3.5 1-7z"/>',
     gem: '<path d="M6 3h12l3 6-9 12L3 9z"/><path d="M3 9h18M9 3l3 18M15 3l-3 18"/>',
+    copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>',
     gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13"/><path d="M12 8S10.5 3 8 4s0 4 4 4zM12 8s1.5-5 4-4 0 4-4 4z"/>',
     ring: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/>',
     beads: '<circle cx="12" cy="4.5" r="2"/><circle cx="18.5" cy="8.5" r="2"/><circle cx="18.5" cy="15.5" r="2"/><circle cx="12" cy="19.5" r="2"/><circle cx="5.5" cy="15.5" r="2"/><circle cx="5.5" cy="8.5" r="2"/>',
@@ -117,6 +118,12 @@
   };
   /* ---------- đại lý uy tín ---------- */
   const DL_KEY = 'psq_dealers_v1';
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-dlcopy]'); if (!b) return;
+    const code = b.dataset.dlcopy, done = () => toast(`Đã sao chép mã đại lý ${code}`);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, () => prompt('Mã số đại lý:', code));
+    else prompt('Mã số đại lý:', code);
+  });
   const dealers = {
     all() { return (store.get(DL_KEY, null) || window.DEALERS || []).filter(x => x && x.name); },
     list() { return dealers.all().filter(x => !x.hidden); },
@@ -126,8 +133,9 @@
       const tel = dealers.tel(x.phone), ini = initials(x.name.replace(/\(.*?\)/g, '').replace(/^Đại lý\s+/i, '')) || 'ĐL';
       return `<article class="card dealer-card ${['glow-gold', 'glow-cyan'][i % 2]}">
         <div class="dealer-top"><span class="dealer-ph">${x.photo ? `<img src="${esc(x.photo)}" alt="" loading="lazy">` : esc(ini)}</span>
-          <div class="dealer-id"><span class="dealer-badge">${icon('shield')}Đại lý uy tín</span><h3>${esc(x.name)}</h3>${x.area ? `<small>${icon('pin')}${esc(x.area)}</small>` : ''}</div></div>
+          <div class="dealer-id"><span class="dealer-badge">${icon('shield')}Đại lý uy tín</span><h3>${esc(x.name)}</h3>${x.code ? `<span class="dealer-code">Mã số đại lý: <b>${esc(x.code)}</b><button type="button" class="dealer-copy" data-dlcopy="${esc(x.code)}" aria-label="Sao chép mã ${esc(x.code)}" title="Sao chép mã">${icon('copy')}</button></span>` : x.area ? `<small>${icon('pin')}${esc(x.area)}</small>` : ''}</div></div>
         ${x.note ? `<p class="dealer-note">${esc(x.note)}</p>` : ''}
+        ${x.code ? `<a class="dealer-reg" href="thanh-vien.html?dang-ky=1&ref=${encodeURIComponent(x.code)}">${icon('user')}Đăng ký thành viên với mã ${esc(x.code)}</a>` : ''}
         ${x.address ? `<p class="dealer-line">${icon('home')}<span>${esc(x.address)}</span></p>` : ''}
         ${x.phone ? `<p class="dealer-line">${icon('phone')}<span>${esc(x.phone)}</span></p>` : ''}
         <div class="dealer-acts">${tel ? `<a class="btn btn-gold btn-sm" href="tel:${esc(tel)}">${icon('phone')} Gọi</a><a class="btn btn-outline-gold btn-sm" href="https://zalo.me/${esc(tel.replace(/^\+84/, '0'))}" target="_blank" rel="noopener">Zalo</a>` : `<a class="btn btn-outline-gold btn-sm" href="lien-he.html">${icon('chat')} Liên hệ</a>`}

@@ -31,10 +31,12 @@
     catch (e) { toast('Bộ nhớ trình duyệt đã đầy, hãy dùng ảnh nhỏ hơn'); return false; }
   }
   let q = '';
+  const members = () => ADB.load().users.filter(u => u.role !== 'admin' && u.code && u.status !== 'locked').sort((a, b) => (b.tier === 'daily') - (a.tier === 'daily'));
+  const findCode = c => ADB.load().users.find(u => (u.code || '').toUpperCase() === c && u.role !== 'admin');
 
   function render(el) {
     const edit = ADMIN.can('content'), list = D.all(), shown = list.filter(x => !x.hidden).length;
-    const f = q.toLowerCase(), rows = list.map((x, i) => ({ x, i })).filter(({ x }) => !f || [x.name, x.area, x.address, x.phone].join(' ').toLowerCase().includes(f));
+    const f = q.toLowerCase(), rows = list.map((x, i) => ({ x, i })).filter(({ x }) => !f || [x.name, x.code, x.area, x.address, x.phone].join(' ').toLowerCase().includes(f));
     el.innerHTML = `
       <div class="card glow-gold">
         <div class="card-head"><div><h3>Đại lý uy tín</h3><div class="sub">${list.length} đại lý · ${shown} đang hiện trên web. Thứ tự ở đây là thứ tự hiện ở trang chủ.</div></div>
@@ -43,11 +45,11 @@
           <input class="input" id="dlaQ" type="search" placeholder="Tìm tên, khu vực, số điện thoại" value="${esc(q)}">
           ${edit ? `<button class="btn btn-gold btn-sm" type="button" id="dlaAdd">${icon('plus')} Thêm đại lý</button>` : ''}
         </div>
-        <div class="table-wrap mt-2"><table class="tbl"><thead><tr><th>#</th><th>Đại lý</th><th>Khu vực</th><th>Điện thoại</th><th>Hiển thị</th><th></th></tr></thead><tbody>
+        <div class="table-wrap mt-2"><table class="tbl"><thead><tr><th>#</th><th>Đại lý</th><th>Mã số đại lý</th><th>Điện thoại</th><th>Hiển thị</th><th></th></tr></thead><tbody>
           ${rows.length ? rows.map(({ x, i }) => `<tr class="${x.hidden ? 'dla-off' : ''}">
             <td class="dim">${i + 1}</td>
             <td><div class="who"><span class="dla-ph">${x.photo ? `<img src="${esc(x.photo)}" alt="">` : esc(ini(x.name))}</span><div><b>${esc(x.name)}</b><small>${esc(x.address || '')}</small></div></div></td>
-            <td>${esc(x.area || '')}</td>
+            <td>${x.code ? `<b class="cyan">${esc(x.code)}</b>` : '<span class="dim">Chưa có</span>'}${x.area ? `<br><small class="dim">${esc(x.area)}</small>` : ''}</td>
             <td>${esc(x.phone || '')}</td>
             <td>${x.hidden ? '<span class="badge">Đang ẩn</span>' : '<span class="badge ship">Đang hiện</span>'}</td>
             <td>${edit ? `<div class="dla-acts">
@@ -81,6 +83,8 @@
           <div class="row wrap" style="gap:8px"><button class="btn btn-sm" type="button" id="dlaPick">Tải ảnh</button><button class="btn btn-ghost btn-sm" type="button" id="dlaNo">Bỏ ảnh</button></div></div>
           <span class="dim" style="font-size:12px">Ảnh được cắt vuông ở giữa. Nên dùng ảnh cửa hàng hoặc logo.</span></div>
         <div class="field full"><label for="dlaN">Tên đại lý</label><input class="input" id="dlaN" maxlength="80" required value="${esc(x.name)}" placeholder="Ví dụ: Đại lý Phúc An"></div>
+        <div class="field full"><label for="dlaC">Mã số đại lý (mã giới thiệu của thành viên đại lý)</label><input class="input" id="dlaC" maxlength="20" list="dlaCodes" value="${esc(x.code || '')}" placeholder="Ví dụ: PS1012" style="text-transform:uppercase" autocomplete="off">
+          <small class="dim" id="dlaCH" style="font-size:12px;min-height:16px;display:block"></small></div>
         <div class="field"><label for="dlaA">Khu vực (tỉnh, thành)</label><input class="input" id="dlaA" maxlength="60" value="${esc(x.area || '')}" placeholder="Ví dụ: Nghệ An" list="dlaAreas"></div>
         <div class="field"><label for="dlaP">Số điện thoại / Zalo</label><input class="input" id="dlaP" maxlength="20" inputmode="tel" value="${esc(x.phone || '')}" placeholder="Ví dụ: 0931 133 199"></div>
         <div class="field full"><label for="dlaD">Địa chỉ</label><input class="input" id="dlaD" maxlength="160" value="${esc(x.address || '')}" placeholder="Số nhà, đường, phường, tỉnh"></div>
@@ -90,8 +94,17 @@
         <p class="err full" id="dlaE" style="color:var(--red);font-size:13px;min-height:1em;margin:0"></p>
         <div class="field full"><button class="btn btn-gold" type="submit">${icon('check')} Lưu đại lý</button></div>
       </form>
+      <datalist id="dlaCodes">${members().map(u => `<option value="${esc(u.code)}">${esc(u.name)}${u.tier === 'daily' ? ' · Đại lý' : u.tier === 'ctv' ? ' · CTV' : ''}</option>`).join('')}</datalist>
       <datalist id="dlaAreas">${[...new Set(L.map(d => d.area).filter(Boolean))].map(a => `<option value="${esc(a)}">`).join('')}</datalist>`);
     const drawPh = () => { $('#dlaPh', m.el).innerHTML = photo ? `<img src="${esc(photo)}" alt="">` : esc(ini($('#dlaN', m.el).value)); $('#dlaNo', m.el).hidden = !photo; };
+    const codeHint = () => {
+      const c = $('#dlaC', m.el).value.trim().toUpperCase(), u = c && findCode(c), h = $('#dlaCH', m.el);
+      h.style.color = ''; h.textContent = !c ? 'Khách xem trang sẽ thấy mã này và dùng để đăng ký thành viên.' : u ? `Thành viên: ${u.name}${u.tier === 'daily' ? ' (đại lý)' : u.tier === 'ctv' ? ' (CTV)' : ' (khách hàng)'}` : 'Chưa có thành viên nào dùng mã này.';
+      if (c && !u) h.style.color = 'var(--red)';
+      if (u && !$('#dlaP', m.el).value.trim() && u.phone) $('#dlaP', m.el).value = u.phone;
+      if (u && !$('#dlaA', m.el).value.trim() && u.city) $('#dlaA', m.el).value = u.city;
+    };
+    codeHint(); $('#dlaC', m.el).addEventListener('input', codeHint);
     drawPh(); $('#dlaN', m.el).addEventListener('input', () => { if (!photo) drawPh(); });
     $('#dlaNo', m.el).addEventListener('click', () => { photo = ''; drawPh(); });
     $('#dlaPick', m.el).addEventListener('click', () => {
@@ -103,7 +116,10 @@
     $('#dlaF', m.el).addEventListener('submit', e => {
       e.preventDefault();
       const v = id => $('#' + id, m.el).value.trim();
-      const it = { id: x.id || uid(), name: v('dlaN'), area: v('dlaA'), phone: v('dlaP'), address: v('dlaD'), map: v('dlaM'), note: v('dlaT'), photo, hidden: !$('#dlaH', m.el).checked };
+      const code = v('dlaC').toUpperCase();
+      if (code && !findCode(code)) { $('#dlaE', m.el).textContent = 'Mã số đại lý chưa đúng: chưa có thành viên nào dùng mã này.'; return; }
+      if (code && D.all().some((d2, j) => j !== idx && (d2.code || '').toUpperCase() === code)) { $('#dlaE', m.el).textContent = 'Mã này đã gắn với một đại lý khác trong danh sách.'; return; }
+      const it = { id: x.id || uid(), code, name: v('dlaN'), area: v('dlaA'), phone: v('dlaP'), address: v('dlaD'), map: v('dlaM'), note: v('dlaT'), photo, hidden: !$('#dlaH', m.el).checked };
       if (!it.name) { $('#dlaE', m.el).textContent = 'Anh chị nhập tên đại lý.'; return; }
       if (it.phone && !/^[0-9 +.]{8,15}$/.test(it.phone)) { $('#dlaE', m.el).textContent = 'Số điện thoại chưa đúng.'; return; }
       const cur = D.all(); if (idx != null) cur[idx] = it; else cur.push(it);
