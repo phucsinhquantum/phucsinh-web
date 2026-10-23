@@ -52,6 +52,14 @@
   <div class="section-title"><div><span class="eyebrow">Được chọn nhiều</span><h2>Sản phẩm bán chạy</h2></div><a class="card-link" href="san-pham.html">Xem tất cả</a></div>
   <section class="p-grid" id="best"></section>
 
+  <!-- Đại lý uy tín: quản lý ở Quản trị > Trang web > Đại lý uy tín -->
+  <div id="dealersBox" hidden>
+    <div class="section-title"><div><span class="eyebrow">Mạng lưới Phúc Sinh QuanTum</span><h2>Đại lý uy tín</h2></div>
+      <div class="cat-nav dl-nav" id="dlNav"><button type="button" data-dl="-1" aria-label="Đại lý trước"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg></button><button type="button" data-dl="1" aria-label="Đại lý tiếp"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></button></div>
+      <a class="card-link" href="dai-ly.html">Xem tất cả</a></div>
+    <section class="dealer-row" id="dealers"></section>
+  </div>
+
   <section class="grid g-main mt-4">
     <div class="card glow-gold reveal">
       <div class="card-head"><h3>Hạng thành viên</h3><span class="sub">theo tổng chi tiêu</span></div>
@@ -126,8 +134,19 @@
       <div class="row between mt-2" style="gap:8px;flex-wrap:wrap">${vids.length > 1 ? `<div class="row" style="gap:8px"><button class="btn btn-sm" type="button" data-vgo="${(i - 1 + vids.length) % vids.length}">${icon('back')} Video trước</button><button class="btn btn-sm" type="button" data-vgo="${(i + 1) % vids.length}">Video tiếp ${icon('arrow')}</button></div>` : '<span></span>'}<a class="cyan" style="font-size:13px" href="${V.watch(v.id)}" target="_blank" rel="noopener">Xem trên YouTube</a></div></div>`);
     m.el.addEventListener('click', e => { const g = e.target.closest('[data-vgo]'); if (g) { m.close(); setTimeout(() => openVideo(+g.dataset.vgo), 60); } });
   };
-  const step = dir => { const c = track.querySelector('.story-card'); track.scrollBy({ left: dir * ((c ? c.offsetWidth : 200) + 14), behavior: 'smooth' }); };
-  const arrows = () => { const max = track.scrollWidth - track.clientWidth - 2; $$('#story [data-dir]').forEach(b => { b.disabled = +b.dataset.dir < 0 ? track.scrollLeft <= 2 : track.scrollLeft >= max; }); $('#story').classList.toggle('no-scroll', max <= 0); };
+  // nút lướt video: luôn hiện khi có từ 2 video. Hết danh sách thì quay vòng lại đầu;
+  // nếu số video vừa khít khung (không cuộn được) thì xoay vòng thứ tự thẻ để khách vẫn lướt được.
+  const step = dir => {
+    const c = track.querySelector('.story-card'), w = (c ? c.offsetWidth : 200) + 14, max = track.scrollWidth - track.clientWidth - 2;
+    if (max <= 0) {
+      if (dir > 0) track.appendChild(track.firstElementChild); else track.prepend(track.lastElementChild);
+      $$('.story-card', track).forEach((x, i) => x.classList.toggle('hot', !i)); return;
+    }
+    if (dir > 0 && track.scrollLeft >= max) return track.scrollTo({ left: 0, behavior: 'smooth' });
+    if (dir < 0 && track.scrollLeft <= 2) return track.scrollTo({ left: max + 2, behavior: 'smooth' });
+    track.scrollBy({ left: dir * w, behavior: 'smooth' });
+  };
+  const arrows = () => { $$('#story [data-dir]').forEach(b => { b.disabled = false; }); $('#story').classList.toggle('no-scroll', vids.length < 2); };
   track.addEventListener('scroll', arrows, { passive: true }); addEventListener('resize', arrows); setTimeout(arrows, 50);
   $('#story').addEventListener('click', e => {
     const d = e.target.closest('[data-dir]'); if (d) return step(+d.dataset.dir);
@@ -139,6 +158,21 @@
       <div class="story-grid">${vids.map((v, i) => `<button class="story-card" type="button" data-all="${i}"><img src="${V.thumb(v.id)}" alt="" loading="lazy"><span class="story-play">${play}</span><span class="story-cap">${esc(v.name || v.title || 'Khách hàng Phúc Sinh')}</span></button>`).join('')}</div>`);
     m.el.addEventListener('click', e => { const c = e.target.closest('[data-all]'); if (c) { m.close(); setTimeout(() => openVideo(+c.dataset.all), 60); } });
   });
+  /* ---------- đại lý uy tín ---------- */
+  const DL = PSQ.dealers.list(), dlRow = $('#dealers');
+  if (DL.length) {
+    $('#dealersBox').hidden = false;
+    dlRow.innerHTML = DL.map((x, i) => PSQ.dealers.card(x, i)).join('');
+    const dlNav = $('#dlNav'), dlCheck = () => { dlNav.hidden = dlRow.scrollWidth <= dlRow.clientWidth + 4; };
+    dlCheck(); addEventListener('resize', dlCheck);
+    dlNav.addEventListener('click', e => {
+      const b = e.target.closest('[data-dl]'); if (!b) return;
+      const dir = +b.dataset.dl, max = dlRow.scrollWidth - dlRow.clientWidth - 2, c = dlRow.firstElementChild, w = (c ? c.offsetWidth : 260) + 14;
+      if (dir > 0 && dlRow.scrollLeft >= max) return dlRow.scrollTo({ left: 0, behavior: 'smooth' });
+      if (dir < 0 && dlRow.scrollLeft <= 2) return dlRow.scrollTo({ left: max + 2, behavior: 'smooth' });
+      dlRow.scrollBy({ left: dir * w, behavior: 'smooth' });
+    });
+  }
   $('#best').innerHTML = [...PRODUCTS].sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0)).slice(0, 8).map(productCard).join('');
   const months = ['T11', 'T12', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10'];
   const draw = () => area($('#journey'), { labels: months, height: 250, mark: 9, fmt: v => Math.round(v).toLocaleString('vi-VN'),

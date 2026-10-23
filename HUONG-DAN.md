@@ -45,3 +45,9 @@ Hiện tài khoản, đơn hàng và tin nhắn chỉ lưu trên trình duyệt 
 
 ## Sửa trang Giới thiệu
 Quản trị > Trang web > Trang giới thiệu: sửa đầu trang, câu chuyện, cam kết, giá trị, số liệu (dùng chung trang chủ), cột mốc, đội ngũ (có tải ảnh từng người, cắt vuông 360px), quy trình, khung cuối. Lưu trên trình duyệt (psq_about_v1); mặc định nằm ở window.ABOUT trong js/data.js. Mã: js/admin/gioi-thieu.js.
+
+## Đại lý uy tín
+Quản trị > Trang web > Đại lý uy tín: thêm, sửa (ảnh, tên, khu vực, SĐT/Zalo, địa chỉ, link bản đồ, giới thiệu), ẩn/hiện, sắp xếp, xóa. Hiện ở trang chủ (thanh trượt có nút) và trang dai-ly.html (Xem tất cả, tìm kiếm, lọc khu vực). Lưu psq_dealers_v1, mặc định window.DEALERS trong js/data.js, hàm dùng chung PSQ.dealers trong js/app.js.
+
+## Video khách hàng
+Quản trị > Video khách hàng có thêm khung "Thêm nhiều video cùng lúc" (mỗi dòng: Link | Tên khách | Tiêu đề). Ở trang chủ, nút lướt video luôn hiện khi có từ 2 video và quay vòng.

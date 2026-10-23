@@ -115,6 +115,26 @@
     watch: id => `https://www.youtube.com/watch?v=${id}`,
     embed: id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1&modestbranding=1`
   };
+  /* ---------- đại lý uy tín ---------- */
+  const DL_KEY = 'psq_dealers_v1';
+  const dealers = {
+    all() { return (store.get(DL_KEY, null) || window.DEALERS || []).filter(x => x && x.name); },
+    list() { return dealers.all().filter(x => !x.hidden); },
+    save(list) { store.set(DL_KEY, list); },
+    tel: p => String(p || '').replace(/[^0-9+]/g, ''),
+    card(x, i = 0) {
+      const tel = dealers.tel(x.phone), ini = initials(x.name.replace(/\(.*?\)/g, '').replace(/^Đại lý\s+/i, '')) || 'ĐL';
+      return `<article class="card dealer-card ${['glow-gold', 'glow-cyan'][i % 2]}">
+        <div class="dealer-top"><span class="dealer-ph">${x.photo ? `<img src="${esc(x.photo)}" alt="" loading="lazy">` : esc(ini)}</span>
+          <div class="dealer-id"><span class="dealer-badge">${icon('shield')}Đại lý uy tín</span><h3>${esc(x.name)}</h3>${x.area ? `<small>${icon('pin')}${esc(x.area)}</small>` : ''}</div></div>
+        ${x.note ? `<p class="dealer-note">${esc(x.note)}</p>` : ''}
+        ${x.address ? `<p class="dealer-line">${icon('home')}<span>${esc(x.address)}</span></p>` : ''}
+        ${x.phone ? `<p class="dealer-line">${icon('phone')}<span>${esc(x.phone)}</span></p>` : ''}
+        <div class="dealer-acts">${tel ? `<a class="btn btn-gold btn-sm" href="tel:${esc(tel)}">${icon('phone')} Gọi</a><a class="btn btn-outline-gold btn-sm" href="https://zalo.me/${esc(tel.replace(/^\+84/, '0'))}" target="_blank" rel="noopener">Zalo</a>` : `<a class="btn btn-outline-gold btn-sm" href="lien-he.html">${icon('chat')} Liên hệ</a>`}
+          ${x.map ? `<a class="btn btn-ghost btn-sm" href="${esc(/^https?:/i.test(x.map) ? x.map : 'https://www.google.com/maps/search/' + encodeURIComponent(x.map))}" target="_blank" rel="noopener">${icon('map')} Bản đồ</a>` : x.address ? `<a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/search/${encodeURIComponent(x.address)}" target="_blank" rel="noopener">${icon('map')} Bản đồ</a>` : ''}</div>
+      </article>`;
+    }
+  };
   const PROD_KEY = 'psq_products_v1';
   (function applyProductEdits() {
     const ed = store.get(PROD_KEY, null); if (!ed || !window.PRODUCTS) return;
@@ -503,7 +523,7 @@
   const statusName = { pending: 'Chờ xác nhận', paid: 'Đã thanh toán', ship: 'Đang giao', done: 'Hoàn thành', failed: 'Đã hủy' };
   const statusBadge = s => `<span class="badge ${s === 'done' ? 'ok' : s}">${statusName[s] || s}</span>`;
 
-  window.PSQ = { videos, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, memberInfo, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, memberInfo, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   shell();
   ambient();

@@ -162,6 +162,16 @@ window.RANKS = [
   { id: 'kim-cuong', name: 'Kim cương', min: 150000000, color: '#4fe6df', perk: 'Giảm 8%, tư vấn riêng, sự kiện đặc biệt' }
 ];
 
+// Đại lý uy tín hiển thị ở trang chủ và trang dai-ly.html. Thêm, sửa, xóa trong Quản trị > Trang web > Đại lý uy tín.
+// Danh sách dưới đây là mặc định khi trình duyệt chưa có danh sách lưu từ trang quản trị (psq_dealers_v1).
+window.DEALERS = [
+  { id: 'dl-mau-1', name: 'Đại lý Phúc An (mẫu)', area: 'TP. Hồ Chí Minh', address: 'Quận 1, TP. Hồ Chí Minh', phone: '', note: 'Trưng bày đầy đủ vòng trầm và nụ trầm.', photo: '' },
+  { id: 'dl-mau-2', name: 'Đại lý Hương Việt (mẫu)', area: 'Hà Nội', address: 'Quận Hoàn Kiếm, Hà Nội', phone: '', note: 'Tư vấn chọn vòng theo mệnh.', photo: '' },
+  { id: 'dl-mau-3', name: 'Đại lý Trầm Sơn (mẫu)', area: 'Đà Nẵng', address: 'Quận Hải Châu, Đà Nẵng', phone: '', note: 'Nhận đặt quà tặng doanh nghiệp.', photo: '' },
+  { id: 'dl-mau-4', name: 'Đại lý An Nhiên (mẫu)', area: 'Nghệ An', address: 'TP. Vinh, Nghệ An', phone: '', note: 'Giao nhanh khu vực Bắc Trung Bộ.', photo: '' },
+  { id: 'dl-mau-5', name: 'Đại lý Phúc Lộc (mẫu)', area: 'Cần Thơ', address: 'Quận Ninh Kiều, Cần Thơ', phone: '', note: 'Có góc trải nghiệm hương trầm.', photo: '' }
+];
+
 // Nội dung trang Giới thiệu. Sửa trong Quản trị > Trang web > Trang giới thiệu (lưu psq_about_v1, ghi đè lên mặc định dưới đây).
 window.ABOUT = {
   heroEyebrow: 'Về Phúc Sinh QuanTum',

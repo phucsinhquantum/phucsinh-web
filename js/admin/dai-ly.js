@@ -1,0 +1,133 @@
+/* Quản trị: Đại lý uy tín (hiện ở trang chủ và dai-ly.html).
+   Lưu trên trình duyệt (psq_dealers_v1) qua PSQ.dealers; mặc định là window.DEALERS trong js/data.js. */
+(function () {
+  const { $, esc, icon, toast, modal } = PSQ;
+  window.ADMIN_MODULES = window.ADMIN_MODULES || {};
+  const D = PSQ.dealers;
+
+  if (!document.getElementById('adm-css-dai-ly')) {
+    const st = document.createElement('style'); st.id = 'adm-css-dai-ly';
+    st.textContent = `
+      [data-pane="dealers"] .tbl { min-width: 820px; } [data-pane="dealers"] .who > div { min-width: 200px; }
+      .dla-ph { width: 46px; height: 46px; border-radius: 12px; flex: none; overflow: hidden; display: grid; place-items: center; font-family: var(--display); color: var(--gold); background: rgba(243,199,107,.1); border: 1px solid rgba(243,199,107,.3); }
+      .dla-ph img { width: 100%; height: 100%; object-fit: cover; }
+      .dla-acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: nowrap; }
+      .dla-acts .btn[disabled] { opacity: .35; pointer-events: none; }
+      .dla-up svg { transform: rotate(-90deg); } .dla-down svg { transform: rotate(90deg); }
+      .dla-photo { display: flex; gap: 14px; align-items: center; }
+      .dla-photo .dla-ph { width: 84px; height: 84px; border-radius: 18px; font-size: 26px; }
+      .dla-off { opacity: .55; }
+      .dla-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .dla-tools .input { height: 40px; flex: 1 1 220px; width: auto; }`;
+    document.head.appendChild(st);
+  }
+
+  const closeBtn = `<button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button>`;
+  const ini = n => PSQ.initials(String(n || '').replace(/\(.*?\)/g, '').replace(/^Đại lý\s+/i, '')) || 'ĐL';
+  const audit = (action, detail) => { const d = ADB.load(); ADB.log(d, action, detail); ADB.save(d); };
+  const uid = () => 'dl' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  function persist(list) {
+    try { localStorage.setItem('psq_dealers_v1', JSON.stringify(list)); return true; }
+    catch (e) { toast('Bộ nhớ trình duyệt đã đầy, hãy dùng ảnh nhỏ hơn'); return false; }
+  }
+  let q = '';
+
+  function render(el) {
+    const edit = ADMIN.can('content'), list = D.all(), shown = list.filter(x => !x.hidden).length;
+    const f = q.toLowerCase(), rows = list.map((x, i) => ({ x, i })).filter(({ x }) => !f || [x.name, x.area, x.address, x.phone].join(' ').toLowerCase().includes(f));
+    el.innerHTML = `
+      <div class="card glow-gold">
+        <div class="card-head"><div><h3>Đại lý uy tín</h3><div class="sub">${list.length} đại lý · ${shown} đang hiện trên web. Thứ tự ở đây là thứ tự hiện ở trang chủ.</div></div>
+          <a class="card-link" href="dai-ly.html" target="_blank" rel="noopener">Xem trang đại lý ${icon('arrow')}</a></div>
+        <div class="dla-tools">
+          <input class="input" id="dlaQ" type="search" placeholder="Tìm tên, khu vực, số điện thoại" value="${esc(q)}">
+          ${edit ? `<button class="btn btn-gold btn-sm" type="button" id="dlaAdd">${icon('plus')} Thêm đại lý</button>` : ''}
+        </div>
+        <div class="table-wrap mt-2"><table class="tbl"><thead><tr><th>#</th><th>Đại lý</th><th>Khu vực</th><th>Điện thoại</th><th>Hiển thị</th><th></th></tr></thead><tbody>
+          ${rows.length ? rows.map(({ x, i }) => `<tr class="${x.hidden ? 'dla-off' : ''}">
+            <td class="dim">${i + 1}</td>
+            <td><div class="who"><span class="dla-ph">${x.photo ? `<img src="${esc(x.photo)}" alt="">` : esc(ini(x.name))}</span><div><b>${esc(x.name)}</b><small>${esc(x.address || '')}</small></div></div></td>
+            <td>${esc(x.area || '')}</td>
+            <td>${esc(x.phone || '')}</td>
+            <td>${x.hidden ? '<span class="badge">Đang ẩn</span>' : '<span class="badge ship">Đang hiện</span>'}</td>
+            <td>${edit ? `<div class="dla-acts">
+              <button class="btn btn-ghost btn-sm dla-up" type="button" data-dla="up" data-i="${i}" ${i && !q ? '' : 'disabled'} aria-label="Lên">${icon('arrow')}</button>
+              <button class="btn btn-ghost btn-sm dla-down" type="button" data-dla="down" data-i="${i}" ${i < list.length - 1 && !q ? '' : 'disabled'} aria-label="Xuống">${icon('arrow')}</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-dla="toggle" data-i="${i}">${x.hidden ? 'Hiện' : 'Ẩn'}</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-dla="edit" data-i="${i}" aria-label="Sửa">${icon('edit')}</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-dla="del" data-i="${i}" aria-label="Xóa">${icon('trash')}</button></div>` : ''}</td>
+          </tr>`).join('') : `<tr><td colspan="6"><div class="empty">${icon('users')}${list.length ? 'Không có đại lý khớp từ khóa.' : 'Chưa có đại lý. Bấm Thêm đại lý để bắt đầu.'}</div></td></tr>`}
+        </tbody></table></div>
+      </div>`;
+    $('#dlaQ').addEventListener('input', e => { q = e.target.value; const pos = e.target.selectionStart; render(el); const n = $('#dlaQ'); n.focus(); n.setSelectionRange(pos, pos); });
+    if (!edit) return;
+    $('#dlaAdd').addEventListener('click', () => form(el));
+    el.querySelector('.tbl').addEventListener('click', e => {
+      const b = e.target.closest('[data-dla]'); if (!b) return;
+      const L = D.all(), i = +b.dataset.i, x = L[i], act = b.dataset.dla;
+      if (act === 'edit') return form(el, i);
+      if (act === 'up' || act === 'down') { const j = i + (act === 'up' ? -1 : 1); [L[i], L[j]] = [L[j], L[i]]; if (persist(L)) render(el); return; }
+      if (act === 'toggle') { x.hidden = !x.hidden; if (persist(L)) { audit(x.hidden ? 'Ẩn đại lý uy tín' : 'Hiện đại lý uy tín', x.name); render(el); } return; }
+      if (act === 'del') { if (!confirm(`Xóa ${x.name} khỏi danh sách đại lý uy tín?`)) return; L.splice(i, 1); if (persist(L)) { audit('Xóa đại lý uy tín', x.name); render(el); toast('Đã xóa đại lý'); } }
+    });
+  }
+
+  function form(el, idx) {
+    const L = D.all(), x = idx != null ? L[idx] : { name: '', area: '', address: '', phone: '', map: '', note: '', photo: '' };
+    let photo = x.photo || '';
+    const m = modal(`<div class="row"><h3>${idx != null ? 'Sửa đại lý' : 'Thêm đại lý'}</h3>${closeBtn}</div>
+      <form class="form-grid mt-2" id="dlaF" novalidate>
+        <div class="field full"><label>Ảnh / logo đại lý</label><div class="dla-photo"><span class="dla-ph" id="dlaPh"></span>
+          <div class="row wrap" style="gap:8px"><button class="btn btn-sm" type="button" id="dlaPick">Tải ảnh</button><button class="btn btn-ghost btn-sm" type="button" id="dlaNo">Bỏ ảnh</button></div></div>
+          <span class="dim" style="font-size:12px">Ảnh được cắt vuông ở giữa. Nên dùng ảnh cửa hàng hoặc logo.</span></div>
+        <div class="field full"><label for="dlaN">Tên đại lý</label><input class="input" id="dlaN" maxlength="80" required value="${esc(x.name)}" placeholder="Ví dụ: Đại lý Phúc An"></div>
+        <div class="field"><label for="dlaA">Khu vực (tỉnh, thành)</label><input class="input" id="dlaA" maxlength="60" value="${esc(x.area || '')}" placeholder="Ví dụ: Nghệ An" list="dlaAreas"></div>
+        <div class="field"><label for="dlaP">Số điện thoại / Zalo</label><input class="input" id="dlaP" maxlength="20" inputmode="tel" value="${esc(x.phone || '')}" placeholder="Ví dụ: 0931 133 199"></div>
+        <div class="field full"><label for="dlaD">Địa chỉ</label><input class="input" id="dlaD" maxlength="160" value="${esc(x.address || '')}" placeholder="Số nhà, đường, phường, tỉnh"></div>
+        <div class="field full"><label for="dlaM">Link Google Maps (không bắt buộc)</label><input class="input" id="dlaM" maxlength="400" value="${esc(x.map || '')}" placeholder="Để trống thì nút Bản đồ tự tìm theo địa chỉ"></div>
+        <div class="field full"><label for="dlaT">Giới thiệu ngắn</label><textarea class="input" id="dlaT" rows="2" maxlength="200" style="min-height:70px">${esc(x.note || '')}</textarea></div>
+        <div class="field full"><label class="check"><input type="checkbox" id="dlaH" ${x.hidden ? '' : 'checked'}> Hiện trên trang web</label></div>
+        <p class="err full" id="dlaE" style="color:var(--red);font-size:13px;min-height:1em;margin:0"></p>
+        <div class="field full"><button class="btn btn-gold" type="submit">${icon('check')} Lưu đại lý</button></div>
+      </form>
+      <datalist id="dlaAreas">${[...new Set(L.map(d => d.area).filter(Boolean))].map(a => `<option value="${esc(a)}">`).join('')}</datalist>`);
+    const drawPh = () => { $('#dlaPh', m.el).innerHTML = photo ? `<img src="${esc(photo)}" alt="">` : esc(ini($('#dlaN', m.el).value)); $('#dlaNo', m.el).hidden = !photo; };
+    drawPh(); $('#dlaN', m.el).addEventListener('input', () => { if (!photo) drawPh(); });
+    $('#dlaNo', m.el).addEventListener('click', () => { photo = ''; drawPh(); });
+    $('#dlaPick', m.el).addEventListener('click', () => {
+      const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*';
+      f.onchange = () => { const file = f.files && f.files[0]; if (!file) return; if (!/^image\//.test(file.type)) return toast('Hãy chọn một file ảnh');
+        squareImg(file, 320).then(src => { photo = src; drawPh(); }).catch(() => toast('Không đọc được ảnh này, thử ảnh khác (JPG hoặc PNG)')); };
+      f.click();
+    });
+    $('#dlaF', m.el).addEventListener('submit', e => {
+      e.preventDefault();
+      const v = id => $('#' + id, m.el).value.trim();
+      const it = { id: x.id || uid(), name: v('dlaN'), area: v('dlaA'), phone: v('dlaP'), address: v('dlaD'), map: v('dlaM'), note: v('dlaT'), photo, hidden: !$('#dlaH', m.el).checked };
+      if (!it.name) { $('#dlaE', m.el).textContent = 'Anh chị nhập tên đại lý.'; return; }
+      if (it.phone && !/^[0-9 +.]{8,15}$/.test(it.phone)) { $('#dlaE', m.el).textContent = 'Số điện thoại chưa đúng.'; return; }
+      const cur = D.all(); if (idx != null) cur[idx] = it; else cur.push(it);
+      if (!persist(cur)) return;
+      audit(idx != null ? 'Sửa đại lý uy tín' : 'Thêm đại lý uy tín', `${it.name}${it.area ? ' · ' + it.area : ''}`);
+      m.close(); render(el); toast('Đã lưu đại lý');
+    });
+  }
+
+  // cắt vuông ở giữa, thu về size px, JPEG 0,85
+  function squareImg(file, size) {
+    return new Promise((ok, fail) => {
+      const url = URL.createObjectURL(file), img = new Image();
+      img.onload = () => {
+        const s = Math.min(img.naturalWidth, img.naturalHeight); if (!s) { URL.revokeObjectURL(url); return fail(new Error('empty')); }
+        const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
+        g.fillStyle = '#0e1417'; g.fillRect(0, 0, size, size); g.imageSmoothingQuality = 'high';
+        g.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
+        URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('decode')); };
+      img.src = url;
+    });
+  }
+
+  ADMIN_MODULES.dealers = { render };
+})();

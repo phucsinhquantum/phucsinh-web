@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Đại lý uy tín · Phúc Sinh QuanTum</title>
+<meta name="description" content="Danh sách đại lý uy tín của Phúc Sinh QuanTum trên toàn quốc: địa chỉ, số điện thoại, Zalo và bản đồ.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/lang.js"></script>
+<style>
+  .dl-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .dl-tools .input { height: 42px; flex: 1 1 240px; width: auto; }
+  .dl-tools select.input { flex: 0 1 220px; }
+  .dl-count { margin-left: auto; color: var(--text-3); font-size: 13px; }
+  @media (max-width: 699px) { .dl-tools select.input { flex: 1 1 100%; } .dl-count { margin-left: 0; } }
+</style>
+</head>
+<body data-page="dealers">
+<div id="page" data-title="Đại lý uy tín" data-crumb="Đại lý uy tín">
+  <section class="hero page-hero card glow-mix reveal">
+    <div class="hero-bg" style="background-image:url(img/intro/phuc-sinh-canh-nen-ngay.jpg)"></div>
+    <span class="eyebrow">Mạng lưới Phúc Sinh QuanTum</span>
+    <h1 class="mt-2">Đại lý <em>uy tín</em> trên toàn quốc</h1>
+    <p class="lead">Tìm đại lý gần anh chị để xem sản phẩm trực tiếp, được tư vấn và nhận hàng nhanh.</p>
+  </section>
+  <div class="card glow-gold mt-3">
+    <div class="dl-tools">
+      <input class="input" id="dlQ" type="search" placeholder="Tìm theo tên đại lý, địa chỉ, số điện thoại" aria-label="Tìm đại lý">
+      <select class="input" id="dlA" aria-label="Lọc theo khu vực"><option value="">Tất cả khu vực</option></select>
+      <span class="dl-count" id="dlC"></span>
+    </div>
+  </div>
+  <section class="dealer-grid mt-3" id="dlGrid"></section>
+</div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const { $, esc, icon } = PSQ, D = PSQ.dealers, all = D.list();
+  const areas = [...new Set(all.map(x => x.area).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  $('#dlA').innerHTML += areas.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  const pre = new URLSearchParams(location.search).get('khu-vuc'); if (pre && areas.includes(pre)) $('#dlA').value = pre;
+  const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+  function draw() {
+    const q = fold($('#dlQ').value.trim()), a = $('#dlA').value;
+    const rows = all.filter(x => (!a || x.area === a) && (!q || fold([x.name, x.area, x.address, x.phone, x.note].join(' ')).includes(q)));
+    $('#dlC').textContent = `${rows.length} / ${all.length} đại lý`;
+    $('#dlGrid').innerHTML = rows.length ? rows.map((x, i) => D.card(x, i)).join('') : `<div class="card empty" style="grid-column:1/-1">${icon('search')}${all.length ? 'Chưa có đại lý phù hợp. Anh chị thử từ khóa hoặc khu vực khác.' : 'Danh sách đại lý đang được cập nhật.'}</div>`;
+  }
+  $('#dlQ').addEventListener('input', draw); $('#dlA').addEventListener('change', draw);
+  draw(); PSQ.reveal();
+})();
+</script>
+</body>
+</html>

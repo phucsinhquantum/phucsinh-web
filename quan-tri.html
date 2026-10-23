@@ -151,6 +151,14 @@
             <button class="btn btn-gold" type="submit">Thêm vào danh sách</button>
             <p class="dim" style="font-size:12px">Dán link video, link Shorts hay link chia sẻ đều được. Video đầu danh sách sẽ hiện lớn nhất. Hiện danh sách lưu trên trình duyệt của máy này; khi đưa web lên máy chủ thật, danh sách sẽ hiện cho mọi khách.</p>
           </form>
+          <form id="vbulk" class="stack mt-3" style="gap:10px;border-top:1px solid var(--line);padding-top:16px" novalidate>
+            <h3 style="font-size:15px">Thêm nhiều video cùng lúc</h3>
+            <div class="field"><label for="vbtext">Mỗi dòng một video: Link | Tên khách hàng | Tiêu đề</label>
+              <textarea class="input" id="vbtext" rows="6" placeholder="https://youtu.be/xxxxxxxxxxx | Chị Thanh, TP. Vinh | Cảm nhận sau 1 tháng&#10;https://www.youtube.com/shorts/yyyyyyyyyyy | Anh Vinh"></textarea>
+              <span class="dim" style="font-size:12px">Tên khách và tiêu đề không bắt buộc, chỉ dán link cũng được.</span></div>
+            <p class="err" id="vberr" style="color:var(--red);font-size:13px;min-height:1em;margin:0"></p>
+            <button class="btn btn-outline-gold" type="submit">Thêm tất cả</button>
+          </form>
         </div>
       </div>
     </section>
@@ -176,6 +184,7 @@
 <script src="js/admin/vong-quay.js"></script>
 <script src="js/admin/quy-diem.js"></script>
 <script src="js/admin/gioi-thieu.js"></script>
+<script src="js/admin/dai-ly.js"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, memberInfo, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -214,7 +223,7 @@
     ['Tổng quan', [['overview', 'Bảng điều khiển', 'chart', 'dashboard'], ['videos', 'Video khách hàng', 'activity', 'content']]],
     ['Phả hệ', [['tree', 'Sơ đồ phả hệ', 'users', 'tree'], ['pending', 'Chờ lên cây', 'clock', 'tree'], ['leaders', 'Cấp bậc lãnh đạo', 'star', 'tree']]],
     ['Người dùng', [['members', 'Danh sách thành viên', 'users', 'members'], ['admins', 'Danh sách quản trị', 'shield', 'admins'], ['roles', 'Vai trò & phân quyền', 'lock', 'admins']]],
-    ['Trang web', [['about', 'Trang giới thiệu', 'info', 'content']]],
+    ['Trang web', [['about', 'Trang giới thiệu', 'info', 'content'], ['dealers', 'Đại lý uy tín', 'shield', 'content']]],
     ['Sản phẩm', [['categories', 'Danh mục sản phẩm', 'grid', 'products'], ['products', 'Quản lý sản phẩm', 'bag', 'products']]],
     ['Kiến thức trầm hương', [['postcats', 'Danh mục kiến thức', 'book', 'content'], ['posts', 'Bài viết kiến thức', 'edit', 'content']]],
     ['Đơn hàng & kho', [['orders', 'Danh sách đơn hàng', 'cart', 'orders'], ['stock', 'Thống kê tồn kho', 'chart', 'stock'], ['receipts', 'Phiếu nhập kho', 'download', 'stock']]],
@@ -443,6 +452,21 @@
     if (list.some(v => v.id === id)) { $('#verr').textContent = 'Video này đã có trong danh sách.'; return; }
     list.push({ url, title: $('#vtitle').value.trim(), name: $('#vname').value.trim() });
     V.save(list); e.target.reset(); $('#vprev').innerHTML = ''; videosPane(); toast('Đã thêm video');
+  });
+  $('#vbulk').addEventListener('submit', e => {
+    e.preventDefault();
+    const list = V.list(), have = new Set(list.map(v => v.id)), bad = [];
+    let added = 0, dup = 0;
+    $('#vbtext').value.split('\n').map(l => l.trim()).filter(Boolean).forEach((l, n) => {
+      const [url, name = '', title = ''] = l.split('|').map(x => x.trim()), id = V.ytId(url);
+      if (!id) return bad.push(n + 1);
+      if (have.has(id)) { dup++; return; }
+      have.add(id); list.push({ url, name, title }); added++;
+    });
+    if (!added) { $('#vberr').textContent = bad.length ? `Dòng ${bad.join(', ')} chưa phải link YouTube.` : dup ? 'Các video này đã có trong danh sách.' : 'Anh chị dán ít nhất một link.'; return; }
+    V.save(list); $('#vbtext').value = ''; videosPane();
+    $('#vberr').textContent = bad.length ? `Đã thêm ${added} video. Dòng ${bad.join(', ')} chưa phải link YouTube nên bỏ qua.` : '';
+    toast(`Đã thêm ${added} video${dup ? `, bỏ qua ${dup} video trùng` : ''}`);
   });
   $('#vlistAdm').addEventListener('click', e => {
     const mv = e.target.closest('[data-vmove]'), del = e.target.closest('[data-vdel]'), list = V.list();
