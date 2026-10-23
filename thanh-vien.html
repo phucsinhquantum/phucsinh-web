@@ -776,6 +776,20 @@
   const PANES = { 'tong-quan': pOverview, 'kich-hoat': pActivate, 'dai-ly': pTeam, 'khach-hang': pCustomers, 'lanh-dao': pLeader, 'don-hang': pOrders, vi: pWallet, 'giao-dich': pTx, 'hoa-hong': pCom, 'nap-diem': pTopup, 'ho-so': pProfile, 'dia-chi': pAddr };
 
   /* ---------- chưa đăng nhập ---------- */
+  // nội dung điều khoản khi đăng ký (bản soạn sẵn, cần luật sư xem lại trước khi chạy thật)
+  function termsHtml(P) {
+    const B = SITE.brand, sec = (t, ps) => `<h4>${t}</h4>${ps.map(x => `<p>${x}</p>`).join('')}`;
+    return sec('1. Phạm vi áp dụng', [`Điều khoản này áp dụng cho mọi tài khoản đăng ký trên website và ứng dụng ${esc(B)}. Khi tích vào ô đồng ý, anh chị xác nhận đã đọc, hiểu và chấp nhận toàn bộ nội dung dưới đây.`])
+      + sec('2. Tài khoản', ['Anh chị cung cấp họ tên, số điện thoại, email đúng sự thật và tự bảo mật mật khẩu. Mỗi người chỉ dùng một tài khoản. Tên truy cập và mã thành viên dùng để giới thiệu, chuyển điểm và đối soát, không đổi được sau khi tạo.', 'Công ty có quyền tạm khóa tài khoản có dấu hiệu gian lận, giả mạo thông tin hoặc dùng sai mục đích.'])
+      + sec('3. Cấp bậc thành viên', [`Khách hàng: đăng ký miễn phí, mua hàng như khách thông thường.`, `Cộng tác viên: kích hoạt gói ${money(P.pkgPrice)}, nhận ${ps(P.pkgPoints)} vào ví điểm mua hàng. Phần còn lại là phí dịch vụ nền tảng (gian hàng online, khóa học, công cụ) và không hoàn lại sau khi đã kích hoạt.`, `Đại lý: tổng tiền mua hàng đã thanh toán cộng dồn đạt ${money(P.agentThreshold)}. Gói kích hoạt cộng tác viên không tính vào mốc này.`])
+      + sec('4. Hoa hồng và thu nhập', [`Hoa hồng tính trên đơn mua hàng của người do anh chị giới thiệu trực tiếp: cộng tác viên ${P.ctvRate}%, đại lý ${P.agentRate}%. Hoa hồng chỉ ghi nhận khi đơn hàng ở trạng thái Hoàn thành.`, `Thưởng giới thiệu ${money(P.refBonus)} khi người được giới thiệu kích hoạt cộng tác viên. Đại lý nhận thêm ${P.overrideRate}% thu nhập từ đơn mua hàng của đại lý do mình giới thiệu, khi đủ điều kiện hoạt động trong ${P.activeDays} ngày gần nhất.`, 'Thu nhập phụ thuộc vào kết quả bán hàng thực tế của mỗi người. Công ty không cam kết mức thu nhập cố định nào.'])
+      + sec('5. Ví, điểm và rút tiền', [`1 điểm PS tương đương 1 đồng và chỉ dùng trong hệ thống ${esc(B)}. Điểm mua hàng chỉ dùng để thanh toán đơn hàng.`, `Khi rút hoa hồng hoặc chuyển điểm thưởng, hệ thống khấu trừ thuế thu nhập cá nhân ${P.taxRate}% theo quy định. Số tiền rút tối thiểu mỗi lần là ${money(d0().settings.minWithdraw || 0)}. Lệnh rút được kế toán duyệt và chuyển khoản về tài khoản ngân hàng đúng tên chủ tài khoản.`])
+      + sec('6. Đơn hàng, đổi sản phẩm', ['Đơn đã thanh toán không hủy được vì hoa hồng và điểm đã được ghi nhận. Anh chị có thể đổi sang sản phẩm cùng giá, hoặc sản phẩm giá cao hơn và chuyển bù phần chênh lệch.', 'Sản phẩm lỗi do sản xuất hoặc giao sai mẫu được đổi trong 7 ngày theo chính sách đổi trả. Sản phẩm trầm hương không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.'])
+      + sec('7. Hành vi không được phép', ['Đưa thông tin sai về sản phẩm, công dụng hoặc thu nhập; tự ý hứa hẹn lợi nhuận với người khác; mua bán, chuyển nhượng tài khoản; tạo nhiều tài khoản để hưởng hoa hồng; dùng tên, logo công ty khi chưa được phép. Vi phạm có thể bị thu hồi hoa hồng chưa rút và khóa tài khoản.'])
+      + sec('8. Chính sách bảo mật', ['Công ty thu thập họ tên, số điện thoại, email, địa chỉ giao hàng và lịch sử giao dịch để xử lý đơn hàng, tính hoa hồng, chăm sóc khách hàng và thực hiện nghĩa vụ thuế. Thông tin không được bán hay chia sẻ cho bên thứ ba, trừ đơn vị vận chuyển, ngân hàng và cơ quan nhà nước khi pháp luật yêu cầu.', 'Anh chị có quyền xem, sửa thông tin cá nhân trong trang Hồ sơ và yêu cầu xóa tài khoản qua hotline hoặc email của công ty.'])
+      + sec('9. Thay đổi điều khoản', [`Công ty có thể cập nhật điều khoản và tỉ lệ hoa hồng. Thay đổi được thông báo trên website và áp dụng cho giao dịch phát sinh sau thời điểm thông báo. Mọi thắc mắc xin liên hệ ${esc(SITE.phone)} hoặc ${esc(SITE.email)}.`]);
+  }
+  const d0 = () => ADB.load();
   function guest(mode = 'login') {
     const d = ADB.load(), P = ADB.plan(d), T = ADB.TIERS;
     const tiers = [
@@ -798,12 +812,14 @@
         <div class="tabs" id="atabs" style="width:max-content;max-width:100%"><button type="button" data-m="login" class="${mode === 'login' ? 'on' : ''}">Đăng nhập</button><button type="button" data-m="register" class="${mode === 'register' ? 'on' : ''}">Đăng ký</button></div>
         <form id="af" class="mt-3" novalidate>
           ${mode === 'register' ? `<div class="field"><label for="fn">Họ và tên</label><input class="input" id="fn" name="name" autocomplete="name" required></div>
-          <div class="field mt-2"><label for="fu">Tên truy cập</label><input class="input" id="fu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="Ví dụ minhanh.psq"><small class="dim" id="fuHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px">Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.</small></div>
+          <div class="field mt-2"><label for="fu">Tên truy cập</label><input class="input" id="fu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="Ví dụ minhanh2026"><small class="dim" id="fuHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px">Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.</small></div>
           <div class="field mt-2"><label for="fp">Số điện thoại</label><input class="input" id="fp" name="phone" type="tel" autocomplete="tel" inputmode="tel"></div>` : ''}
           <div class="field mt-2"><label for="fe">Email</label><input class="input" id="fe" name="email" type="email" autocomplete="email" required></div>
           <div class="field mt-2"><label for="fw">Mật khẩu</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>
           ${mode === 'register' ? `<div class="field mt-2"><label for="fr">Mã giới thiệu (nếu có)</label><input class="input" id="fr" name="ref" autocomplete="off" placeholder="Ví dụ PS1001" value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>
-          <label class="check mt-2"><input type="checkbox" name="agree" required> Tôi đồng ý với điều khoản và chính sách bảo mật</label>` : ''}
+          <div class="terms-h mt-2"><b>Điều khoản sử dụng và chính sách bảo mật</b><small id="termsHint">Kéo xuống đọc hết để đồng ý</small></div>
+          <div class="terms" id="terms" tabindex="0" role="document" aria-label="Điều khoản sử dụng">${termsHtml(P)}</div>
+          <label class="check mt-2 terms-ok"><input type="checkbox" name="agree" id="agree" required disabled> Tôi đã đọc và đồng ý với điều khoản sử dụng và chính sách bảo mật</label>` : ''}
           <p class="red mt-1" id="err" style="font-size:13px;min-height:20px"></p>
           <button class="btn btn-gold btn-block btn-lg" type="submit">${mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</button>
           <p class="dim mt-2" style="font-size:12px">${mode === 'login' ? 'Tài khoản dùng thử: khach1@email.com / 123456' : 'Mật khẩu tối thiểu 6 ký tự.'}</p>
@@ -821,6 +837,8 @@
     const fu = $('#fu'), unameErr = v => !v ? '' : !UNAME.test(v) ? 'Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.' : unameTaken(ADB.load(), v, null) ? 'Tên truy cập này đã có người dùng.' : '';
     if (fu) fu.addEventListener('input', () => { const v = fu.value.trim().toLowerCase(), er = unameErr(v);
       $('#fuHint').innerHTML = !v ? 'Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.' : er ? `<span class="red">${er}</span>` : `<span class="green">Dùng được: @${esc(v)}</span>`; });
+    // điều khoản: phải kéo đọc tới cuối thì ô đồng ý mới bấm được
+    const tm = $('#terms'); if (tm) { const ag = $('#agree'), seen = () => { if (tm.scrollTop + tm.clientHeight >= tm.scrollHeight - 12) { ag.disabled = false; $('#termsHint').textContent = 'Đã đọc hết'; $('#termsHint').classList.add('green'); tm.removeEventListener('scroll', seen); } }; tm.addEventListener('scroll', seen, { passive: true }); seen(); }
     $('#af').addEventListener('submit', e => {
       e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), err = $('#err');
       let wanted;
