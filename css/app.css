@@ -900,3 +900,10 @@ html.reduce-motion .gift-blink svg { animation: none !important; color: #ff4d4d;
 .dealer-reg { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--gold); padding: 8px 10px; border-radius: 10px; border: 1px dashed rgba(243, 199, 107, .4); background: rgba(243, 199, 107, .05); }
 .dealer-reg:hover { background: rgba(243, 199, 107, .12); }
 .dealer-reg svg { width: 14px; height: 14px; flex: none; }
+/* ảnh, chú thích, liên kết trong bài viết kiến thức */
+.prose figure { margin: 22px 0; }
+.prose img { max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 14px; border: 1px solid var(--line-2); }
+.prose figcaption { margin-top: 8px; text-align: center; font-size: 13px; color: var(--text-3); }
+.prose a { color: var(--cyan); text-decoration: underline; text-underline-offset: 3px; }
+.prose ol { margin: 0 0 14px; padding-left: 22px; }
+.prose hr { border: 0; height: 1px; margin: 26px 0; background: linear-gradient(90deg, transparent, rgba(243, 199, 107, .45), transparent); }

@@ -51,3 +51,6 @@ Quản trị > Trang web > Đại lý uy tín: thêm, sửa (ảnh, tên, khu v�
 
 ## Video khách hàng
 Quản trị > Video khách hàng có thêm khung "Thêm nhiều video cùng lúc" (mỗi dòng: Link | Tên khách | Tiêu đề). Ở trang chủ, nút lướt video luôn hiện khi có từ 2 video và quay vòng.
+
+## Soạn bài viết kiến thức
+Quản trị > Kiến thức trầm hương > Bài viết kiến thức > Viết bài mới / Sửa: trang soạn bài đầy đủ (tiêu đề, tóm tắt, thanh công cụ: tiêu đề mục, đậm, nghiêng, danh sách, trích dẫn, liên kết, chèn ảnh, chế độ HTML), ảnh bìa tải lên tự cắt 1600 × 900 (16:9), ảnh trong bài tự thu về ngang 1200 px, tự lưu nháp, xem trước, Lưu nháp (ẩn) hoặc Đăng bài. Dán từ Word tự làm sạch.

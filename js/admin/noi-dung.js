@@ -35,8 +35,10 @@
   /* ---------- bài viết: danh sách đầy đủ (kể cả bài ẩn) ---------- */
   const allPosts = () => store.get(KEY.posts, null) || POSTS.map(p => ({ ...p }));
   function savePosts(list) {
-    store.set(KEY.posts, list);
+    try { localStorage.setItem(KEY.posts, JSON.stringify(list)); }
+    catch (e) { toast('Bộ nhớ trình duyệt đã đầy. Hãy bớt ảnh trong bài hoặc xóa bài cũ rồi lưu lại.'); return false; }
     POSTS.splice(0, POSTS.length, ...list.filter(p => !p.hidden));
+    return true;
   }
 
   /* ---------- danh mục dùng chung cho sản phẩm và kiến thức ---------- */
@@ -123,6 +125,289 @@
   const cleanUrl = s => String(s || '').trim().replace(/["'()\s]/g, '');
   const st = { q: '', cat: '', vis: '' };
 
+
+  /* ---------- trang soạn bài viết ---------- */
+  // Kích thước ảnh khớp bố cục web:
+  //  - Ảnh bìa: 1600 × 900 px (tỉ lệ 16:9). Thẻ bài ở trang chủ / Kiến thức hiện đúng 16:9; đầu trang bài viết cắt bớt trên dưới.
+  //  - Ảnh trong bài: ngang 1200 px, cao tùy ý (khuyên 1200 × 800 px, tỉ lệ 3:2). Ảnh lớn hơn được tự thu nhỏ.
+  const COVER_W = 1600, COVER_H = 900, BODY_W = 1200;
+  const DRAFT = 'psq_post_draft_v1';
+  function loadImg(file) {
+    return new Promise((ok, fail) => { const url = URL.createObjectURL(file), img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); img.naturalWidth ? ok(img) : fail(new Error('empty')); };
+      img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('decode')); }; img.src = url; });
+  }
+  // ảnh bìa: cắt giữa về đúng 16:9 rồi thu về 1600 × 900
+  async function coverFrom(file) {
+    const img = await loadImg(file), W = img.naturalWidth, H = img.naturalHeight, r = COVER_W / COVER_H;
+    let sw = W, sh = W / r; if (sh > H) { sh = H; sw = H * r; }
+    const c = document.createElement('canvas'); c.width = Math.min(COVER_W, Math.round(sw)); c.height = Math.round(c.width / r);
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh, 0, 0, c.width, c.height);
+    return { src: c.toDataURL('image/jpeg', 0.82), w: W, h: H, small: W < COVER_W * 0.6 };
+  }
+  // ảnh trong bài: giữ tỉ lệ, ngang tối đa 1200
+  async function bodyFrom(file) {
+    const img = await loadImg(file), W = img.naturalWidth, H = img.naturalHeight, k = Math.min(1, BODY_W / W);
+    const c = document.createElement('canvas'); c.width = Math.round(W * k); c.height = Math.round(H * k);
+    const g = c.getContext('2d'); g.fillStyle = '#0e1417'; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, c.width, c.height);
+    return { src: c.toDataURL('image/jpeg', 0.82), w: W, h: H };
+  }
+  const pick = () => new Promise(ok => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.onchange = () => ok(f.files && f.files[0]); f.click(); });
+  // làm sạch HTML: chỉ giữ thẻ trình bày bài viết, bỏ script / style / thuộc tính lạ
+  const ALLOW = { P: [], H2: [], H3: [], STRONG: [], B: [], EM: [], I: [], U: [], UL: [], OL: [], LI: [], BLOCKQUOTE: [], A: ['href'], BR: [], FIGURE: [], FIGCAPTION: [], IMG: ['src', 'alt'], HR: [] };
+  function clean(html) {
+    const box = document.createElement('div'); box.innerHTML = html;
+    (function walk(n) {
+      [...n.childNodes].forEach(c => {
+        if (c.nodeType === 3) return;
+        if (c.nodeType !== 1) { c.remove(); return; }
+        let tag = c.tagName;
+        if (tag === 'DIV') { const p = document.createElement('p'); while (c.firstChild) p.appendChild(c.firstChild); c.replaceWith(p); c = p; tag = 'P'; }
+        if (tag === 'H1') { const h = document.createElement('h2'); while (c.firstChild) h.appendChild(c.firstChild); c.replaceWith(h); c = h; tag = 'H2'; }
+        if (/^(H4|H5|H6)$/.test(tag)) { const h = document.createElement('h3'); while (c.firstChild) h.appendChild(c.firstChild); c.replaceWith(h); c = h; tag = 'H3'; }
+        if (!ALLOW[tag]) { if (/^(SCRIPT|STYLE|IFRAME|OBJECT|EMBED|FORM|INPUT|BUTTON|SVG|MATH)$/.test(tag)) c.remove(); else { walk(c); c.replaceWith(...c.childNodes); } return; }
+        [...c.attributes].forEach(a => { if (!ALLOW[tag].includes(a.name)) c.removeAttribute(a.name); });
+        if (tag === 'A') { const h = c.getAttribute('href') || ''; if (!/^(https?:|mailto:|tel:|[a-z0-9-]+\.html|#)/i.test(h)) c.removeAttribute('href'); else if (/^https?:/i.test(h)) { c.setAttribute('target', '_blank'); c.setAttribute('rel', 'noopener'); } }
+        if (tag === 'IMG') { const s = c.getAttribute('src') || ''; if (!/^(data:image\/(jpeg|png|webp|gif);base64,|https:\/\/|img\/)/i.test(s)) { c.remove(); return; } c.setAttribute('loading', 'lazy'); }
+        walk(c);
+      });
+    })(box);
+    box.querySelectorAll('p').forEach(x => { if (x.querySelector('ul,ol,figure,h2,h3,blockquote,p,hr')) x.replaceWith(...x.childNodes); });
+    box.querySelectorAll('figcaption').forEach(x => { if (!x.closest('figure')) { const pr = x.previousElementSibling; if (pr && pr.tagName === 'FIGURE' && !pr.querySelector('figcaption')) pr.appendChild(x); else x.remove(); } });
+    box.querySelectorAll('figure').forEach(x => { if (!x.querySelector('img')) x.remove(); });
+    box.querySelectorAll('p,h2,h3,li,blockquote').forEach(x => { if (!x.textContent.trim() && !x.querySelector('img,br')) x.remove(); });
+    return box.innerHTML.trim();
+  }
+  const kb = s => Math.round((s || '').length * 0.75 / 1024);
+  const usedMB = () => { let n = 0; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || '').length; } } catch (e) {} return n * 2 / 1048576; };
+
+  if (!document.getElementById('adm-css-soan-bai')) {
+    const st2 = document.createElement('style'); st2.id = 'adm-css-soan-bai';
+    st2.textContent = `
+      .ed-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+      .ed-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+      .ed-head h3 { margin-right: auto; }
+      .ed-title { width: 100%; font-family: var(--display); font-size: clamp(24px, 2.6vw, 34px); font-weight: 600; line-height: 1.2; background: transparent; border: 0; border-bottom: 1px solid var(--line-2); padding: 6px 0 12px; color: var(--text); outline: none; }
+      .ed-title:focus { border-color: var(--gold); }
+      .ed-bar { position: sticky; top: 8px; z-index: 6; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; margin-top: 14px; border: 1px solid var(--line-2); border-radius: 12px 12px 0 0; background: rgba(10, 14, 16, .96); }
+      .ed-bar button, .ed-bar select { height: 34px; min-width: 34px; padding: 0 9px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--text-2); cursor: pointer; font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+      .ed-bar select { border-color: var(--line-2); background: rgba(255,255,255,.03); }
+      .ed-bar button:hover, .ed-bar button.on { color: var(--gold); border-color: rgba(243,199,107,.4); background: rgba(243,199,107,.08); }
+      .ed-bar button svg { width: 15px; height: 15px; }
+      .ed-bar .sep { width: 1px; background: var(--line-2); margin: 4px 4px; }
+      .ed-area { min-height: 460px; padding: 22px 24px; border: 1px solid var(--line-2); border-top: 0; border-radius: 0 0 12px 12px; background: rgba(0,0,0,.18); outline: none; max-width: none !important; overflow-wrap: anywhere; }
+      .ed-area:focus { border-color: rgba(243,199,107,.45); }
+      .ed-area:empty::before { content: attr(data-ph); color: var(--text-3); }
+      .ed-area img { max-width: 100%; height: auto; border-radius: 12px; display: block; margin: 0 auto; }
+      .ed-area figure { margin: 18px 0; } .ed-area figcaption { font-size: 13px; color: var(--text-3); text-align: center; margin-top: 6px; }
+      .ed-area a { color: var(--cyan); text-decoration: underline; }
+      .ed-html { width: 100%; min-height: 460px; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; border-radius: 0 0 12px 12px; }
+      .ed-side { display: grid; gap: 14px; position: sticky; top: 8px; }
+      .ed-side .card { padding: 16px; }
+      .ed-side h4 { font-size: 14px; margin: 0 0 10px; color: var(--gold); }
+      .ed-cover { position: relative; aspect-ratio: 16/9; border-radius: 12px; border: 1px dashed rgba(243,199,107,.45); background: #0c1114 center/cover no-repeat; display: grid; place-items: center; text-align: center; cursor: pointer; overflow: hidden; color: var(--text-3); font-size: 13px; }
+      .ed-cover.has { border-style: solid; }
+      .ed-cover.has > span { display: none; }
+      .ed-size { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(79,230,223,.06); border: 1px solid rgba(79,230,223,.25); font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+      .ed-size b { color: var(--cyan); }
+      .ed-warn { color: var(--amber, #f3c76b); font-size: 12.5px; margin-top: 6px; }
+      .ed-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--text-3); margin-top: 10px; }
+      .ed-side .field + .field { margin-top: 10px; }
+      .ed-pv .post-cover { border-radius: 12px 12px 0 0; }
+      .ed-pv .post-card { pointer-events: none; }
+      @media (max-width: 1180px) { .ed-wrap { grid-template-columns: 1fr; } .ed-side { position: static; } }
+      @media (max-width: 699px) { .ed-area { padding: 16px; min-height: 340px; } .ed-head .btn { flex: 1 1 auto; } }`;
+    document.head.appendChild(st2);
+  }
+
+  function editor(el, p0, back) {
+    const isNew = !p0, list = allPosts();
+    let p = p0 ? list.find(x => x.id === p0.id) : null;
+    let draft = null; try { draft = JSON.parse(localStorage.getItem(DRAFT)); } catch (e) {}
+    const base = p ? { ...p } : { id: '', cat: (POST_CATS[0] || {}).id || '', title: '', excerpt: '', body: '', cover: '', date: toVn(PSQ.today()), read: 0 };
+    const useDraft = draft && draft.for === (p ? p.id : '') && draft.at && (draft.title || draft.body) && confirm('Có bản nháp chưa lưu của bài này (' + new Date(draft.at).toLocaleString('vi-VN') + '). Mở lại bản nháp?');
+    const v = useDraft ? { ...base, ...draft } : base;
+    let cover = v.cover || '', htmlMode = false, dirty = false;
+    const B = (cmd, ic, label, arg) => `<button type="button" data-cmd="${cmd}"${arg ? ` data-arg="${arg}"` : ''} title="${label}" aria-label="${label}">${ic}</button>`;
+    el.innerHTML = `<div class="card glow-cyan">
+      <div class="ed-head"><h3>${isNew ? 'Viết bài mới' : 'Sửa bài viết'}</h3>
+        <button class="btn btn-sm btn-ghost" type="button" data-back>${icon('back')} Danh sách bài</button>
+        <button class="btn btn-sm" type="button" data-pv>${icon('eye')} Xem trước</button>
+        <button class="btn btn-sm btn-outline-gold" type="button" data-save="hide">Lưu nháp (ẩn)</button>
+        <button class="btn btn-sm btn-gold" type="button" data-save="show">${icon('check')} ${isNew ? 'Đăng bài' : 'Lưu và hiện'}</button></div>
+      <div class="ed-wrap">
+        <div>
+          <input class="ed-title" id="edT" maxlength="140" placeholder="Nhập tiêu đề bài viết" value="${esc(v.title)}">
+          <div class="field mt-2"><label for="edX">Tóm tắt (hiện dưới tiêu đề và trên thẻ bài, 1 đến 2 câu)</label><textarea class="input" id="edX" maxlength="300" style="min-height:70px">${esc(v.excerpt)}</textarea><span class="nd-hint" id="edXc"></span></div>
+          <div class="ed-bar" id="edBar">
+            <select data-block aria-label="Kiểu chữ"><option value="p">Đoạn văn</option><option value="h2">Tiêu đề mục</option><option value="h3">Tiêu đề nhỏ</option></select>
+            <span class="sep"></span>
+            ${B('bold', '<b>B</b>', 'In đậm (Ctrl+B)')}${B('italic', '<i>I</i>', 'In nghiêng (Ctrl+I)')}${B('underline', '<u>U</u>', 'Gạch chân (Ctrl+U)')}
+            <span class="sep"></span>
+            ${B('insertUnorderedList', '• Danh sách', 'Danh sách chấm')}${B('insertOrderedList', '1. Danh sách', 'Danh sách số')}${B('quote', '❝ Trích dẫn', 'Khung trích dẫn')}
+            <span class="sep"></span>
+            ${B('link', icon('globe') + ' Liên kết', 'Chèn liên kết')}${B('image', icon('plus') + ' Chèn ảnh', 'Chèn ảnh vào bài')}${B('insertHorizontalRule', '―', 'Đường kẻ ngang')}
+            <span class="sep"></span>
+            ${B('removeFormat', 'Xóa định dạng', 'Xóa định dạng')}${B('undo', '↶', 'Hoàn tác')}${B('redo', '↷', 'Làm lại')}
+            <button type="button" data-html style="margin-left:auto" title="Xem và sửa mã HTML">&lt;/&gt; HTML</button>
+          </div>
+          <div class="prose ed-area" id="edB" contenteditable="true" data-ph="Bắt đầu viết nội dung tại đây. Dùng thanh công cụ phía trên để tạo tiêu đề mục, danh sách, chèn ảnh..."></div>
+          <textarea class="input ed-html" id="edH" hidden spellcheck="false"></textarea>
+          <div class="ed-stats"><span id="edW"></span><span id="edS"></span><span id="edAuto"></span></div>
+          <p class="nd-hint mt-1">Viết về văn hóa, cách chọn và bảo quản trầm. Không nêu công dụng chữa bệnh. Dán chữ từ Word hay web khác sẽ tự bỏ định dạng lạ.</p>
+        </div>
+        <aside class="ed-side">
+          <div class="card"><h4>Ảnh bìa</h4>
+            <div class="ed-cover${cover ? ' has' : ''}" id="edC" role="button" tabindex="0" style="${cover ? `background-image:url(${esc(cleanUrl(cover))})` : ''}"><span>${icon('plus')}<br>Bấm để tải ảnh bìa</span></div>
+            <div class="row mt-1" style="gap:8px;flex-wrap:wrap"><button class="btn btn-sm" type="button" data-cpick>${cover ? 'Đổi ảnh' : 'Tải ảnh'}</button><button class="btn btn-sm btn-ghost" type="button" data-cnone ${cover ? '' : 'hidden'}>Bỏ ảnh</button>
+              <select class="input" data-clib style="height:32px;font-size:12px;flex:1 1 140px;width:auto"><option value="">Hoặc chọn ảnh có sẵn</option>${COVERS.map((c, i) => `<option value="${esc(c)}">Ảnh có sẵn ${i + 1}</option>`).join('')}</select></div>
+            <div class="ed-warn" id="edCw"></div>
+            <div class="ed-size"><b>Kích thước ảnh bìa: 1600 × 900 px</b> (ngang 16 : cao 9), file JPG dưới 1 MB. Ảnh khác tỉ lệ sẽ được tự cắt ở giữa, nên đặt nội dung chính vào giữa ảnh.<br><b>Ảnh trong bài: ngang 1200 px</b>, cao tùy ý (đẹp nhất 1200 × 800 px). Ảnh lớn hơn được tự thu nhỏ.</div>
+          </div>
+          <div class="card"><h4>Thông tin đăng</h4>
+            <div class="field"><label for="edCat">Danh mục</label><select class="input" id="edCat">${POST_CATS.map(c => `<option value="${c.id}"${c.id === v.cat ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+            <div class="field"><label for="edD">Ngày đăng</label><input class="input" type="date" id="edD" value="${toIso(v.date)}"></div>
+            <div class="field"><label for="edR">Thời gian đọc (phút, để 0 sẽ tự tính)</label><input class="input" type="number" min="0" max="60" id="edR" value="${+v.read || 0}"></div>
+            <label class="check mt-2"><input type="checkbox" id="edF"${v.featured ? ' checked' : ''}> Đặt làm bài nổi bật (hiện lớn đầu trang Kiến thức)</label>
+            <div class="ed-stats"><span>Trạng thái: ${p ? (p.hidden ? '<b class="red">Đang ẩn</b>' : '<b class="green">Đang hiện</b>') : 'Bài mới'}</span><span id="edMem"></span></div>
+          </div>
+          <div class="card ed-pv"><h4>Thẻ bài sẽ hiện như sau</h4><div id="edPv"></div></div>
+          <p class="red" id="edE" style="font-size:13px;min-height:1em;margin:0"></p>
+        </aside>
+      </div></div>`;
+    const ed = $('#edB', el), html = $('#edH', el), T = $('#edT', el), X = $('#edX', el);
+    ed.innerHTML = v.body || '';
+    try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
+    const body = () => clean(htmlMode ? html.value : ed.innerHTML);
+    const stats = () => {
+      const b = body(), words = b.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length, imgs = (b.match(/<img/g) || []).length;
+      $('#edW', el).textContent = `${words.toLocaleString('vi-VN')} chữ · khoảng ${Math.max(1, Math.round(words / 220))} phút đọc`;
+      $('#edS', el).textContent = `${imgs} ảnh trong bài · bài nặng khoảng ${kb(b) + kb(cover)} KB`;
+      $('#edMem', el).textContent = `Bộ nhớ trình duyệt đã dùng ${usedMB().toFixed(1)} / khoảng 5 MB`;
+      $('#edXc', el).textContent = `${X.value.length} / 300 ký tự`;
+      const c = POST_CATS.find(x => x.id === $('#edCat', el).value);
+      $('#edPv', el).innerHTML = `<div class="card post-card" style="box-shadow:none"><div class="post-cover" style="background-image:url(${esc(cleanUrl(cover || COVERS[0]))})"></div><div class="post-body"><div class="post-meta"><span class="badge gold">${esc(c ? c.name : '')}</span></div><h3>${esc(T.value || 'Tiêu đề bài viết')}</h3><small class="dim">${esc(toVn($('#edD', el).value || PSQ.today()))} · ${+$('#edR', el).value || Math.max(1, Math.round(words / 220))} phút đọc</small></div></div>`;
+    };
+    // tự lưu nháp mỗi khi gõ (chỉ trên máy này)
+    let at; const autosave = () => { dirty = true; clearTimeout(at); at = setTimeout(() => {
+      try { localStorage.setItem(DRAFT, JSON.stringify({ for: p ? p.id : '', at: Date.now(), title: T.value, excerpt: X.value, body: htmlMode ? html.value : ed.innerHTML, cover, cat: $('#edCat', el).value, date: toVn($('#edD', el).value), read: +$('#edR', el).value || 0, featured: $('#edF', el).checked })); $('#edAuto', el).textContent = 'Đã tự lưu nháp lúc ' + new Date().toLocaleTimeString('vi-VN'); }
+      catch (e) { $('#edAuto', el).textContent = 'Không tự lưu được nháp (bộ nhớ đầy)'; }
+      stats(); }, 700); };
+    [T, X, ed, html].forEach(n => n.addEventListener('input', autosave));
+    ['edCat', 'edD', 'edR', 'edF'].forEach(id => $('#' + id, el).addEventListener('change', autosave));
+    stats();
+
+    // thanh công cụ
+    // chèn khối (ảnh) ngay sau đoạn đang đứng, rồi đặt con trỏ vào đoạn mới bên dưới
+    const insertBlock = h => {
+      const sel = getSelection(); let n = sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
+      while (n && n.parentNode !== ed) n = n.parentNode;
+      const tmp = document.createElement('div'); tmp.innerHTML = h; const blk = tmp.firstElementChild, after = document.createElement('p'); after.innerHTML = '<br>';
+      if (n && n.parentNode === ed) { const empty = !n.textContent.trim() && !n.querySelector('img'); n.after(blk); blk.after(after); if (empty && n.tagName === 'P') n.remove(); }
+      else { ed.appendChild(blk); ed.appendChild(after); }
+      const r = document.createRange(); r.setStart(after, 0); r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
+    };
+    const exec = (c, a = null) => { ed.focus(); document.execCommand(c, false, a); autosave(); syncBar(); };
+    const syncBar = () => {
+      if (htmlMode) return;
+      ['bold', 'italic', 'underline', 'insertUnorderedList', 'insertOrderedList'].forEach(c => { const b = $(`[data-cmd="${c}"]`, el); try { b.classList.toggle('on', document.queryCommandState(c)); } catch (e) {} });
+      let blk = ''; try { blk = String(document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''); } catch (e) {}
+      $('[data-block]', el).value = ['h2', 'h3'].includes(blk) ? blk : 'p';
+      $('[data-cmd="quote"]', el).classList.toggle('on', blk === 'blockquote');
+    };
+    document.addEventListener('selectionchange', () => { if (el.contains(document.activeElement) && document.activeElement === ed) syncBar(); });
+    $('[data-block]', el).addEventListener('change', e => exec('formatBlock', e.target.value));
+    let saved = null; const keep = () => { const s = getSelection(); if (s.rangeCount && ed.contains(s.anchorNode)) saved = s.getRangeAt(0).cloneRange(); };
+    const restore = () => { ed.focus(); if (saved) { const s = getSelection(); s.removeAllRanges(); s.addRange(saved); } };
+    ed.addEventListener('keyup', keep); ed.addEventListener('mouseup', keep); ed.addEventListener('blur', keep);
+    $('#edBar', el).addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+    $('#edBar', el).addEventListener('click', async e => {
+      const b = e.target.closest('[data-cmd]'); if (!b || htmlMode) return;
+      const c = b.dataset.cmd;
+      if (c === 'quote') { let blk = ''; try { blk = String(document.queryCommandValue('formatBlock')).toLowerCase(); } catch (x) {} return exec('formatBlock', blk.includes('blockquote') ? 'p' : 'blockquote'); }
+      if (c === 'link') {
+        keep(); const sel = String(getSelection()), url = prompt('Dán đường dẫn (https://... hoặc tên trang như san-pham.html):', 'https://'); if (!url || url === 'https://') return;
+        restore(); if (!sel) document.execCommand('insertHTML', false, `<a href="${esc(url)}">${esc(url)}</a>`); else document.execCommand('createLink', false, url); autosave(); return;
+      }
+      if (c === 'image') {
+        keep(); const file = await pick(); if (!file) return;
+        if (!/^image\//.test(file.type)) return toast('Hãy chọn một file ảnh');
+        try {
+          const im = await bodyFrom(file), cap = prompt('Chú thích dưới ảnh (để trống nếu không cần):', '') || '';
+          restore(); insertBlock(`<figure><img src="${im.src}" alt="${esc(cap || T.value)}">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`);
+          if (im.w < 800) toast(`Ảnh chỉ rộng ${im.w} px, có thể bị mờ. Nên dùng ảnh ngang 1200 px.`); else toast('Đã chèn ảnh');
+          autosave();
+        } catch (x) { toast('Không đọc được ảnh này, thử ảnh JPG hoặc PNG khác'); }
+        return;
+      }
+      exec(c);
+    });
+    // dán chữ: bỏ định dạng lạ từ Word / web
+    ed.addEventListener('paste', e => {
+      const h = e.clipboardData && e.clipboardData.getData('text/html'), t = e.clipboardData && e.clipboardData.getData('text/plain');
+      if (!h && !t) return; e.preventDefault();
+      const safe = h ? clean(h.replace(/<img[^>]*>/gi, '')) : t.split(/\n{2,}/).map(x => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('');
+      document.execCommand('insertHTML', false, safe); autosave();
+    });
+    $('[data-html]', el).addEventListener('click', e => {
+      htmlMode = !htmlMode; e.currentTarget.classList.toggle('on', htmlMode);
+      if (htmlMode) { html.value = clean(ed.innerHTML).replace(/(<\/(p|h2|h3|ul|ol|blockquote|figure)>)/g, '$1\n'); }
+      else ed.innerHTML = clean(html.value);
+      ed.hidden = htmlMode; html.hidden = !htmlMode; $$('#edBar [data-cmd], #edBar [data-block]', el).forEach(b => b.disabled = htmlMode); stats();
+    });
+
+    // ảnh bìa
+    const setCover = src => { cover = src; const c = $('#edC', el); c.classList.toggle('has', !!src); c.style.backgroundImage = src ? `url(${cleanUrl(src)})` : ''; $('[data-cpick]', el).textContent = src ? 'Đổi ảnh' : 'Tải ảnh'; $('[data-cnone]', el).hidden = !src; autosave(); stats(); };
+    const upCover = async () => {
+      const file = await pick(); if (!file) return; if (!/^image\//.test(file.type)) return toast('Hãy chọn một file ảnh');
+      try { const r = await coverFrom(file); setCover(r.src);
+        $('#edCw', el).textContent = r.small ? `Ảnh gốc ${r.w} × ${r.h} px hơi nhỏ, có thể bị mờ. Nên dùng ảnh 1600 × 900 px.` : Math.abs(r.w / r.h - 16 / 9) > 0.05 ? `Ảnh gốc ${r.w} × ${r.h} px khác tỉ lệ 16:9 nên đã được cắt ở giữa. Xem khung trên để kiểm tra.` : `Ảnh gốc ${r.w} × ${r.h} px, đúng tỉ lệ.`;
+      } catch (x) { toast('Không đọc được ảnh này, thử ảnh JPG hoặc PNG khác'); }
+    };
+    $('#edC', el).addEventListener('click', upCover); $('#edC', el).addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); upCover(); } });
+    $('[data-cpick]', el).addEventListener('click', upCover);
+    $('[data-cnone]', el).addEventListener('click', () => { setCover(''); $('#edCw', el).textContent = ''; });
+    $('[data-clib]', el).addEventListener('change', e => { if (e.target.value) { setCover(e.target.value); $('#edCw', el).textContent = ''; e.target.value = ''; } });
+
+    // xem trước bài đầy đủ
+    $('[data-pv]', el).addEventListener('click', () => {
+      const c = POST_CATS.find(x => x.id === $('#edCat', el).value);
+      const m = modal(`<div class="card-head"><div><span class="badge gold">${esc(c ? c.name : '')}</span><h3 class="mt-1">${esc(T.value || 'Tiêu đề bài viết')}</h3></div>${closeBtn}</div>
+        <div class="nd-prev" style="background-image:url(${esc(cleanUrl(cover || COVERS[0]))})"></div>
+        ${X.value ? `<p class="lead mt-2" style="color:var(--text-2)">${esc(X.value)}</p>` : ''}
+        <div class="prose mt-2" style="max-width:none">${body() || '<p class="dim">Chưa có nội dung.</p>'}</div>`);
+      $('.modal', m.el).classList.add('nd-wide');
+    });
+    const leave = () => { if (dirty && !confirm('Rời trang soạn bài? Bản nháp vẫn được giữ trên máy này, lần sau mở lại được.')) return; back(); };
+    $('[data-back]', el).addEventListener('click', leave);
+
+    // lưu
+    $$('[data-save]', el).forEach(b => b.addEventListener('click', () => {
+      const err = $('#edE', el), title = T.value.trim(), b2 = body(), show = b.dataset.save === 'show';
+      err.textContent = '';
+      if (!title) { err.textContent = 'Anh chị nhập tiêu đề bài viết.'; T.focus(); return; }
+      if (!$('#edCat', el).value) { err.textContent = 'Cần tạo danh mục kiến thức trước.'; return; }
+      if (!b2) { err.textContent = 'Nội dung bài viết đang trống.'; ed.focus(); return; }
+      if (show && !cover) { if (!confirm('Bài chưa có ảnh bìa. Dùng ảnh có sẵn của web và đăng luôn?')) return; }
+      const words = b2.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length, L = allPosts();
+      const cur = p ? L.find(x => x.id === p.id) : null;
+      const np = Object.assign(cur || {}, {
+        title, cat: $('#edCat', el).value, date: toVn($('#edD', el).value || PSQ.today()), cover: cover || COVERS[0],
+        excerpt: X.value.trim(), body: b2, read: +$('#edR', el).value || Math.max(1, Math.round(words / 220)), featured: $('#edF', el).checked
+      });
+      if (show) delete np.hidden; else np.hidden = true;
+      if (!show && L.filter(x => !x.hidden && x !== np).length < 1) { err.textContent = 'Cần giữ ít nhất một bài đang hiện, hãy bấm Đăng bài.'; return; }
+      if (np.featured) L.forEach(x => { if (x !== np) delete x.featured; }); else delete np.featured;
+      if (!cur) { np.id = uniq(slug(title), L.map(x => x.id)); L.unshift(np); }
+      if (!savePosts(L)) { err.textContent = 'Chưa lưu được vì bộ nhớ trình duyệt đã đầy. Hãy bớt ảnh hoặc dùng ảnh nhỏ hơn.'; return; }
+      try { localStorage.removeItem(DRAFT); } catch (e) {}
+      audit(cur ? 'Sửa bài viết' : 'Thêm bài viết', title + (show ? '' : ' (nháp, đang ẩn)'));
+      toast(show ? (cur ? 'Đã lưu và hiện bài viết' : 'Đã đăng bài viết') : 'Đã lưu nháp, bài đang ẩn');
+      dirty = false; p = np; back();
+    }));
+    T.focus();
+  }
+
   ADMIN_MODULES.posts = {
     render(el) {
       const list = allPosts(), edit = ADMIN.can('content');
@@ -160,54 +445,17 @@
       $$('[data-hide]', el).forEach(b => b.addEventListener('click', () => {
         const p = list.find(x => x.id === b.dataset.hide);
         if (!p.hidden && list.filter(x => !x.hidden).length <= 1) { toast('Cần giữ ít nhất một bài đang hiện'); return; }
-        p.hidden = !p.hidden; savePosts(list); audit(p.hidden ? 'Ẩn bài viết' : 'Hiện bài viết', p.title);
+        p.hidden = !p.hidden; if (!savePosts(list)) { p.hidden = !p.hidden; return; } audit(p.hidden ? 'Ẩn bài viết' : 'Hiện bài viết', p.title);
         toast(p.hidden ? 'Đã ẩn bài viết' : 'Bài viết đã hiện lại'); this.render(el);
       }));
       $$('[data-del]', el).forEach(b => b.addEventListener('click', () => {
         const i = list.findIndex(x => x.id === b.dataset.del), p = list[i];
         if (!p.hidden && list.filter(x => !x.hidden).length <= 1) { toast('Cần giữ ít nhất một bài đang hiện'); return; }
         if (!confirm(`Xóa hẳn bài "${p.title}"? Có thể chọn Ẩn nếu chỉ muốn tạm gỡ.`)) return;
-        list.splice(i, 1); savePosts(list); audit('Xóa bài viết', p.title); toast('Đã xóa bài viết'); this.render(el);
+        list.splice(i, 1); if (!savePosts(list)) return; audit('Xóa bài viết', p.title); toast('Đã xóa bài viết'); this.render(el);
       }));
     },
-    edit(el, p) {
-      const isNew = !p, list = allPosts();
-      p = p ? list.find(x => x.id === p.id) : { id: '', cat: (POST_CATS[0] || {}).id || '', title: '', excerpt: '', body: '', cover: COVERS[0], date: toVn(PSQ.today()), read: 0 };
-      const m = modal(`<form novalidate><div class="card-head"><h3>${isNew ? 'Viết bài mới' : 'Sửa bài viết'}</h3>${closeBtn}</div>
-        <div class="form-grid">
-          <div class="field full"><label>Tiêu đề</label><input class="input" name="title" value="${esc(p.title)}" required maxlength="140"></div>
-          <div class="field"><label>Danh mục</label><select class="input" name="cat">${POST_CATS.map(c => `<option value="${c.id}"${c.id === p.cat ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
-          <div class="field"><label>Ngày đăng</label><input class="input" type="date" name="date" value="${toIso(p.date)}"></div>
-          <div class="field full"><label>Ảnh bìa (đường dẫn trong img/ hoặc https://...)</label><input class="input" name="cover" list="ndCovers" value="${esc(p.cover || '')}"><datalist id="ndCovers">${COVERS.map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
-          <div class="field full"><div class="nd-prev" data-prev style="background-image:url(${esc(cleanUrl(p.cover))})"></div></div>
-          <div class="field full"><label>Tóm tắt (hiện dưới tiêu đề và ở thẻ bài)</label><textarea class="input" name="excerpt" style="min-height:80px" maxlength="300">${esc(p.excerpt)}</textarea></div>
-          <div class="field full"><label>Nội dung (HTML)</label><textarea class="input nd-body" name="body">${esc(p.body)}</textarea>
-            <span class="nd-hint">Dùng thẻ &lt;p&gt; cho đoạn văn, &lt;h2&gt; &lt;h3&gt; cho tiêu đề mục, &lt;ul&gt;&lt;li&gt; cho danh sách, &lt;blockquote&gt; cho trích dẫn. Không nêu công dụng chữa bệnh.</span></div>
-          <div class="field"><label>Thời gian đọc (phút, để 0 sẽ tự tính)</label><input class="input" type="number" min="0" max="60" name="read" value="${p.read || 0}"></div>
-          <label class="check" style="align-self:end;padding-bottom:10px"><input type="checkbox" name="featured"${p.featured ? ' checked' : ''}> Đặt làm bài nổi bật</label>
-        </div>
-        <p class="red mt-1" data-err style="font-size:13px;min-height:1em"></p>
-        <div class="row mt-2" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">${isNew ? 'Đăng bài' : 'Lưu thay đổi'}</button></div></form>`);
-      $('.modal', m.el).classList.add('nd-wide');
-      const f = $('form', m.el);
-      f.cover.addEventListener('input', () => { $('[data-prev]', m.el).style.backgroundImage = `url(${cleanUrl(f.cover.value)})`; });
-      f.addEventListener('submit', e => {
-        e.preventDefault();
-        const title = f.title.value.trim(), body = f.body.value.trim(), err = $('[data-err]', m.el);
-        if (!title) { err.textContent = 'Anh chị nhập tiêu đề bài viết.'; f.title.focus(); return; }
-        if (!f.cat.value) { err.textContent = 'Cần tạo danh mục kiến thức trước.'; return; }
-        if (!body) { err.textContent = 'Nội dung bài viết đang trống.'; f.body.focus(); return; }
-        const words = body.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
-        const np = Object.assign(p, {
-          title, cat: f.cat.value, date: toVn(f.date.value || PSQ.today()), cover: cleanUrl(f.cover.value) || COVERS[0],
-          excerpt: f.excerpt.value.trim(), body: /^</.test(body) ? body : body.split(/\n{2,}/).map(t => `<p>${esc(t)}</p>`).join('\n'),
-          read: +f.read.value || Math.max(1, Math.round(words / 220)), featured: f.featured.checked
-        });
-        if (np.featured) list.forEach(x => { if (x !== np) delete x.featured; }); else delete np.featured;
-        if (isNew) { np.id = uniq(slug(title), list.map(x => x.id)); list.unshift(np); }
-        savePosts(list); audit(isNew ? 'Thêm bài viết' : 'Sửa bài viết', title);
-        m.close(); toast(isNew ? 'Đã đăng bài viết' : 'Đã lưu bài viết'); this.render(el);
-      });
-    }
+    // trang soạn bài: mở ngay trong khung quản trị (không dùng hộp thoại nhỏ)
+    edit(el, p) { editor(el, p, () => this.render(el)); }
   };
 })();
