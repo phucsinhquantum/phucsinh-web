@@ -428,6 +428,7 @@ select.input option { background: var(--panel-solid); }
   .side-back { display: block; position: fixed; inset: 0; z-index: 79; background: rgba(0, 0, 0, .55); opacity: 0; pointer-events: none; transition: opacity .3s; }
   .app.nav-open .side-back { opacity: 1; pointer-events: auto; }
   .menu-btn { display: grid; }
+  .gift-btn { display: grid; }
   .g-main, .g-main-r { grid-template-columns: 1fr; }
   .g-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .g-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -855,3 +856,14 @@ html.reduce-motion .wh-bulb { animation-duration: 1.2s !important; }
 @keyframes navAttnBg { 0%, 100% { box-shadow: none; } 45% { box-shadow: inset 0 0 0 1px rgba(255, 77, 77, .55), 0 0 16px rgba(255, 60, 60, .35); } }
 .nav-attn .side .nav a svg, .nav-attn .tabbar a svg { animation: navAttn 1.1s ease-in-out calc(var(--i, 0) * .12s) 5; }
 .nav-attn .side .nav a, .nav-attn .tabbar a { animation: navAttnBg 1.1s ease-in-out calc(var(--i, 0) * .12s) 5; }
+
+/* icon hộp quà (Vòng quay) luôn nhấp nháy để thu hút */
+.gift-btn { display: none; }
+@keyframes giftBlink {
+  0%, 100% { color: #ff4d4d; filter: drop-shadow(0 0 4px rgba(255, 60, 60, .8)); transform: scale(1); }
+  50% { color: #ffd166; filter: drop-shadow(0 0 8px rgba(255, 60, 60, 1)) drop-shadow(0 0 16px rgba(255, 120, 60, .6)); transform: scale(1.2) rotate(-8deg); }
+}
+.gift-blink svg, .nav-attn .side .nav a.gift-blink svg { animation: giftBlink 1s ease-in-out infinite; }
+.gift-blink > span:first-of-type { color: #ff6b6b; }
+html.reduce-motion .gift-blink svg { animation: none !important; color: #ff4d4d; }
+@media (max-width: 1099px) { .gift-btn { display: grid; } }
