@@ -16,9 +16,16 @@
 <link rel="stylesheet" href="css/app.css">
 <script src="js/lang.js"></script>
 <style>
-  .story h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1.12; }
-  .story .prose { font-size: 15px; max-width: none; }
-  .promise { display: grid; gap: 14px; }
+  /* câu chuyện thương hiệu: tiêu đề trên, nội dung chia 2 cột trên màn hình rộng */
+  .about-story { display: flex; flex-direction: column; justify-content: center; padding: clamp(22px, 3vw, 40px); }
+  .about-story h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1.12; max-width: 30ch; }
+  .about-story h2::after { content: ""; display: block; width: 64px; height: 2px; margin-top: 18px; border-radius: 2px; background: linear-gradient(90deg, var(--gold), var(--cyan)); box-shadow: 0 0 12px var(--gold-glow); }
+  .about-story .prose { font-size: 15px; max-width: none; margin-top: 20px; }
+  .about-story .prose p { margin: 0 0 14px; }
+  .about-story .prose p:last-child { margin-bottom: 0; }
+  .about-story .prose p:first-child::first-letter { float: left; font-family: var(--display); font-size: 3.4em; line-height: .8; padding: 6px 4px 0 0; color: var(--gold); }
+  @media (min-width: 1280px) { .about-story .prose { column-count: 2; column-gap: 40px; column-rule: 1px solid rgba(243, 199, 107, .14); } }
+  .promise { display: grid; gap: 14px; align-content: center; }
   .promise-logo { display: grid; place-items: center; padding: 10px 0 4px; }
   .promise-logo img { width: 120px; filter: drop-shadow(0 0 18px rgba(243, 199, 107, .45)); }
   .ticks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 14px; }
@@ -76,7 +83,7 @@
   </section>
 
   <section class="grid g-main-r mt-3">
-    <article class="card glow-gold story reveal">
+    <article class="card glow-gold about-story reveal">
       <span class="eyebrow" id="storyEyebrow"></span>
       <h2 class="display mt-1" id="storyTitle"></h2>
       <div class="prose mt-2" id="story"></div>
