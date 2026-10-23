@@ -10,6 +10,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PSQ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
@@ -144,10 +149,11 @@
     ? `<iframe class="map-frame" src="${esc(S.mapEmbed)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Bản đồ cửa hàng" allowfullscreen></iframe>`
     : `<a class="map-ph" href="${esc(mapsUrl)}" target="_blank" rel="noopener" aria-label="Mở bản đồ"><span class="pin">${icon('pin')}</span><span class="lbl">${icon('map')} ${esc(S.address)}</span></a>`;
 
-  // mạng xã hội: thêm SITE.social = { facebook, youtube, tiktok } trong data.js để có link thật
+  // mạng xã hội: sửa link trong Quản trị > Hệ thống > Thiết lập
   const so = S.social || {};
   const socials = [
     { ico: 'facebook', n: 'Facebook', u: so.facebook },
+    { ico: 'messenger', n: 'Messenger', u: S.messLink() },
     { ico: 'zalo', n: 'Zalo OA', u: so.zalo || 'https://zalo.me/' + S.zalo },
     { ico: 'youtube', n: 'YouTube', u: so.youtube },
     { ico: 'tiktok', n: 'TikTok', u: so.tiktok }

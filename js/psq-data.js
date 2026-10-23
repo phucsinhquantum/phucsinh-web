@@ -4,14 +4,12 @@
    Cần nạp sau js/data.js và js/app.js. */
 (function () {
   const { db, today } = PSQ;
-  const VERSION = 6;
+  const VERSION = 7;
 
   const DEFAULT_SETTINGS = {
     shopName: SITE.brand, hotline: SITE.phone, email: SITE.email, address: SITE.address,
-    pointRate: SITE.pointRate || 0.1,            // điểm PS = tỉ lệ x giá trị đơn
-    commission: [10, 5, 3],                      // % hoa hồng theo tầng F1, F2, F3 (mẫu)
     fundRate: 1,                                 // % doanh thu đơn hoàn thành trích vào Quỹ tri ân (mẫu)
-    minWithdraw: 500000,
+    minWithdraw: 200000,
     autoPlace: false,                            // tự xếp lên cây khi có người giới thiệu
     mailSender: 'Phúc Sinh QuanTum <no-reply@phucsinh.vn>',
     leaderRanks: [                               // cấp bậc lãnh đạo (mẫu)
@@ -73,17 +71,7 @@
     const S = d.settings, byId = id => d.users.find(u => u.id === id);
     const done = o => o.status === 'done' || o.status === 'paid' || o.status === 'ship';
 
-    // hoa hồng theo tầng từ đơn hàng
-    d.commissions = [];
-    d.orders.filter(o => o.status !== 'failed').forEach(o => {
-      let up = byId(o.userId); let lvl = 0;
-      while (up && up.sponsor && lvl < S.commission.length) {
-        const rec = byId(up.sponsor); if (!rec) break;
-        const rate = S.commission[lvl];
-        d.commissions.push({ id: uid('hh'), order: o.id, user: rec.id, from: o.userId, level: lvl + 1, rate, amount: Math.round(o.total * rate / 100), date: o.date, status: o.status === 'done' ? 'paid' : o.status === 'pending' ? 'pending' : 'approved' });
-        up = rec; lvl++;
-      }
-    });
+    d.commissions = [];   // dựng lại theo kế hoạch trả thưởng ở migrateV3
 
     // nạp điểm
     d.topups = [];
@@ -152,6 +140,7 @@
     if (d.v < 4) migrateV4(d);
     if (d.v < 5) migrateV5(d);
     if (d.v < 6) migrateV6(d);
+    if (d.v < 7) migrateV7(d);
     d.v = VERSION; return true;
   }
 
@@ -190,17 +179,6 @@
     },
     // số dư ví (giao dịch đã hoàn tất)
     balance(d, id) { return (d.wallet || []).filter(w => w.user === id && w.status === 'done').reduce((s, w) => s + w.amount, 0); },
-    // tạo hoa hồng cho một đơn mới theo thiết lập
-    commissionsFor(d, order) {
-      const out = []; let up = ADB.user(d, order.userId), lvl = 0;
-      while (up && up.sponsor && lvl < d.settings.commission.length) {
-        const rec = ADB.user(d, up.sponsor); if (!rec) break;
-        const rate = d.settings.commission[lvl];
-        out.push({ id: uid('hh'), order: order.id, user: rec.id, from: order.userId, level: lvl + 1, rate, amount: Math.round(order.total * rate / 100), date: order.date || today(), status: 'pending' });
-        up = rec; lvl++;
-      }
-      return out;
-    },
     // tải bảng ra CSV (mở bằng Excel)
     csv(name, rows) {
       const s = '﻿' + rows.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
@@ -223,7 +201,7 @@
     overrideRate: 40, overrideShop: 10,            // đại lý hưởng 40% thu nhập của đại lý mình giới thiệu; 10% phần này vào ví mua hàng
     taxRate: 10,                                   // thuế khi rút ví hoa hồng và khi chuyển điểm thưởng sang khả dụng
     agentThreshold: 16800000,                      // tổng mua cộng dồn để lên đại lý
-    pkgCountsAs: 346000,                           // phần của gói tính vào doanh số mua hàng (mốc đại lý)
+    pkgCountsAs: 0,                                // phần của gói tính vào doanh số mua hàng (mốc đại lý): gói không tính
     // điều kiện để đại lý nhận thu nhập từ đại lý tuyến dưới: trong activeDays ngày gần nhất có đơn tự mua và đơn bán
     activeDays: 30, activeMinBuy: 0, activeMinSell: 0, activeRule: 'any', // any: 1 trong 2 việc · all: cả hai
     holdDays: 30,                                  // khoản bị giữ chờ quá số ngày này mà chưa đủ điều kiện thì hủy
@@ -269,8 +247,9 @@
       credit(d, c.user, 'sales', c.kind === 'ref' ? 'referral' : 'commission', c.amount, c.kind === 'ref' ? `Thưởng giới thiệu CTV ${(ADB.user(d, c.from) || {}).name || ''}` : `Hoa hồng ${c.rate}% đơn ${c.order}`, c.order, { date: c.date });
     }
     c.status = 'paid';
-    // đại lý B có thu nhập (kể cả thu nhập B nhận từ tầng dưới): đại lý A (người giới thiệu B) hưởng 40%, tính tiếp lên trên
-    {
+    // đại lý B có thu nhập từ đơn mua hàng (kể cả thu nhập B nhận từ tầng dưới): đại lý A (người giới thiệu B) hưởng 40%, tính tiếp lên trên.
+    // Thưởng giới thiệu CTV (200k) chỉ trả cho người giới thiệu, không tính là thu nhập để tuyến trên hưởng.
+    if (c.kind !== 'ref') {
       const r = ADB.user(d, c.user), P = plan(d), depth = (c.depth || 0) + 1, amount = pct(c.amount, P.overrideRate), date = c.paidAt || c.date;
       let up = r && r.sponsor && ADB.user(d, r.sponsor), hops = 0;
       // chuyển lên trên: bỏ qua đại lý chưa đủ điều kiện
@@ -288,9 +267,10 @@
     if (c.status === 'paid') payCommission(d, c);
     return c;
   }
-  // ghi nhận một đơn đã thanh toán: kích hoạt CTV, hoa hồng, lên đại lý (chạy 1 lần mỗi đơn)
+  // ghi nhận một đơn đã hoàn thành: kích hoạt CTV, hoa hồng, lên đại lý (chạy 1 lần mỗi đơn).
+  // Hoa hồng chỉ trả khi đơn Hoàn thành; đơn gói kích hoạt tự chuyển Hoàn thành khi đã thanh toán (xem markPaid).
   function settleOrder(d, o) {
-    if (!o || o.settled || !PAID(o)) return false;
+    if (!o || o.settled || o.status !== 'done') return false;
     const buyer = ADB.user(d, o.userId); o.settled = true;
     if (!buyer) return true;
     const P = plan(d), sp = buyer.sponsor ? ADB.user(d, buyer.sponsor) : null, date = o.date || now();
@@ -301,18 +281,19 @@
       credit(d, buyer.id, 'shop', 'package', P.pkgPoints, 'Điểm mua hàng từ gói kích hoạt cộng tác viên', o.id, { date });
       if (sp && (sp.tier === 'ctv' || sp.tier === 'daily')) addCommission(d, { kind: 'ref', order: o.id, user: sp.id, from: buyer.id, rate: 0, base: P.pkgPrice, amount: P.refBonus, date });
       else if (sp) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: 0, base: P.pkgPrice, amount: P.refBonus, date, status: 'missed', note: 'Chưa kích hoạt cộng tác viên' });
-    } else if (buyer.tier === 'ctv' || buyer.tier === 'daily') {
-      const first = buyer.tier === 'ctv' && !buyer.firstOrderDone;
-      if (buyer.tier === 'ctv') buyer.firstOrderDone = true;
-      if (sp && !first) {
-        const base = itemsTotal(o), rate = sp.tier === 'daily' ? P.agentRate : sp.tier === 'ctv' ? P.ctvRate : 0;
-        if (rate) addCommission(d, { kind: 'direct', order: o.id, user: sp.id, from: buyer.id, rate, base, amount: pct(base, rate), date });
-        if (rate < P.agentRate) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: P.agentRate - rate, base, amount: pct(base, P.agentRate - rate), date, status: 'missed', note: rate ? 'Phần chênh lệch nếu là đại lý' : 'Chưa kích hoạt cộng tác viên' });
-      }
-    }
+    } else if (sp) directCommission(d, o, buyer, sp, itemsTotal(o), date);
     // lên đại lý khi tổng mua cộng dồn đủ mốc
     if (buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = date; }
     return true;
+  }
+
+  // hoa hồng trực tiếp cho người giới thiệu trên mỗi đơn mua hàng của người mình giới thiệu (khách, CTV hay đại lý đều tính):
+  // người giới thiệu là CTV hưởng ctvRate, đại lý hưởng agentRate; người giới thiệu chưa kích hoạt thì ghi bỏ lỡ
+  function directCommission(d, o, buyer, sp, base, date, note) {
+    const P = plan(d), rate = sp.tier === 'daily' ? P.agentRate : sp.tier === 'ctv' ? P.ctvRate : 0;
+    if (!(base > 0)) return;
+    if (rate) addCommission(d, { kind: 'direct', order: o.id, user: sp.id, from: buyer.id, rate, base, amount: pct(base, rate), date, note: note || '' });
+    if (rate < P.agentRate) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: P.agentRate - rate, base, amount: pct(base, P.agentRate - rate), date, status: 'missed', note: rate ? 'Phần chênh lệch nếu là đại lý' : 'Chưa kích hoạt cộng tác viên' });
   }
 
   function migrateV3(d) {
@@ -322,7 +303,7 @@
     const taken = new Set(d.users.map(u => u.username).filter(Boolean));
     d.users.forEach(u => {
       if (!u.username) { let b = (u.email || u.code || 'tv').split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '') || 'tv', n = b, k = 1; while (taken.has(n)) n = b + (++k); u.username = n; taken.add(n); }
-      if (u.role !== 'admin') { u.tier = 'khach'; delete u.firstOrderDone; delete u.activated; delete u.agentSince; }
+      if (u.role !== 'admin') { u.tier = 'khach'; delete u.activated; delete u.agentSince; }
     });
     // tài khoản mẫu khach1 có đội nhóm riêng để xem trang thành viên
     const demo = ADB.user(d, 'u1');
@@ -373,6 +354,14 @@
       { id: uid('qd'), date: first, from: null, to: 'ph', amount: ktOpen + phOpen, note: 'Số dư đầu kỳ khi mở sổ quỹ điểm', actor: 'Hệ thống', opening: true },
       { id: uid('qd'), date: first, from: 'ph', to: 'kt', amount: ktOpen, note: 'Cấp đầu kỳ cho quỹ kế toán (gồm các khoản đã trả trước khi mở sổ)', actor: 'Hệ thống', opening: true }
     ];
+  }
+
+  // v7: gói kích hoạt không tính vào doanh số lên đại lý, rút tối thiểu 200.000đ, bỏ cờ miễn hoa hồng đơn đầu của CTV
+  function migrateV7(d) {
+    const P = plan(d); P.pkgCountsAs = 0;
+    if (!d.settings.minWithdraw || d.settings.minWithdraw === 500000) d.settings.minWithdraw = 200000;
+    d.users.forEach(u => { delete u.firstOrderDone; });
+    delete d.settings.pointRate; delete d.settings.commission;
   }
 
   /* =====================================================================
@@ -579,6 +568,71 @@
       credit(d, o.userId, 'shop', 'refund', o.shopPaid || 0, 'Hoàn điểm đơn hủy ' + o.id, o.id);
       credit(d, o.userId, 'cash', 'refund', o.cashPaid || 0, 'Hoàn tiền đơn hủy ' + o.id, o.id);
       o.refunded = true; return (o.shopPaid || 0) + (o.cashPaid || 0);
+    },
+    // đơn đã nhận tiền (đã thanh toán, đã hoàn thành, hoặc đang giao mà không phải trả khi nhận hàng): không hủy được, chỉ đổi sản phẩm
+    locked(o) { return !!o && (o.settled || ['paid', 'done'].includes(o.status) || (o.status === 'ship' && o.pay !== 'cod')); },
+    // tồn kho: null là chưa quản lý (coi như còn hàng)
+    stockOf(d, id) { const s = d.stock || {}; return id in s ? +s[id] || 0 : null; },
+    // trừ kho khi đơn được thanh toán hoặc đi giao (1 lần), trả lại kho khi hủy
+    stockOut(d, o) {
+      if (!o || o.stockOut) return false; d.stock = d.stock || {};
+      (o.items || []).forEach(x => { if (x.id !== PKG_ID && x.id in d.stock) d.stock[x.id] = Math.max(0, (+d.stock[x.id] || 0) - x.qty); });
+      return (o.stockOut = true);
+    },
+    stockBack(d, o, items) {
+      if (!o || !o.stockOut) return false; d.stock = d.stock || {};
+      (items || o.items || []).forEach(x => { if (x.id !== PKG_ID && x.id in d.stock) d.stock[x.id] = (+d.stock[x.id] || 0) + x.qty; });
+      if (!items) o.stockOut = false; return true;
+    },
+    // đổi trạng thái đơn theo luật: chặn hủy đơn đã nhận tiền, chặn giao hoặc hoàn thành khi còn thiếu tiền bù,
+    // đơn gói kích hoạt tự Hoàn thành khi đã thanh toán, trừ hoặc trả kho, ghi nhận hoa hồng khi Hoàn thành
+    setStatus(d, o, status) {
+      if (status === o.status) return { ok: true };
+      if (status === 'failed' && ADB.locked(o)) return { error: `Đơn #${o.id} đã thanh toán, hoa hồng và điểm đã ghi nhận nên không hủy được. Anh chị chỉ có thể đổi sang sản phẩm khác bằng hoặc cao hơn số tiền.` };
+      if (o.exchange && o.exchange.due > 0 && ['ship', 'done'].includes(status)) return { error: `Đơn #${o.id} còn thiếu ${PSQ.money(o.exchange.due)} tiền bù đổi sản phẩm. Xác nhận đã nhận tiền bù trước.` };
+      if (status === 'pending' && ADB.locked(o)) return { error: `Đơn #${o.id} đã thanh toán, không chuyển về chờ xác nhận được.` };
+      o.status = status;
+      const isPkg = (o.items || []).some(x => x.id === PKG_ID);
+      if (isPkg && status === 'paid') o.status = 'done';
+      const r = { ok: true, status: o.status };
+      if (['paid', 'ship', 'done'].includes(o.status)) r.stock = ADB.stockOut(d, o);
+      if (o.status === 'failed') { r.refunded = ADB.refundOrder(d, o); r.restocked = ADB.stockBack(d, o); }
+      r.settled = settleOrder(d, o);
+      return r;
+    },
+    // sản phẩm có thể đổi cho đơn đã thanh toán: same: cùng giá với phần hàng đã trả; more: giá cao hơn (khách chuyển bù)
+    exchangeOptions(d, o) {
+      const paid = itemsTotal(o), ok = p => p.id !== PKG_ID && p.active !== false && ADB.stockOf(d, p.id) !== 0;
+      const same = PRODUCTS.filter(p => ok(p) && p.price === paid);
+      const more = PRODUCTS.filter(p => ok(p) && p.price > paid).sort((a, b) => a.price - b.price);
+      return { paid, same, more };
+    },
+    // đổi đơn đã thanh toán sang sản phẩm khác (số tiền bằng hoặc cao hơn). Phần chênh lệch chờ khách chuyển bù.
+    exchangeOrder(d, o, id, qty, actor) {
+      const p = PRODUCTS.find(x => x.id === id); qty = Math.max(1, Math.round(+qty || 1));
+      if (!p) return { error: 'Không tìm thấy sản phẩm.' };
+      if (o.exchange && o.exchange.due > 0) return { error: 'Đơn đang chờ khách chuyển bù lần đổi trước.' };
+      const st = ADB.stockOf(d, p.id); if (st !== null && st < qty) return { error: `${p.name} chỉ còn ${st} trong kho.` };
+      const paid = itemsTotal(o), next = p.price * qty, diff = next - paid;
+      if (diff < 0) return { error: 'Sản phẩm đổi phải bằng hoặc cao hơn số tiền đã thanh toán (' + PSQ.money(paid) + ').' };
+      const old = o.items.map(x => Object.assign({}, x)), items = [{ id: p.id, name: p.name, price: p.price, qty }];
+      if (o.stockOut) { ADB.stockBack(d, o, old); o.stockOut = false; o.items = items; ADB.stockOut(d, o); } else o.items = items;
+      o.total += diff;
+      (o.exchanges = o.exchanges || []).push({ date: now(), from: old, to: items, diff, by: actor || '' });
+      o.exchange = { due: diff, diff, date: now() };
+      if (!diff) delete o.exchange;
+      return { diff };
+    },
+    // xác nhận đã nhận tiền bù đổi sản phẩm: đơn đặt thành công; đơn đã ghi nhận hoa hồng thì tính thêm hoa hồng trên phần bù
+    confirmTopup(d, o) {
+      if (!o.exchange || !(o.exchange.due > 0)) return { error: 'Đơn không có khoản bù.' };
+      const diff = o.exchange.due; o.extraPaid = (o.extraPaid || 0) + diff; delete o.exchange;
+      if (o.settled) {
+        const buyer = ADB.user(d, o.userId), sp = buyer && buyer.sponsor ? ADB.user(d, buyer.sponsor) : null, P = plan(d);
+        if (sp) directCommission(d, o, buyer, sp, diff, now(), 'Phần bù đổi sản phẩm');
+        if (buyer && buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = now(); }
+      }
+      return { diff };
     },
     // tạo đơn mua gói kích hoạt cộng tác viên
     buyPackage(d, u, pay) {

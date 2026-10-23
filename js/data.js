@@ -21,7 +21,6 @@ window.SITE = {
   mapEmbed: '',                    // dán link nhúng Google Maps (https://www.google.com/maps/embed?...)
   bank: { name: 'Ngân hàng (mẫu)', account: '0000 0000 0000', owner: 'CONG TY PHUC SINH QUANTUM' },
   shipFee: 0,                      // phí giao hàng (0 = miễn phí)
-  pointRate: 0.1,                  // 10% giá trị đơn được cộng điểm PS
   // tài khoản quản trị dùng thử (chỉ lưu trên trình duyệt, cần máy chủ thật trước khi chạy chính thức)
   demoAdmin: { email: 'admin@psq.vn', pass: 'psq2026' }
 };
@@ -154,14 +153,6 @@ window.TIMELINE = [
   { year: '2026', text: 'Ra mắt dòng trầm hương lượng tử và web app thành viên. (mẫu)' }
 ];
 
-// hạng thành viên theo tổng chi tiêu
-window.RANKS = [
-  { id: 'dong', name: 'Đồng', min: 0, color: '#c98b5a', perk: 'Tích 10% điểm PS trên mỗi đơn' },
-  { id: 'bac', name: 'Bạc', min: 20000000, color: '#cfd8dc', perk: 'Giảm 3% đơn tiếp theo, thay dây miễn phí' },
-  { id: 'vang', name: 'Vàng', min: 50000000, color: '#f3c76b', perk: 'Giảm 5%, quà sinh nhật' },
-  { id: 'kim-cuong', name: 'Kim cương', min: 150000000, color: '#4fe6df', perk: 'Giảm 8%, tư vấn riêng, sự kiện đặc biệt' }
-];
-
 // Đại lý uy tín hiển thị ở trang chủ và trang dai-ly.html. Thêm, sửa, xóa trong Quản trị > Trang web > Đại lý uy tín.
 // Danh sách dưới đây là mặc định khi trình duyệt chưa có danh sách lưu từ trang quản trị (psq_dealers_v1).
 window.DEALERS = [
@@ -232,3 +223,17 @@ window.ABOUT_DEFAULT = JSON.parse(JSON.stringify({ about: window.ABOUT, team: wi
     }
   } catch (e) {}
 })();
+
+// Thông tin cửa hàng, ngân hàng và link mạng xã hội sửa trong Quản trị > Hệ thống > Thiết lập (lưu psq_site_v1, ghi đè SITE ở mọi trang)
+(function () {
+  try {
+    const v = JSON.parse(localStorage.getItem('psq_site_v1')); if (!v || typeof v !== 'object') return;
+    ['brand', 'phone', 'zalo', 'email', 'address', 'hours'].forEach(k => { if (typeof v[k] === 'string' && v[k].trim()) SITE[k] = v[k].trim(); });
+    ['messenger', 'mapEmbed'].forEach(k => { if (typeof v[k] === 'string') SITE[k] = v[k].trim(); });
+    if (v.bank) ['name', 'account', 'owner'].forEach(k => { if (typeof v.bank[k] === 'string' && v.bank[k].trim()) SITE.bank[k] = v.bank[k].trim(); });
+    if (v.social) ['facebook', 'youtube', 'tiktok', 'zalo'].forEach(k => { if (typeof v.social[k] === 'string') SITE.social[k] = v.social[k].trim(); });
+  } catch (e) {}
+})();
+// đường dẫn Messenger: nhận tên trang (m.me/ten-trang) hoặc link đầy đủ
+SITE.messLink = () => !SITE.messenger ? '' : /^https?:\/\//i.test(SITE.messenger) ? SITE.messenger : 'https://m.me/' + SITE.messenger.replace(/^@/, '');
+

@@ -10,6 +10,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PSQ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
@@ -62,9 +67,8 @@
 
   <section class="grid g-main mt-4">
     <div class="card glow-gold reveal">
-      <div class="card-head"><h3>Hạng thành viên</h3><span class="sub">theo tổng chi tiêu</span></div>
-      <div id="rankDonut"></div>
-      <div class="legend mt-2" id="rankLegend"></div>
+      <div class="card-head"><h3>Thành viên mới</h3><span class="sub">cộng tác viên và đại lý mới kích hoạt</span></div>
+      <div class="new-mem" id="newMem"></div>
     </div>
     <div class="card glow-cyan reveal">
       <div class="card-head" style="flex-wrap:wrap"><div><h3>Hành trình cùng khách hàng</h3><div class="sub">Khách hàng mỗi tháng · 12 tháng gần nhất (số liệu mẫu)</div></div>
@@ -96,9 +100,10 @@
 
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
+<script src="js/psq-data.js"></script>
 <script>
 (function () {
-  const { $, $$, esc, icon, productCard, area, donut, modal } = PSQ;
+  const { $, $$, esc, icon, productCard, area, modal } = PSQ;
   const ico = ['', 'gold', 'violet', 'green'];
   $('#stats').innerHTML = STATS.map((s, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat reveal"><div class="stat-top"><span class="stat-ico ${ico[i]}">${icon(s.icon)}</span>${esc(s.label)}</div><div class="stat-val">${esc(s.value)}</div></div>`).join('');
   $('#cats').innerHTML = CATEGORIES.map((c, i) => {
@@ -179,9 +184,15 @@
     series: [{ name: 'Khách mới', color: '#f3c76b', dots: true, values: [320, 380, 360, 470, 450, 560, 520, 610, 640, 780, 700, 760] },
              { name: 'Quay lại', color: '#4fe6df', values: [180, 200, 230, 240, 260, 280, 300, 330, 340, 360, 390, 420] }] });
   draw(); let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(draw, 200); });
-  const seg = [{ name: 'Đồng', value: 52, color: '#c98b5a' }, { name: 'Bạc', value: 28, color: '#b98cff' }, { name: 'Vàng', value: 14, color: '#f3c76b' }, { name: 'Kim cương', value: 6, color: '#4fe6df' }];
-  donut($('#rankDonut'), { segments: seg, center: '12.000+', sub: 'thành viên' });
-  $('#rankLegend').innerHTML = seg.map(s => `<div class="legend-row"><span class="dot" style="color:${s.color}"></span><span>${s.name}</span><span>${s.value}%</span></div>`).join('');
+  // thành viên mới: CTV và đại lý vừa kích hoạt (tên và mã số), mới nhất trước
+  {
+    const users = window.ADB ? ADB.load().users : (PSQ.db.load().users || []);
+    const L = users.filter(x => x.role !== 'admin' && x.status !== 'locked' && (x.tier === 'ctv' || x.tier === 'daily'))
+      .map(x => ({ x, at: x.tier === 'daily' ? (x.agentSince || x.activated || '') : (x.activated || '') }))
+      .sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8);
+    $('#newMem').innerHTML = L.length ? L.map(({ x, at }, i) => `<div class="nm-row"><span class="avatar ${['', 'v', 'g'][i % 3]}">${esc(PSQ.initials(x.name))}</span><div><b>${esc(x.name)}</b><small>Mã số <span class="gold">${esc(x.code || '')}</span>${at ? ' · ' + PSQ.fdate(at) : ''}</small></div><span class="badge ${x.tier === 'daily' ? 'gold' : 'ship'}">${x.tier === 'daily' ? 'Đại lý mới' : 'CTV mới'}</span></div>`).join('')
+      : '<p class="dim" style="font-size:14px">Danh sách thành viên mới đang được cập nhật.</p>';
+  }
   $('#posts').innerHTML = POSTS.slice(0, 3).map(p => `<a class="card post-card" href="bai-viet.html?id=${p.id}" style="box-shadow:none"><div class="post-cover" style="background-image:url(${p.cover})"></div><div class="post-body"><div class="post-meta"><span class="badge gold">${esc(POST_CATS.find(c => c.id === p.cat).name)}</span></div><h3>${esc(p.title)}</h3><div class="post-meta">${p.date} · ${p.read} phút đọc</div></div></a>`).join('');
   // đánh giá: hiện 3 đánh giá đầu, còn lại xem trong "Xem tất cả"
   const revItem = (r, i) => { const n = Math.min(5, Math.max(1, +r.stars || 5)); return `<div class="feed-item"><span class="avatar ${['', 'v', 'g'][i % 3]}">${r.photo ? `<img src="${esc(r.photo)}" alt="">` : esc(PSQ.initials(r.name))}</span><div><b>${esc(r.name)} <span class="gold" style="font-size:12px" aria-label="${n} sao">${'★'.repeat(n)}<span style="opacity:.25">${'★'.repeat(5 - n)}</span></span></b><small>${esc(r.place || '')}</small><p class="muted mt-1" style="font-size:14px">${esc(r.text)}</p></div></div>`; };

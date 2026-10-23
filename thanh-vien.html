@@ -14,6 +14,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PSQ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
@@ -361,7 +366,7 @@
       <div class="step" style="--c:${ADB.TIERS.daily.color}"><span class="sdot">${icon(agDone ? 'check' : 'award')}</span>
         <div class="row between wrap" style="gap:6px"><b>Đại lý</b>${agDone ? `<span class="badge ok">Đã đạt${me.agentSince ? ' ' + fdate(me.agentSince) : ''}</span>` : `<span class="dim nowrap" style="font-size:12.5px">${pctOf(Math.min(spent, P.agentThreshold), P.agentThreshold)}%</span>`}</div>
         <div><div class="progress mt-1"><i style="width:${Math.max(2, Math.min(100, pctOf(spent, P.agentThreshold)))}%"></i></div>
-          <span class="dim" style="font-size:13px">Tổng mua ${money(spent)} / ${money(P.agentThreshold)}${agDone ? '' : ', còn ' + money(left)}. Gói kích hoạt được tính ${money(P.pkgCountsAs != null ? P.pkgCountsAs : P.pkgPoints)}.</span></div>
+          <span class="dim" style="font-size:13px">Tổng mua ${money(spent)} / ${money(P.agentThreshold)}${agDone ? '' : ', còn ' + money(left)}. ${P.pkgCountsAs ? 'Gói kích hoạt được tính ' + money(P.pkgCountsAs) + '.' : 'Gói kích hoạt không tính vào doanh số.'}</span></div>
         <ul><li>Gian hàng online trị giá 10.000.000đ</li><li>Khóa học cao cấp cầm tay chỉ việc trị giá 15.000.000đ</li><li>Bộ công cụ tạo video hàng loạt và livestream đa nền tảng trị giá 30.000.000đ</li><li>Hoa hồng ${P.agentRate}% đơn hàng của người mình giới thiệu</li><li>Hưởng ${P.overrideRate}% thu nhập của đại lý tuyến dưới (vào ví điểm thưởng và ví mua hàng)</li></ul></div>`;
   }
 

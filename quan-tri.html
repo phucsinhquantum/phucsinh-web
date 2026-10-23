@@ -10,6 +10,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PSQ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
@@ -188,7 +193,7 @@
 <script src="js/admin/danh-gia.js"></script>
 <script>
 (function () {
-  const { $, $$, esc, money, short, icon, db, auth, memberInfo, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
+  const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
   const AV = ['', 'v', 'g'];
   const catName = id => (CATEGORIES.find(c => c.id === id) || {}).name || id;
 
@@ -331,10 +336,10 @@
     const list = d.orders.filter(o => (!st || o.status === st) && (!q || [o.id, o.name, o.phone, o.email].join(' ').toLowerCase().includes(q)));
     $('#ocount').textContent = list.length + ' đơn';
     $('#olist').innerHTML = list.length ? list.map((o, i) => `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(o.name)}</span><div><b>${esc(o.name)}</b><small>${esc(o.phone || '')}</small></div></div></td>
-      <td><b>#${o.id}</b></td><td class="dim" style="max-width:220px">${isPkg(o) ? '<span class="badge violet">Gói CTV</span><br>' : ''}${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="nowrap gold">${money(o.total)}${o.shopPaid ? `<br><small class="green">Điểm: ${money(o.shopPaid).replace('đ', ' PS')}</small>` : ''}${o.cashPaid ? `<br><small class="cyan">Ví tiền mặt: ${money(o.cashPaid)}</small>` : ''}</td>
+      <td><b>#${o.id}</b></td><td class="dim" style="max-width:220px">${isPkg(o) ? '<span class="badge violet">Gói CTV</span><br>' : ''}${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="nowrap gold">${money(o.total)}${o.shopPaid ? `<br><small class="green">Điểm: ${money(o.shopPaid).replace('đ', ' PS')}</small>` : ''}${o.cashPaid ? `<br><small class="cyan">Ví tiền mặt: ${money(o.cashPaid)}</small>` : ''}${o.exchange && o.exchange.due > 0 ? `<br><small class="red">Chờ bù ${money(o.exchange.due)}</small>` : o.exchanges ? '<br><small class="dim">Đã đổi sản phẩm</small>' : ''}</td>
       <td>${o.pay === 'bank' ? 'Chuyển khoản' : o.pay === 'wallet' ? 'Bằng ví' : 'Khi nhận hàng'}</td>
       <td><select class="input" data-status="${o.id}" aria-label="Trạng thái đơn ${o.id}">${Object.entries(statusName).map(([k, v]) => `<option value="${k}"${k === o.status ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
-      <td class="dim nowrap">${fdate(o.date)}</td><td><button class="btn btn-sm" type="button" data-view="${o.id}">Xem</button></td></tr>`).join('')
+      <td class="dim nowrap">${fdate(o.date)}</td><td><div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn btn-sm" type="button" data-view="${o.id}">Xem</button>${o.exchange && o.exchange.due > 0 ? `<button class="btn btn-sm btn-gold" type="button" data-topup="${o.id}" title="Xác nhận khách đã chuyển bù ${money(o.exchange.due)}">Đã nhận bù</button>` : ADB.locked(o) && !isPkg(o) ? `<button class="btn btn-sm btn-outline-gold" type="button" data-swap="${o.id}">Đổi SP</button>` : ''}</div></td></tr>`).join('')
       : `<tr><td colspan="8"><div class="empty">Không có đơn phù hợp.</div></td></tr>`;
   }
   $('#oq').addEventListener('input', orders); $('#os').addEventListener('change', orders);
@@ -343,19 +348,73 @@
     const s = e.target.closest('[data-status]'); if (!s) return;
     const d = ADB.load(), o = d.orders.find(x => x.id === s.dataset.status); if (!o) return;
     const from = o.status, buyer = o.userId ? ADB.user(d, o.userId) : null, before = buyer ? (buyer.tier || 'khach') : null;
-    o.status = s.value;
-    const settled = ['paid', 'ship', 'done'].includes(o.status) && ADB.settleOrder(d, o);
-    const refunded = o.status === 'failed' && ADB.refundOrder(d, o);
-    if (refunded) ADB.log(d, 'Hoàn tiền đơn hủy', `${o.id}: hoàn ${money(refunded)} vào ví của ${o.name}`);
+    const want = s.value, r = ADB.setStatus(d, o, want);
+    if (r.error) {
+      s.value = from; toast(r.error, 'err');
+      if (want === 'failed' && !(o.exchange && o.exchange.due > 0)) setTimeout(() => exchangeModal(o.id), 400);
+      return;
+    }
+    const settled = r.settled;
+    if (r.refunded) ADB.log(d, 'Hoàn tiền đơn hủy', `${o.id}: hoàn ${money(r.refunded)} vào ví của ${o.name}`);
     const after = buyer ? (buyer.tier || 'khach') : null;
-    ADB.log(d, 'Cập nhật đơn hàng', `${o.id}: ${statusName[from] || from} → ${statusName[o.status]}${settled ? ' (đã ghi nhận hoa hồng, điểm)' : ''}`);
+    ADB.log(d, 'Cập nhật đơn hàng', `${o.id}: ${statusName[from] || from} → ${statusName[o.status]}${o.status !== s.value ? ' (đơn gói kích hoạt tự hoàn thành)' : ''}${settled ? ' (đã ghi nhận hoa hồng, điểm)' : ''}${r.stock ? ' (đã trừ kho)' : ''}${r.restocked ? ' (đã trả lại kho)' : ''}`);
     if (buyer && before !== after) ADB.log(d, after === 'daily' ? 'Lên đại lý' : 'Kích hoạt cộng tác viên', `${buyer.name} (@${buyer.username || ''}): ${ADB.TIERS[before].name} → ${ADB.TIERS[after].name}`);
     ADB.save(d);
     toast(`Đơn #${o.id}: ${statusName[o.status]}`);
     if (buyer && before !== after) setTimeout(() => toast(after === 'daily' ? `${buyer.name} đã lên Đại lý` : `${buyer.name} đã được kích hoạt Cộng tác viên`), 350);
     else if (settled && isPkg(o)) setTimeout(() => toast(`Đã cộng ${money(ADB.plan(d).pkgPoints).replace('đ', ' PS')} vào ví mua hàng của ${o.name}`), 350);
+    orders();
   });
+  // đổi sản phẩm cho đơn đã thanh toán (không hủy được): cùng giá, nếu không có thì bắt buộc chọn sản phẩm giá cao hơn và khách chuyển bù
+  function exchangeModal(id) {
+    const d = ADB.load(), o = d.orders.find(x => x.id === id); if (!o) return;
+    const X = ADB.exchangeOptions(d, o); let mode = X.same.length ? 'same' : 'more';
+    const row = p => { const st = ADB.stockOf(d, p.id); return `<label class="xo"><input type="radio" name="xp" value="${p.id}" data-price="${p.price}"><span>${esc(p.name)}<small class="dim">${st === null ? '' : 'Còn ' + st + ' trong kho'}</small></span><b class="gold nowrap">${money(p.price)}</b></label>`; };
+    const m = modal(`<form id="xf"><div class="card-head"><h3>Đổi sản phẩm đơn #${esc(o.id)}</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      <p class="muted" style="font-size:13px">Đơn đã thanh toán <b class="gold">${money(X.paid)}</b> tiền hàng, hoa hồng và điểm đã ghi nhận nên không hủy được. Khách chỉ đổi sang sản phẩm bằng hoặc cao hơn số tiền này.</p>
+      <div class="tabs mt-2" role="tablist"><button type="button" data-xm="same"${X.same.length ? '' : ' disabled'}>Tương đương (${X.same.length})</button><button type="button" data-xm="more">Giá cao hơn (${X.more.length})</button></div>
+      <p class="red mt-1" id="xnone" style="font-size:13px"${X.same.length ? ' hidden' : ''}>Không có sản phẩm cùng giá ${money(X.paid)}. Khách bắt buộc chọn sản phẩm giá cao hơn và chuyển bù phần chênh lệch.</p>
+      <div class="xlist mt-2" id="xlist"></div>
+      <div class="row between mt-2" style="flex-wrap:wrap;gap:10px"><label class="row" style="gap:8px">Số lượng <input class="input" type="number" name="qty" min="1" value="1" style="width:80px"></label><span id="xdiff" class="muted" style="font-size:14px">Chọn sản phẩm để tính tiền bù</span></div>
+      <div class="row mt-2" style="justify-content:flex-end;gap:10px"><button class="btn btn-ghost" type="button" data-close>Đóng</button><button class="btn btn-gold" type="submit">Đổi sản phẩm</button></div></form>`);
+    const f = m.el.querySelector('#xf');
+    const paint = () => {
+      m.el.querySelectorAll('[data-xm]').forEach(b => b.classList.toggle('on', b.dataset.xm === mode));
+      const list = mode === 'same' ? X.same : X.more;
+      f.querySelector('#xlist').innerHTML = list.length ? list.map(row).join('') : '<div class="empty">Không có sản phẩm phù hợp còn hàng.</div>';
+      calc();
+    };
+    const calc = () => {
+      const c = f.querySelector('[name=xp]:checked'), q = Math.max(1, +f.qty.value || 1), out = f.querySelector('#xdiff');
+      if (!c) { out.textContent = 'Chọn sản phẩm để tính tiền bù'; return; }
+      const diff = +c.dataset.price * q - X.paid;
+      out.innerHTML = diff < 0 ? '<span class="red">Thấp hơn số tiền đã trả, chọn số lượng hoặc sản phẩm khác</span>' : diff ? `Khách cần chuyển bù <b class="gold">${money(diff)}</b>` : '<span class="green">Bằng số tiền đã trả, không cần bù</span>';
+    };
+    m.el.addEventListener('click', e => { const b = e.target.closest('[data-xm]'); if (b && !b.disabled) { mode = b.dataset.xm; paint(); } });
+    f.addEventListener('change', calc); f.addEventListener('input', calc);
+    f.addEventListener('submit', e => {
+      e.preventDefault();
+      const c = f.querySelector('[name=xp]:checked'); if (!c) { toast('Anh chị chọn sản phẩm muốn đổi.', 'err'); return; }
+      const d2 = ADB.load(), o2 = d2.orders.find(x => x.id === id), me = auth.user();
+      const r = ADB.exchangeOrder(d2, o2, c.value, f.qty.value, me ? me.name : '');
+      if (r.error) { toast(r.error, 'err'); return; }
+      ADB.log(d2, 'Đổi sản phẩm', `${o2.id}: đổi sang ${o2.items.map(x => x.name + ' x' + x.qty).join(', ')}${r.diff ? `, khách cần chuyển bù ${money(r.diff)}` : ''}`);
+      ADB.save(d2); m.close(); orders();
+      toast(r.diff ? `Đã đổi sản phẩm. Đơn #${o2.id} chờ khách chuyển bù ${money(r.diff)}` : `Đã đổi sản phẩm cho đơn #${o2.id}`);
+    });
+    paint();
+  }
+  window.exchangeModal = exchangeModal;
   $('#olist').addEventListener('click', e => {
+    const sw = e.target.closest('[data-swap]'); if (sw) { exchangeModal(sw.dataset.swap); return; }
+    const tp = e.target.closest('[data-topup]');
+    if (tp) {
+      const d = ADB.load(), o = d.orders.find(x => x.id === tp.dataset.topup); if (!o) return;
+      if (!confirm(`Xác nhận đã nhận ${money(o.exchange.due)} tiền bù của ${o.name} cho đơn #${o.id}?`)) return;
+      const r = ADB.confirmTopup(d, o); if (r.error) { toast(r.error, 'err'); return; }
+      ADB.log(d, 'Nhận tiền bù đổi sản phẩm', `${o.id}: ${o.name} chuyển bù ${money(r.diff)}${o.settled ? ', đã tính thêm hoa hồng trên phần bù' : ''}`);
+      ADB.save(d); orders(); toast(`Đơn #${o.id} đã đặt thành công sau khi nhận bù ${money(r.diff)}`); return;
+    }
     const b = e.target.closest('[data-view]'); if (!b) return;
     const o = ADB.load().orders.find(x => x.id === b.dataset.view);
     modal(`<div class="card-head"><h3>Đơn #${o.id}</h3>${statusBadge(o.status)}<button class="icon-btn" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>

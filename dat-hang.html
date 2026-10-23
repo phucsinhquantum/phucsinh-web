@@ -10,6 +10,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PSQ">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
@@ -134,13 +139,16 @@
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
-  const S = SITE, rate = S.pointRate || .1, ship = S.shipFee || 0;
+  const S = SITE, ship = S.shipFee || 0;
   const PROVINCES = ['Hà Nội', 'TP. Hồ Chí Minh', 'Hải Phòng', 'Đà Nẵng', 'Huế', 'Cần Thơ', 'An Giang', 'Bắc Ninh', 'Cà Mau', 'Cao Bằng', 'Đắk Lắk', 'Điện Biên', 'Đồng Nai', 'Đồng Tháp', 'Gia Lai', 'Hà Tĩnh', 'Hưng Yên', 'Khánh Hòa', 'Lai Châu', 'Lâm Đồng', 'Lạng Sơn', 'Lào Cai', 'Nghệ An', 'Ninh Bình', 'Phú Thọ', 'Quảng Ngãi', 'Quảng Ninh', 'Quảng Trị', 'Sơn La', 'Tây Ninh', 'Thái Nguyên', 'Thanh Hóa', 'Tuyên Quang', 'Vĩnh Long'];
   const STEPS = [['Giỏ hàng', 'Kiểm tra sản phẩm'], ['Thông tin giao hàng', 'Địa chỉ và thanh toán'], ['Xác nhận', 'Xem lại và đặt hàng']];
   const normPhone = s => String(s || '').replace(/[\s.\-()]/g, '').replace(/^\+84/, '0');
-  const pts = n => money(n * rate).replace('đ', '');
   const u = auth.user();
-  const form = { name: u?.name || '', phone: u?.phone || '', email: u?.email || '', province: PROVINCES.includes(u?.city) ? u.city : '', address: '', note: '', pay: '' };
+  const form = { name: u?.name || '', phone: u?.phone || '', email: u?.email || '', province: PROVINCES.includes(u?.city) ? u.city : '', address: '', note: '', pay: '', saveAddr: true, addrId: '' };
+  // sổ địa chỉ của thành viên (Tài khoản > Sổ địa chỉ): điền sẵn địa chỉ mặc định
+  const myAddr = () => (u && window.ADB ? (ADB.load().addresses || []).filter(a => a.user === u.id) : []).sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+  const useAddr = a => { if (!a) return; form.addrId = a.id; form.name = a.name || form.name; form.phone = a.phone || form.phone; form.address = a.line || ''; form.province = PROVINCES.includes(a.province) ? a.province : form.province; };
+  useAddr(myAddr()[0]);
   let step = 0, placed = null;
   // ví điểm mua hàng (1 PS = 1đ) cho thành viên đã đăng nhập
   const PS = n => money(n).replace('đ', ' PS');
@@ -215,12 +223,14 @@
     return `<form class="card glow-gold" id="infoForm" novalidate>
       <div class="card-head"><div><span class="eyebrow">Bước 2</span><h2 class="display mt-1">Thông tin giao hàng</h2></div></div>
       ${u ? `<p class="pts-note" style="margin-bottom:16px">${icon('user')}<span>Đã điền sẵn theo tài khoản <b>${esc(u.name)}</b>. Anh chị có thể sửa lại nếu giao cho người khác.</span></p>` : `<p class="muted" style="font-size:13px;margin-bottom:16px">Đã có tài khoản? <a class="cyan" href="thanh-vien.html">Đăng nhập</a> để điền nhanh và tích điểm PS.</p>`}
+      ${(() => { const A = myAddr(); return A.length ? `<div class="field full saved-addr"><label for="f-saved">Địa chỉ đã lưu</label><select class="input" id="f-saved" name="saved"><option value="">Nhập địa chỉ khác</option>${A.map(a => `<option value="${esc(a.id)}"${a.id === form.addrId ? ' selected' : ''}>${esc([a.name, a.phone, a.line, a.province].filter(Boolean).join(' · '))}${a.isDefault ? ' (mặc định)' : ''}</option>`).join('')}</select><span class="err" hidden></span></div>` : ''; })()}
       <div class="form-grid">
         ${field('name', 'Họ và tên', `<input class="input" id="f-name" name="name" autocomplete="name" value="${esc(form.name)}" placeholder="Nguyễn Văn A">`, 0, 1)}
         ${field('phone', 'Số điện thoại', `<input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" value="${esc(form.phone)}" placeholder="0912 345 678">`, 0, 1)}
         ${field('email', 'Email', `<input class="input" id="f-email" name="email" type="email" autocomplete="email" value="${esc(form.email)}" placeholder="Để nhận xác nhận đơn (không bắt buộc)">`)}
         ${field('province', 'Tỉnh / thành phố', `<select class="input" id="f-province" name="province"><option value="">Chọn tỉnh, thành phố</option>${PROVINCES.map(p => `<option${p === form.province ? ' selected' : ''}>${p}</option>`).join('')}</select>`, 0, 1)}
         ${field('address', 'Địa chỉ nhận hàng', `<input class="input" id="f-address" name="address" autocomplete="street-address" value="${esc(form.address)}" placeholder="Số nhà, đường, phường hoặc xã">`, 1, 1)}
+        ${u ? `<label class="check full" id="saveAddrBox"${form.addrId ? ' hidden' : ''}><input type="checkbox" name="saveAddr"${form.saveAddr ? ' checked' : ''}> Lưu địa chỉ này vào sổ địa chỉ</label>` : ''}
         ${field('note', 'Ghi chú', `<textarea class="input" id="f-note" name="note" rows="3" style="min-height:90px" placeholder="Thời gian nhận hàng, size cổ tay, lời nhắn in thiệp quà tặng...">${esc(form.note)}</textarea>`, 1)}
       </div>
       <h3 class="mt-3" style="font-size:16px;margin-bottom:12px">Phương thức thanh toán</h3>
@@ -239,6 +249,7 @@
     const f = $('#infoForm'); if (!f) return;
     ['name', 'phone', 'email', 'province', 'address', 'note'].forEach(k => form[k] = f.elements[k].value.trim());
     form.pay = f.elements.pay.value || '';
+    if (f.elements.saveAddr) form.saveAddr = f.elements.saveAddr.checked;
   }
   function validate() {
     const e = {};
@@ -335,12 +346,17 @@
       const res = PSQ.placeOrder({ name: form.name, phone: normPhone(form.phone), email: form.email, address: `${form.address}, ${form.province}`, note: form.note, pay: form.pay });
       if (res.error) { b.disabled = false; toast(res.error); return; }
       placed = res.order;
+      if (u && window.ADB && !form.addrId && form.saveAddr) {
+        const d = ADB.load(); d.addresses = d.addresses || [];
+        const mine = d.addresses.filter(a => a.user === u.id), line = form.address.trim();
+        if (!mine.some(a => a.line === line && a.province === form.province)) { d.addresses.push({ id: ADB.uid('dc'), user: u.id, name: form.name, phone: normPhone(form.phone), line, province: form.province, isDefault: !mine.length }); ADB.save(d); }
+      }
       if ((want || wantCash) && u && window.ADB) {
         const d = ADB.load(), o = d.orders.find(x => x.id === placed.id), me = ADB.user(d, u.id);
         const used = o && me && want ? ADB.spendShop(d, me, o, want) : 0, usedC = o && me && wantCash ? ADB.spendCash(d, me, o, wantCash) : 0;
         if (used || usedC) {
           const full = used + usedC >= o.total;
-          if (full) { o.status = 'paid'; ADB.settleOrder(d, o); }
+          if (full) ADB.setStatus(d, o, 'paid');
           ADB.log(d, 'Thanh toán bằng ví', `${o.id}: ${me.name}${used ? ` dùng ${PS(used)} ví mua hàng` : ''}${usedC ? ` trả ${money(usedC)} ví tiền mặt` : ''}${full ? ', đã thanh toán đủ' : ''}`);
           ADB.save(d); placed = o;
         }
@@ -350,6 +366,11 @@
   });
   $('#main').addEventListener('submit', e => { if (e.target.id === 'infoForm') { e.preventDefault(); readForm(); if (validate()) { step = 2; render(true); } } });
   $('#main').addEventListener('change', e => {
+    if (e.target.name === 'saved') {
+      readForm(); const a = myAddr().find(x => x.id === e.target.value);
+      if (a) useAddr(a); else { form.addrId = ''; form.address = ''; }
+      render(); const n = $(a ? '#f-note' : '#f-address'); if (n) n.focus(); return;
+    }
     if (e.target.name === 'pay') { $('#bankBox').hidden = e.target.value !== 'bank'; form.pay = e.target.value; $('#walletBox').innerHTML = walletNote(); }
   });
   $('#main').addEventListener('input', e => { const f = e.target.closest('.field.bad'); if (f) { f.classList.remove('bad'); f.querySelector('.err').hidden = true; } });

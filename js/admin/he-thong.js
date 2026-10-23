@@ -67,7 +67,7 @@
       <p>Giao đến: ${esc(o.address || '')}. Thanh toán: ${o.pay === 'bank' ? 'chuyển khoản' : o.pay === 'wallet' ? 'bằng ví điểm' : 'khi nhận hàng'}.</p><p>Nhân viên sẽ gọi xác nhận trong thời gian sớm nhất.</p>
       <p><span class="ht-btn">Xem đơn hàng</span></p>`;
     else if (m.type === 'Đăng ký') main = `<p>Cảm ơn anh chị đã đăng ký thành viên ${esc(S.shopName || SITE.brand)}.</p>${u && u.code ? `<p>Mã giới thiệu của anh chị: <b>${esc(u.code)}</b>. Chia sẻ mã này để người thân nhận ưu đãi khi đăng ký.</p>` : ''}
-      <p>Mỗi đơn hàng được tích ${Math.round((S.pointRate || .1) * 100)}% giá trị thành điểm PS, dùng để đổi ưu đãi ở các đơn sau.</p><p><span class="ht-btn">Vào trang thành viên</span></p>`;
+      <p>Kích hoạt gói cộng tác viên để nhận hoa hồng bán hàng, trở thành đại lý hưởng thu nhập không giới hạn.</p><p><span class="ht-btn">Vào trang thành viên</span></p>`;
     else main = `<p>${esc(m.subject)}.</p><p>Nội dung chi tiết theo mẫu thư "${esc(m.type)}" của hệ thống. (mẫu)</p>`;
     return `<div class="ht-mail"><div class="ht-mail-h">${esc(S.shopName || SITE.brand)}</div>
       <div class="ht-mail-b"><p>Kính gửi ${esc(name)},</p>${main}<p>Trân trọng,<br>Đội ngũ ${esc(S.shopName || SITE.brand)}</p></div>
@@ -224,14 +224,14 @@
   const PLAN_FIELDS = [
     ['pkgPrice', 'Giá gói kích hoạt CTV', 'money', 'Khách mua gói này để trở thành cộng tác viên.'],
     ['pkgPoints', 'Điểm nhận khi kích hoạt', 'money', 'Cộng vào ví điểm mua hàng. Phần còn lại của giá gói là phí nền tảng.'],
-    ['refBonus', 'Thưởng giới thiệu CTV', 'money', 'Người giới thiệu (CTV hoặc đại lý) nhận khi người mới kích hoạt gói.'],
-    ['ctvRate', 'Hoa hồng của CTV', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp, trừ đơn đầu bằng điểm gói.'],
+    ['refBonus', 'Thưởng giới thiệu CTV', 'money', 'Người giới thiệu (CTV hoặc đại lý) nhận khi người mới kích hoạt gói. Khoản này không tính là thu nhập để tuyến trên hưởng.'],
+    ['ctvRate', 'Hoa hồng của CTV', 'pct', 'Trên mọi đơn mua hàng của người mình giới thiệu trực tiếp (khách hàng, CTV hay đại lý), trả khi đơn Hoàn thành.'],
     ['agentRate', 'Hoa hồng của đại lý', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp.'],
-    ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập của đại lý mình giới thiệu, tính dồn lên các đại lý tuyến trên.'],
+    ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập từ đơn mua hàng của đại lý mình giới thiệu, tính dồn lên các đại lý tuyến trên. Thưởng giới thiệu CTV không tính.'],
     ['overrideShop', 'Phần vào ví mua hàng', 'pct', 'Tỉ lệ của khoản thu nhập trên vào ví mua hàng, còn lại vào ví điểm thưởng.'],
     ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng và khi chuyển điểm thưởng sang khả dụng.'],
     ['agentThreshold', 'Mốc lên đại lý', 'money', 'Tổng tiền mua đã thanh toán cộng dồn để tự lên đại lý.'],
-    ['pkgCountsAs', 'Phần của gói tính vào doanh số mua hàng', 'money', 'Khi tính mốc lên đại lý, mỗi gói kích hoạt chỉ được tính số tiền này.'],
+    ['pkgCountsAs', 'Phần của gói tính vào doanh số mua hàng', 'money', 'Khi tính mốc lên đại lý, mỗi gói kích hoạt được tính số tiền này. Để 0 là gói không tính vào doanh số.'],
     ['activeDays', 'Chu kỳ xét điều kiện đại lý', 'days', 'Trong số ngày này, đại lý phải có đơn tự mua hoặc đơn bán (theo quy tắc bên dưới) mới nhận thu nhập từ đại lý tuyến dưới.'],
     ['activeMinBuy', 'Đơn tự mua tối thiểu', 'money', 'Giá trị tối thiểu của đơn tự mua để tính là đủ điều kiện. 0 là đơn nào cũng tính.'],
     ['activeMinSell', 'Đơn bán tối thiểu', 'money', 'Giá trị tối thiểu của đơn do người mình giới thiệu trực tiếp mua. 0 là đơn nào cũng tính.'],
@@ -249,9 +249,20 @@
         <div class="card-head"><div><h3>Thiết lập hệ thống</h3><div class="sub">Áp dụng cho đơn hàng, hoa hồng, ví và thư gửi khách</div></div></div>
         <div class="form-grid">
           <div class="ht-sec full">Thông tin cửa hàng</div>
-          ${f('shopName', 'Tên cửa hàng', S.shopName)}${f('hotline', 'Hotline', S.hotline, 'tel')}
-          ${f('email', 'Email liên hệ', S.email, 'email')}${f('mailSender', 'Người gửi thư tự động', S.mailSender)}
-          <div class="field full"><label for="hs-address">Địa chỉ</label><input class="input" id="hs-address" name="address" value="${esc(S.address)}"${dis}></div>
+          <p class="dim full" style="font-size:12.5px;margin:0">Lưu xong, thông tin dưới đây đổi ở mọi nơi trên web: chân trang, trang Liên hệ, nút gọi và Zalo, thông tin chuyển khoản ở trang đặt hàng và ví.</p>
+          ${f('shopName', 'Tên cửa hàng', S.shopName || SITE.brand)}${f('hotline', 'Hotline', S.hotline || SITE.phone, 'tel')}
+          ${f('zalo', 'Số Zalo', SITE.zalo, 'tel')}${f('email', 'Email liên hệ', S.email || SITE.email, 'email')}
+          ${f('hours', 'Giờ mở cửa', SITE.hours)}${f('mailSender', 'Người gửi thư tự động', S.mailSender)}
+          <div class="field full"><label for="hs-address">Địa chỉ</label><input class="input" id="hs-address" name="address" value="${esc(S.address || SITE.address)}"${dis}></div>
+          <div class="field full"><label for="hs-mapEmbed">Link nhúng Google Maps (không bắt buộc)</label><input class="input" id="hs-mapEmbed" name="mapEmbed" value="${esc(SITE.mapEmbed || '')}" placeholder="https://www.google.com/maps/embed?..."${dis}></div>
+          <div class="ht-sec full mt-2">Tài khoản nhận chuyển khoản</div>
+          ${f('bankName', 'Ngân hàng', SITE.bank.name)}${f('bankAccount', 'Số tài khoản', SITE.bank.account)}
+          ${f('bankOwner', 'Chủ tài khoản', SITE.bank.owner)}
+          <div class="ht-sec full mt-2">Link mạng xã hội</div>
+          <p class="dim full" style="font-size:12.5px;margin:0">Để trống mục nào thì mục đó hiện "sắp ra mắt" ở trang Liên hệ và ẩn ở chân trang.</p>
+          ${f('facebook', 'Facebook', SITE.social.facebook, 'url', ' placeholder="https://facebook.com/..."')}${f('messenger', 'Messenger (tên trang hoặc link m.me)', SITE.messenger)}
+          ${f('zaloOA', 'Zalo OA', SITE.social.zalo, 'url', ' placeholder="https://zalo.me/..."')}${f('youtube', 'YouTube', SITE.social.youtube, 'url', ' placeholder="https://youtube.com/@..."')}
+          ${f('tiktok', 'TikTok', SITE.social.tiktok, 'url', ' placeholder="https://tiktok.com/@..."')}
           <div class="ht-sec full mt-2">Kế hoạch trả thưởng</div>
           <p class="dim full" style="font-size:12.5px;margin:0">1 điểm PS = 1 đồng. Thay đổi chỉ áp dụng cho đơn hàng ghi nhận sau khi lưu, không tính lại các khoản đã trả.</p>
           ${PLAN_FIELDS.map(([k, label, kind, help]) => pf(k, label, P[k], kind, help)).join('')}
@@ -275,6 +286,9 @@
         if (v('email') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email'))) return fail('Email liên hệ chưa đúng.', 'email');
         if (v('hotline') && !/^[0-9 +.]{8,15}$/.test(v('hotline'))) return fail('Số hotline chưa đúng.', 'hotline');
         if (!v('mailSender')) return fail('Anh chị nhập người gửi thư tự động.', 'mailSender');
+        if (v('zalo') && !/^[0-9 +.]{8,15}$/.test(v('zalo'))) return fail('Số Zalo chưa đúng.', 'zalo');
+        for (const k of ['facebook', 'zaloOA', 'youtube', 'tiktok']) if (v(k) && !/^https?:\/\/\S+$/i.test(v(k))) return fail('Link phải bắt đầu bằng https://', k);
+        if (v('mapEmbed') && !/^https:\/\/www\.google\.com\/maps\/embed\S*$/i.test(v('mapEmbed'))) return fail('Link nhúng bản đồ phải bắt đầu bằng https://www.google.com/maps/embed', 'mapEmbed');
         const mw = +v('minWithdraw');
         if (v('minWithdraw') === '' || !(mw >= 0)) return fail('Mức rút tối thiểu không hợp lệ.', 'minWithdraw');
         const plan = {};
@@ -297,6 +311,9 @@
           minWithdraw: Math.round(mw), autoPlace: form.autoPlace.checked,
           plan: Object.assign({}, ADB.PLAN, (d2.settings || {}).plan || {}, plan)
         });
+        const site = { brand: v('shopName'), phone: v('hotline'), zalo: v('zalo'), email: v('email'), address: v('address'), hours: v('hours'), mapEmbed: v('mapEmbed'), messenger: v('messenger'),
+          bank: { name: v('bankName'), account: v('bankAccount'), owner: v('bankOwner') }, social: { facebook: v('facebook'), zalo: v('zaloOA'), youtube: v('youtube'), tiktok: v('tiktok') } };
+        try { localStorage.setItem('psq_site_v1', JSON.stringify(site)); } catch (er) {}
         ADB.log(d2, 'Thiết lập hệ thống', `Gói ${money(plan.pkgPrice)} (${money(plan.pkgPoints)} PS); giới thiệu ${money(plan.refBonus)}; CTV ${plan.ctvRate}%, đại lý ${plan.agentRate}%, thu nhập đại lý ${plan.overrideRate}% (${plan.overrideShop}% vào ví mua hàng); thuế ${plan.taxRate}%; lên đại lý ${money(plan.agentThreshold)}; gói tính vào doanh số ${money(plan.pkgCountsAs)}; rút tối thiểu ${money(mw)}`); ADB.save(d2);
         toast('Đã lưu thiết lập hệ thống');
       });

@@ -190,31 +190,33 @@
       u.pass = hash(newPass); u.passChanged = today(); db.save(d); return { ok: true };
     }
   };
-  // tổng chi tiêu, điểm và hạng của một khách
-  function memberInfo(u) {
-    const orders = db.load().orders.filter(o => o.userId === u.id).sort((a, b) => b.date.localeCompare(a.date));
-    const spent = orders.filter(o => o.status !== 'failed').reduce((s, o) => s + o.total, 0);
-    const points = Math.round(spent * (S.pointRate || 0.1)) - (u.usedPoints || 0);
-    const ranks = window.RANKS || [];
-    let rank = ranks[0], next = null;
-    ranks.forEach((r, i) => { if (spent >= r.min) { rank = r; next = ranks[i + 1] || null; } });
-    return { orders, spent, points, rank, next, progress: next ? (spent - rank.min) / (next.min - rank.min) : 1 };
-  }
 
   /* ---------- giỏ hàng ---------- */
   const product = id => PRODUCTS.find(p => p.id === id);
+  // tồn kho do quản trị cập nhật (Kho): null là chưa quản lý tồn kho, coi như còn hàng
+  let stockC = null;
+  const stockMap = () => stockC || (setTimeout(() => { stockC = null; }), stockC = (store.get(DB_KEY, {}) || {}).stock || {});
+  const stockOf = id => { const m = stockMap(); return id in m ? Math.max(0, +m[id] || 0) : null; };
+  const soldOut = id => stockOf(id) === 0;
   const cart = {
     items() { return store.get(CART_KEY, []).filter(x => product(x.id)); },
     count() { return cart.items().reduce((s, x) => s + x.qty, 0); },
     total() { return cart.items().reduce((s, x) => s + product(x.id).price * x.qty, 0); },
-    add(id, qty = 1) { const it = cart.items(); const f = it.find(x => x.id === id); f ? f.qty += qty : it.push({ id, qty }); store.set(CART_KEY, it); cart.changed(); },
-    set(id, qty) { let it = cart.items(); const f = it.find(x => x.id === id); if (f) f.qty = qty; it = it.filter(x => x.qty > 0); store.set(CART_KEY, it); cart.changed(); },
+    add(id, qty = 1) {
+      const st = stockOf(id); if (st === 0) { toast('Sản phẩm này đã hết hàng.', 'err'); return false; }
+      const it = cart.items(); const f = it.find(x => x.id === id); f ? f.qty += qty : it.push({ id, qty });
+      const g = f || it[it.length - 1]; let capped = false; if (st !== null && g.qty > st) { g.qty = st; capped = true; }
+      store.set(CART_KEY, it); cart.changed(); if (capped) toast(`Sản phẩm này chỉ còn ${st} trong kho.`, 'err'); return true;
+    },
+    set(id, qty) { let it = cart.items(); const f = it.find(x => x.id === id), st = stockOf(id); if (st !== null && qty > st) { qty = st; toast(`Sản phẩm này chỉ còn ${st} trong kho.`, 'err'); } if (f) f.qty = qty; it = it.filter(x => x.qty > 0); store.set(CART_KEY, it); cart.changed(); },
     clear() { store.set(CART_KEY, []); cart.changed(); },
     changed() { $$('[data-cart-count]').forEach(n => { const c = cart.count(); n.textContent = c; n.hidden = !c; }); renderDrawer(); document.dispatchEvent(new CustomEvent('cart:change')); }
   };
   function placeOrder(info) {
     const items = cart.items().map(x => { const p = product(x.id); return { id: p.id, name: p.name, price: p.price, qty: x.qty }; });
     if (!items.length) return { error: 'Giỏ hàng đang trống.' };
+    const out = items.find(x => { const st = stockOf(x.id); return st !== null && x.qty > st; });
+    if (out) { const st = stockOf(out.id); return { error: st ? `${out.name} chỉ còn ${st} trong kho, anh chị giảm số lượng giúp em.` : `${out.name} đã hết hàng, anh chị bỏ sản phẩm này khỏi giỏ.` }; }
     const d = db.load(), u = auth.user();
     const num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
     const o = { id: 'PSQ' + num, userId: u ? u.id : null, ...info, items, total: items.reduce((s, x) => s + x.price * x.qty, 0) + (S.shipFee || 0), status: 'pending', date: today() };
@@ -422,8 +424,8 @@
           <div><a class="brand" href="index.html" style="padding:0 0 12px"><img src="${S.logo}" alt=""><b>${esc(S.brand)}</b></a>
             <p style="max-width:36ch">Trầm hương tự nhiên tuyển chọn, chế tác thủ công, có nguồn gốc rõ ràng.</p></div>
           <div><h4>Khám phá</h4><a href="gioi-thieu.html">Giới thiệu</a><a href="san-pham.html">Sản phẩm</a><a href="kien-thuc.html">Kiến thức trầm</a><a href="thanh-vien.html">Thành viên</a></div>
-          <div><h4>Hỗ trợ</h4><a href="dat-hang.html">Đặt hàng</a><a href="lien-he.html">Liên hệ</a><a href="lien-he.html#chinh-sach">Chính sách đổi trả</a><a href="lien-he.html#chinh-sach">Bảo hành</a></div>
-          <div><h4>Liên hệ</h4><a href="tel:${esc(S.phone.replace(/\s/g, ''))}">${esc(S.phone)}</a><a href="mailto:${esc(S.email)}">${esc(S.email)}</a><span style="display:block;padding:4px 0">${esc(S.address)}</span></div>
+          <div><h4>Hỗ trợ</h4><a href="dat-hang.html">Đặt hàng</a><a href="lien-he.html">Liên hệ</a><a href="lien-he.html#chinh-sach">Chính sách đổi trả</a><a href="lien-he.html#chinh-sach">Bảo hành</a>${pwa.can() ? '<a href="#" data-user-act="install">Cài ứng dụng PSQ</a>' : ''}</div>
+          <div><h4>Liên hệ</h4><a href="tel:${esc(S.phone.replace(/\s/g, ''))}">${esc(S.phone)}</a><a href="mailto:${esc(S.email)}">${esc(S.email)}</a><span style="display:block;padding:4px 0">${esc(S.address)}</span>${footSocial()}</div>
           <div class="copy"><span>© ${new Date().getFullYear()} ${esc(S.brand)}. Mọi quyền được bảo lưu.</span><span>Sản phẩm không phải là thuốc, không thay thế thuốc chữa bệnh.</span></div>
         </footer>
       </div>
@@ -441,7 +443,7 @@
       <div class="toasts" aria-live="polite"></div>
       ${cur === 'admin' ? '' : `<div class="contact-dock" aria-label="Liên hệ nhanh">
         <a class="cd-btn cd-zalo" href="https://zalo.me/${esc(String(S.zalo || '').replace(/\D/g, ''))}" target="_blank" rel="noopener" aria-label="Chat Zalo"><span class="cd-ico notranslate" translate="no">Zalo</span><span class="cd-tip">Chat Zalo</span></a>
-        <a class="cd-btn cd-mess" href="${S.messenger ? 'https://m.me/' + esc(S.messenger) : 'lien-he.html'}"${S.messenger ? ' target="_blank" rel="noopener"' : ''} aria-label="Nhắn tin Messenger"><span class="cd-ico">${icon('messenger')}</span><span class="cd-tip">Nhắn Messenger</span></a>
+        <a class="cd-btn cd-mess" href="${S.messenger ? esc(S.messLink()) : 'lien-he.html'}"${S.messenger ? ' target="_blank" rel="noopener"' : ''} aria-label="Nhắn tin Messenger"><span class="cd-ico">${icon('messenger')}</span><span class="cd-tip">Nhắn Messenger</span></a>
         <a class="cd-btn cd-call" href="tel:${esc(String(S.phone || '').replace(/[^\d+]/g, ''))}" aria-label="Gọi ${esc(S.phone || '')}"><span class="cd-ico">${icon('phone')}</span><span class="cd-tip">Gọi ${esc(S.phone || '')}</span></a>
       </div>`}`);
     // các icon thanh bên nhấp nháy đỏ một lúc khi vào trang để khách chú ý
@@ -451,7 +453,7 @@
       const ub = e.target.closest('[data-user-open]');
       if (ub) { e.stopPropagation(); if (document.querySelector('.user-pop')) return closeUser(); userMenu(ub); return; }
       const ua = e.target.closest('[data-user-act]');
-      if (ua) { e.preventDefault(); const a = ua.dataset.userAct; closeUser(); if (a === 'logout') { auth.logout(); toast('Đã đăng xuất'); setTimeout(() => location.href = cur === 'admin' ? 'index.html' : location.href.split('#')[0], 300); } if (a === 'pass') passModal(); return; }
+      if (ua) { e.preventDefault(); const a = ua.dataset.userAct; closeUser(); if (a === 'logout') { auth.logout(); toast('Đã đăng xuất'); setTimeout(() => location.href = cur === 'admin' ? 'index.html' : location.href.split('#')[0], 300); } if (a === 'pass') passModal(); if (a === 'install') pwa.install(); return; }
       if (!e.target.closest('.user-pop')) closeUser();
       const lb = e.target.closest('[data-lang-open]');
       if (lb) { e.stopPropagation(); if (document.querySelector('.lang-pop')) return PSQLang.close(); PSQLang.menu(lb); return; }
@@ -463,7 +465,7 @@
       if (t.matches('[data-nav-close]')) app.classList.remove('nav-open');
       if (t.matches('[data-cart-open]')) openCart(true);
       if (t.matches('[data-cart-close]')) openCart(false);
-      if (t.matches('[data-add]')) { e.preventDefault(); cart.add(t.dataset.add, +(t.dataset.n || 1)); toast('Đã thêm vào giỏ: ' + product(t.dataset.add).name); if (t.dataset.go) location.href = 'dat-hang.html'; }
+      if (t.matches('[data-add]')) { e.preventDefault(); if (t.disabled || !cart.add(t.dataset.add, +(t.dataset.n || 1))) return; toast('Đã thêm vào giỏ: ' + product(t.dataset.add).name); if (t.dataset.go) location.href = 'dat-hang.html'; }
       if (t.matches('[data-qty]')) { const [id, d] = t.dataset.qty.split('|'); const it = cart.items().find(x => x.id === id); if (it) cart.set(id, d === 'x' ? 0 : it.qty + +d); }
     });
     addEventListener('keydown', e => { if (e.key === 'Escape') { openCart(false); app.classList.remove('nav-open'); closeUser(); } });
@@ -473,8 +475,8 @@
       const u = auth.user(), pop = document.createElement('div'); pop.className = 'user-pop'; pop.setAttribute('role', 'menu');
       const it = (href, ic, label, act) => `<a role="menuitem" href="${href}"${act ? ` data-user-act="${act}"` : ''}>${icon(ic)}<span>${label}</span></a>`;
       pop.innerHTML = u ? `<div class="up-head"><span class="avatar">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials(u.name))}</span><div><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></div></div>
-        ${it('thanh-vien.html#ho-so', 'user', 'Hồ sơ của tôi')}${it('thanh-vien.html#vi', 'wallet', 'Ví của tôi')}${it('#', 'lock', 'Đổi mật khẩu', 'pass')}${u.role === 'admin' ? it('quan-tri.html', 'grid', 'Trang quản trị') : ''}<div class="up-sep"></div>${it('#', 'logout', 'Đăng xuất', 'logout')}`
-        : `<div class="up-head"><span class="avatar">${icon('user')}</span><div><b>Khách</b><small>Đăng nhập để xem ví, đơn hàng</small></div></div>${it('thanh-vien.html', 'user', 'Đăng nhập')}${it('thanh-vien.html?dang-ky=1', 'plus', 'Đăng ký thành viên')}`;
+        ${it('thanh-vien.html#ho-so', 'user', 'Hồ sơ của tôi')}${it('thanh-vien.html#vi', 'wallet', 'Ví của tôi')}${it('#', 'lock', 'Đổi mật khẩu', 'pass')}${u.role === 'admin' ? it('quan-tri.html', 'grid', 'Trang quản trị') : ''}${pwa.can() ? it('#', 'download', 'Cài ứng dụng PSQ', 'install') : ''}<div class="up-sep"></div>${it('#', 'logout', 'Đăng xuất', 'logout')}`
+        : `<div class="up-head"><span class="avatar">${icon('user')}</span><div><b>Khách</b><small>Đăng nhập để xem ví, đơn hàng</small></div></div>${it('thanh-vien.html', 'user', 'Đăng nhập')}${it('thanh-vien.html?dang-ky=1', 'plus', 'Đăng ký thành viên')}${pwa.can() ? '<div class="up-sep"></div>' + it('#', 'download', 'Cài ứng dụng PSQ', 'install') : ''}`;
       document.body.appendChild(pop);
       const r = btn.getBoundingClientRect(); pop.style.top = (r.bottom + 8) + 'px'; pop.style.left = Math.max(12, Math.min(innerWidth - pop.offsetWidth - 12, r.right - pop.offsetWidth)) + 'px';
       btn.setAttribute('aria-expanded', 'true'); const f = pop.querySelector('a'); f && f.focus();
@@ -505,7 +507,12 @@
       : `<div class="empty">${icon('cart')}Giỏ hàng đang trống.<div class="mt-2"><a class="btn btn-outline-gold btn-sm" href="san-pham.html">Xem sản phẩm</a></div></div>`;
     foot.innerHTML = it.length ? `<div class="row between"><span class="muted">Tạm tính</span><b class="gold" style="font-size:18px">${money(cart.total())}</b></div><a class="btn btn-gold btn-block" href="dat-hang.html">Đặt hàng ${icon('arrow')}</a>` : '';
   }
-  function toast(msg) { const box = $('.toasts'); if (!box) return; const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; box.appendChild(t); setTimeout(() => t.remove(), 2600); }
+  // link mạng xã hội ở chân trang: chỉ hiện các mục đã có link trong Thiết lập
+  function footSocial() {
+    const so = S.social || {}, L = [['facebook', 'Facebook', so.facebook], ['messenger', 'Messenger', S.messenger ? S.messLink() : ''], ['zalo', 'Zalo', so.zalo || (S.zalo ? 'https://zalo.me/' + String(S.zalo).replace(/\D/g, '') : '')], ['youtube', 'YouTube', so.youtube], ['tiktok', 'TikTok', so.tiktok]].filter(x => x[2]);
+    return L.length ? `<div class="foot-social">${L.map(([i, n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener" aria-label="${n}" title="${n}">${icon(i)}</a>`).join('')}</div>` : '';
+  }
+  function toast(msg, kind) { const box = $('.toasts'); if (!box) return; const t = document.createElement('div'); t.className = 'toast' + (kind === 'err' ? ' toast-err' : ''); t.textContent = msg; if (kind === 'err') t.setAttribute('role', 'alert'); box.appendChild(t); setTimeout(() => t.remove(), kind === 'err' ? 6000 : 2600); }
   function modal(html) {
     const back = document.createElement('div'); back.className = 'modal-back';
     back.innerHTML = `<div class="modal card glow-mix" role="dialog" aria-modal="true">${html}</div>`;
@@ -520,18 +527,41 @@
   }
   // thẻ sản phẩm dùng chung
   function productCard(p) {
-    return `<article class="card p-card">
-      <a class="p-img" href="san-pham-chi-tiet.html?id=${p.id}">${art(p)}${p.old ? `<span class="badge gold tag">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : p.hot ? '<span class="badge violet tag">Bán chạy</span>' : ''}</a>
+    const out = soldOut(p.id);
+    return `<article class="card p-card${out ? ' sold-out' : ''}">
+      <a class="p-img" href="san-pham-chi-tiet.html?id=${p.id}">${art(p)}${out ? '<span class="badge failed tag">Hết hàng</span>' : p.old ? `<span class="badge gold tag">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : p.hot ? '<span class="badge violet tag">Bán chạy</span>' : ''}</a>
       <div class="p-body"><h3><a href="san-pham-chi-tiet.html?id=${p.id}">${esc(p.name)}</a></h3>
         <div class="row" style="gap:8px;flex-wrap:wrap"><span class="p-price">${money(p.price)}</span>${p.old ? `<s class="dim" style="font-size:12px">${money(p.old)}</s>` : ''}</div>
 </div>
-      <div class="p-actions"><button class="btn btn-outline-gold btn-sm" type="button" data-add="${p.id}">${icon('cart')} Thêm</button><button class="btn btn-gold btn-sm" type="button" data-add="${p.id}" data-go="1">Mua ngay</button></div>
+      <div class="p-actions">${out ? `<button class="btn btn-ghost btn-sm" type="button" disabled>Hết hàng</button>` : `<button class="btn btn-outline-gold btn-sm" type="button" data-add="${p.id}">${icon('cart')} Thêm</button><button class="btn btn-gold btn-sm" type="button" data-add="${p.id}" data-go="1">Mua ngay</button>`}</div>
     </article>`;
   }
   const statusName = { pending: 'Chờ xác nhận', paid: 'Đã thanh toán', ship: 'Đang giao', done: 'Hoàn thành', failed: 'Đã hủy' };
   const statusBadge = s => `<span class="badge ${s === 'done' ? 'ok' : s}">${statusName[s] || s}</span>`;
 
-  window.PSQ = { videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, memberInfo, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+
+  /* ---------- cài web như ứng dụng (PWA) ---------- */
+  const pwa = (() => {
+    let ev = null;
+    const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    addEventListener('beforeinstallprompt', e => { e.preventDefault(); ev = e; document.documentElement.classList.add('can-install'); });
+    addEventListener('appinstalled', () => { ev = null; document.documentElement.classList.remove('can-install'); toast('Đã cài ứng dụng Phúc Sinh QuanTum'); });
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    return {
+      can: () => !standalone(),
+      async install() {
+        if (ev) { ev.prompt(); const r = await ev.userChoice.catch(() => null); ev = null; if (r && r.outcome === 'accepted') toast('Đang cài ứng dụng...'); return; }
+        modal(`<div class="card-head"><h3>Cài ứng dụng PSQ</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+          <p class="muted" style="font-size:14px">Cài vào màn hình chính để mở nhanh như ứng dụng, toàn màn hình, không cần vào kho ứng dụng.</p>
+          <ol class="pwa-steps">${ios ? '<li>Mở trang này bằng <b>Safari</b>.</li><li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên lên) ở thanh dưới.</li><li>Chọn <b>Thêm vào MH chính</b> rồi bấm <b>Thêm</b>.</li>'
+            : '<li>Mở trang này bằng <b>Chrome</b> (Android, máy tính) hoặc <b>Edge</b>.</li><li>Bấm nút menu <b>⋮</b> ở góc trên.</li><li>Chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.</li>'}</ol>
+          <div class="row mt-2" style="justify-content:flex-end"><button class="btn btn-gold" type="button" data-close>Đã hiểu</button></div>`);
+      }
+    };
+  })();
+
+  window.PSQ = { pwa, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   shell();
   ambient();
