@@ -162,6 +162,46 @@ window.RANKS = [
   { id: 'kim-cuong', name: 'Kim cương', min: 150000000, color: '#4fe6df', perk: 'Giảm 8%, tư vấn riêng, sự kiện đặc biệt' }
 ];
 
+// Nội dung trang Giới thiệu. Sửa trong Quản trị > Trang web > Trang giới thiệu (lưu psq_about_v1, ghi đè lên mặc định dưới đây).
+window.ABOUT = {
+  heroEyebrow: 'Về Phúc Sinh QuanTum',
+  heroTitle: 'Gìn giữ hương trầm Việt',
+  heroEm: 'bằng sự tử tế.',
+  heroLead: 'Chúng tôi tuyển chọn trầm hương tự nhiên, chế tác thủ công và minh bạch nguồn gốc cho từng sản phẩm, để mỗi món quà trầm mang đúng giá trị của nó.',
+  heroImg: 'img/intro/canh-1-may-nui-ngay.jpg',
+  storyEyebrow: 'Câu chuyện thương hiệu',
+  storyTitle: 'Từ một xưởng trầm nhỏ đến thương hiệu trầm hương lượng tử',
+  story: [
+    'Phúc Sinh QuanTum bắt đầu từ một xưởng chế tác trầm nhỏ, nơi những người thợ dành nhiều năm học cách đọc vân dầu, cảm nhận độ nặng và lắng nghe từng tầng hương của khúc trầm. (mẫu)',
+    'Chúng tôi tin rằng trầm hương là một sản phẩm văn hóa: thứ giúp ta chậm lại, thư thái hơn trong nhịp sống bận rộn. Vì thế mỗi sản phẩm đều đi kèm thông tin lô nguyên liệu, quy trình chế tác và chính sách hậu mãi rõ ràng. (mẫu)',
+    '“Trầm hương lượng tử” là tên gọi dòng trầm tuyển chọn của thương hiệu, thể hiện cách chúng tôi kết hợp giá trị tự nhiên với quy trình kiểm soát chất lượng hiện đại. (mẫu)'
+  ],
+  promiseTitle: 'Cam kết của chúng tôi',
+  promises: [
+    'Trầm tự nhiên, có hồ sơ nguồn gốc cho từng lô',
+    'Chế tác thủ công, kiểm tra từng hạt trước khi xâu',
+    'Đổi trả trong 7 ngày nếu sản phẩm lỗi (mẫu)',
+    'Thay dây miễn phí cho thành viên (mẫu)'
+  ],
+  values: [
+    { t: 'Tôn trọng tự nhiên', d: 'Chỉ chọn trầm có nguồn gốc rõ ràng, khai thác có trách nhiệm với rừng dó và người trồng.' },
+    { t: 'Minh bạch', d: 'Mỗi sản phẩm gắn với thông tin lô nguyên liệu, giấy kiểm định và chính sách bảo hành.' },
+    { t: 'Tay nghề thủ công', d: 'Nghệ nhân mài, khoan, đánh bóng từng hạt để giữ vân dầu và hương trầm tự nhiên.' },
+    { t: 'Đồng hành lâu dài', d: 'Tư vấn tận tâm, chăm sóc sau bán và chương trình cộng tác viên, đại lý.' }
+  ],
+  teamNote: 'Ảnh và tên thật của đội ngũ sẽ cập nhật sau (mẫu).',
+  steps: [
+    { t: 'Nguồn nguyên liệu', d: 'Thu mua từ vùng dó bầu có hồ sơ, ghi rõ nơi khai thác và thời gian tạo trầm. (mẫu)' },
+    { t: 'Tuyển chọn', d: 'Đánh giá màu, vân dầu, độ nặng và mùi hương của từng khối trầm.' },
+    { t: 'Chế tác', d: 'Nghệ nhân mài tay, khoan và đánh bóng, giữ lại vân trầm tự nhiên.' },
+    { t: 'Kiểm định', d: 'Kiểm tra độ đều hạt, độ hoàn thiện và lập phiếu thông tin cho từng sản phẩm. (mẫu)' },
+    { t: 'Đóng gói', d: 'Hộp quà sang trọng, kèm thẻ hướng dẫn bảo quản và giấy bảo hành.' }
+  ],
+  ctaTitle: 'Chọn món trầm hợp với mình',
+  ctaText: 'Xem bộ sưu tập vòng trầm, chuỗi hạt, vật phẩm phong thủy, hoặc đăng ký thành viên miễn phí để nhận ưu đãi riêng.'
+};
+window.ABOUT_DEFAULT = JSON.parse(JSON.stringify({ about: window.ABOUT, team: window.TEAM, timeline: window.TIMELINE, stats: window.STATS }));
+
 // Danh mục và bài viết do trang Quản trị sửa (lưu trên trình duyệt này) sẽ thay cho danh sách mặc định ở trên.
 // Giữ nguyên mảng gốc (splice) để các đoạn mã đã giữ tham chiếu vẫn thấy nội dung mới. Bài viết bị ẩn không hiện ra ngoài.
 (function () {
@@ -171,4 +211,12 @@ window.RANKS = [
   use(window.CATEGORIES, 'psq_cats_v1');
   use(window.POST_CATS, 'psq_postcats_v1');
   use(window.POSTS, 'psq_posts_v1', p => !p.hidden);
+  // trang giới thiệu: nội dung chữ, đội ngũ, cột mốc, số liệu (số liệu dùng chung với trang chủ)
+  try {
+    const a = JSON.parse(localStorage.getItem('psq_about_v1'));
+    if (a && typeof a === 'object') {
+      if (a.about) Object.assign(window.ABOUT, a.about);
+      [['team', 'TEAM'], ['timeline', 'TIMELINE'], ['stats', 'STATS']].forEach(([k, g]) => { if (Array.isArray(a[k]) && a[k].length) window[g].splice(0, window[g].length, ...a[k]); });
+    }
+  } catch (e) {}
 })();
