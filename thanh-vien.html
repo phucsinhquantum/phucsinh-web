@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024f">
-<script src="js/lang.js?v=20261024f"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024g">
+<script src="js/lang.js?v=20261024g"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,11 +216,11 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261024f"></script>
-<script src="js/api.js?v=20261024f"></script>
-<script src="js/data.js?v=20261024f"></script>
-<script src="js/app.js?v=20261024f"></script>
-<script src="js/psq-data.js?v=20261024f"></script>
+<script src="js/patch.js?v=20261024g"></script>
+<script src="js/api.js?v=20261024g"></script>
+<script src="js/data.js?v=20261024g"></script>
+<script src="js/app.js?v=20261024g"></script>
+<script src="js/psq-data.js?v=20261024g"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -250,6 +250,15 @@
     toast('Đã sao chép đường dẫn giới thiệu');
   }
   // gửi thao tác lên máy chủ: lỗi thì hiện ở el (hoặc thông báo đỏ), xong thì hiện msg
+  // khung chờ thanh toán + gửi bill cho đơn gói (CTV, đại lý) và yêu cầu nạp tiền; duyệt xong vẽ lại trang
+  let openBill = false;
+  const billWait = (kind, x, redo, paidTitle, paidSub) => {
+    const open = openBill; openBill = false;
+    PSQ.payWait.start({ open, paidTitle, paidSub, onPaid: () => setTimeout(redo, 2500),
+      send: bill => kind === 'topup' ? API.act('topupClaim', { id: x.id, bill }) : API.act('paidClaim', { id: x.id, bill }),
+      check: () => API.act('payStatus', { kind, id: x.id }).status });
+  };
+  const waitBox = x => x.status === 'pending' ? PSQ.payWait.html({ sent: !!(x.bills || []).length }) : '';
   const act = (name, args, msg, el) => { const r = API.act(name, args); if (r.error) { if (el) el.textContent = r.error; else toast(r.error, 'err'); return null; } if (msg) toast(typeof msg === 'function' ? msg(r) : msg); return r; };
   const head = (t, sub, right = '') => `<div class="card-head" style="flex-wrap:wrap"><div><h3>${t}</h3>${sub ? `<div class="sub">${sub}</div>` : ''}</div>${right ? `<div style="margin-left:auto">${right}</div>` : ''}</div>`;
   const ph = (t, sub) => `<div class="tv-ph"><h2>${t}</h2>${sub ? `<p class="dim">${sub}</p>` : ''}</div>`;
@@ -403,15 +412,16 @@
       <ul class="pkg-list mt-2">${perkLi(d, 'dailyPkg')}</ul>
       <p class="muted mt-2" style="font-size:13px">Quyền lợi Đại lý:</p><ul class="pkg-list">${perkLi(d, 'daily')}</ul></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn gói đại lý #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
-        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>
-        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản lên Đại lý ngay khi công ty xác nhận đã nhận tiền.</p></div>`
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}
+        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản lên Đại lý ngay khi công ty duyệt bill chuyển khoản.</p></div>`
       : `<div class="card glow-cyan">${head('Đăng ký ngay', 'thanh toán bằng chuyển khoản')}
         <p class="muted" style="font-size:14px">Bấm nút bên dưới để tạo đơn gói đại lý. Trang sẽ hiện thông tin chuyển khoản với nội dung là mã đơn.</p>
         <button class="btn btn-gold btn-block btn-lg mt-2" type="button" id="agBuy">${icon('award')} Đăng ký đại lý ${money(P.agentPkgPrice)}</button>
         <p class="dim mt-2" style="font-size:12.5px">Gói đại lý không tính hoa hồng cho người giới thiệu. Hoa hồng được tính khi anh chị dùng điểm để đặt đơn hàng.</p></div>`;
     box.innerHTML = ph('Đăng ký đại lý', 'Lên Đại lý ngay bằng gói đại lý') + `<div class="grid g-2">${intro}${status}</div>`;
+    if (o && o.status === 'pending') billWait('order', o, redo, 'Đã nhận thanh toán gói đại lý', 'Chúc mừng anh chị đã lên Đại lý!');
     const btn = $('#agBuy', box); if (btn) btn.addEventListener('click', () => {
-      btn.disabled = true; if (act('buyAgentPackage', {}, r => 'Đã tạo đơn ' + r.order.id + ', anh chị chuyển khoản để lên đại lý')) redo(); else btn.disabled = false;
+      btn.disabled = true; if (act('buyAgentPackage', {}, r => 'Đã tạo đơn ' + r.order.id + ', anh chị chuyển khoản rồi gửi ảnh bill')) redo(); else btn.disabled = false;
     });
   }
 
@@ -429,15 +439,16 @@
           <ul class="pkg-list">${perkLi(d, 'ctvFee')}</ul></div></div>
       <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${money(P.refBonus)} khi người đó kích hoạt CTV. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn kích hoạt #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
-        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>
-        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản được kích hoạt Cộng tác viên ngay khi công ty xác nhận đã nhận tiền. Anh chị có thể xem trạng thái tại Đơn hàng của tôi.</p></div>`
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}
+        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản được kích hoạt Cộng tác viên ngay khi công ty duyệt bill chuyển khoản. Anh chị có thể xem trạng thái tại Đơn hàng của tôi.</p></div>`
       : `<div class="card glow-cyan">${head('Kích hoạt ngay', 'thanh toán bằng chuyển khoản')}
         <p class="muted" style="font-size:14px">Bấm nút bên dưới để tạo đơn kích hoạt. Trang sẽ hiện thông tin chuyển khoản với nội dung là mã đơn.</p>
         <button class="btn btn-gold btn-block btn-lg mt-2" type="button" id="pkBuy">${icon('sparkle')} Kích hoạt gói ${money(P.pkgPrice)}</button>
         <p class="dim mt-2" style="font-size:12.5px">Tài khoản được kích hoạt sau khi công ty xác nhận thanh toán.</p></div>`;
     box.innerHTML = ph('Kích hoạt cộng tác viên', 'Mở gian hàng online và bắt đầu nhận hoa hồng') + `<div class="grid g-2">${intro}${status}</div>`;
+    if (o && o.status === 'pending') billWait('order', o, redo, 'Đã nhận thanh toán gói kích hoạt', 'Chúc mừng anh chị đã là Cộng tác viên!');
     const btn = $('#pkBuy', box); if (btn) btn.addEventListener('click', () => {
-      btn.disabled = true; if (act('buyPackage', {}, r => 'Đã tạo đơn ' + r.order.id + ', anh chị chuyển khoản để kích hoạt')) redo(); else btn.disabled = false;
+      btn.disabled = true; if (act('buyPackage', {}, r => 'Đã tạo đơn ' + r.order.id + ', anh chị chuyển khoản rồi gửi ảnh bill')) redo(); else btn.disabled = false;
     });
   }
 
@@ -567,7 +578,10 @@
   /* ---------- NẠP TIỀN ---------- */
   function pTopup(box, d, me, redo) {
     const T = (d.topups || []).filter(t => t.user === me.id).sort((a, b) => b.date.localeCompare(a.date)), bal = ADB.balances(d, me.id).cash;
-    box.innerHTML = ph('Nạp tiền', 'Tiền nạp vào ' + W.cash.name.toLowerCase() + ', dùng mua hàng ngay hoặc đổi sang điểm PS (1đ = 1 PS)') + note + `<div class="grid g-main-r">
+    const wt = T.find(t => t.status === 'pending' && t.method === 'Chuyển khoản');
+    const waitCard = wt ? `<div class="card glow-gold" style="margin-bottom:16px">${head('Yêu cầu nạp ' + money(wt.amount), 'tạo ngày ' + fdate(wt.date), wB(wt.status))}
+      <div class="box" style="padding:14px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)">${bankBox(me, wt.amount)}</div>${waitBox(wt)}</div>` : '';
+    box.innerHTML = ph('Nạp tiền', 'Tiền nạp vào ' + W.cash.name.toLowerCase() + ', dùng mua hàng ngay hoặc đổi sang điểm PS (1đ = 1 PS)') + note + waitCard + `<div class="grid g-main-r">
       <div class="card glow-cyan">${head('Lịch sử nạp tiền', T.length + ' lần nạp')}
         ${T.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Số tiền</th><th>Hình thức</th><th>Vào ví</th><th>Trạng thái</th></tr></thead><tbody>${T.map(t => `<tr><td class="dim nowrap">${fdate(t.date)}</td><td class="gold nowrap"><b>${money(t.amount)}</b></td><td>${esc(t.method || '')}${t.auto ? '<br><small class="green">Tự động xác nhận</small>' : ''}</td><td class="nowrap">${wdot(t.wallet || 'shop')}</td><td>${wB(t.status)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('plus')}Chưa nạp tiền lần nào.</div>`}
       </div>
@@ -586,13 +600,15 @@
         : `<p class="dim" style="font-size:12.5px">Nộp tiền tại cửa hàng, kế toán xác nhận rồi tiền mới vào ví.</p>`;
       $('#tpS', box).textContent = bank ? 'Tôi đã chuyển khoản' : 'Gửi yêu cầu nạp';
     };
+    if (wt) billWait('topup', wt, redo, 'Đã cộng ' + money(wt.amount) + ' vào ví', 'Tiền đã vào ' + W.cash.name.toLowerCase() + ', anh chị dùng được ngay.');
     info(); A.addEventListener('input', info); M.addEventListener('change', info);
     if (!box.dataset.depBound) box.dataset.depBound = 1, box.addEventListener('click', e => { const c = e.target.closest('[data-copy-dep]'); if (c) { navigator.clipboard && navigator.clipboard.writeText(c.dataset.copyDep).catch(() => {}); toast('Đã sao chép nội dung chuyển khoản'); } });
     $('#tpQ', box).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { A.value = b.dataset.v; info(); } });
     $('#tpF', box).addEventListener('submit', e => {
       e.preventDefault(); const a = Math.round(+A.value || 0);
       if (!a || a < 10000) return $('#tpE', box).textContent = 'Số tiền nạp tối thiểu 10.000đ.';
-      if (act('deposit', { amount: a, method: M.value }, 'Đã gửi yêu cầu nạp ' + money(a) + ', tiền vào ví khi công ty xác nhận', $('#tpE', box))) redo();
+      const bank = M.value === 'Chuyển khoản';
+      if (act('deposit', { amount: a, method: M.value }, bank ? 'Đã ghi nhận yêu cầu nạp ' + money(a) + ', anh chị gửi ảnh bill giúp em' : 'Đã gửi yêu cầu nạp ' + money(a) + ', tiền vào ví khi công ty xác nhận', $('#tpE', box))) { openBill = bank; redo(); if (bank) scrollTo({ top: 0, behavior: 'smooth' }); }
     });
   }
 
@@ -691,7 +707,7 @@
   const bankBox = (u, a) => `<dl class="kv dep-bank"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd>${a ? `<dt>Số tiền</dt><dd><b>${money(a)}</b></dd>` : ''}<dt>Nội dung</dt><dd><b class="cyan">${esc(depCode(u))}</b> <button class="link-btn" type="button" data-copy-dep="${esc(depCode(u))}">Sao chép</button></dd></dl>${a ? PSQ.qr(a, depCode(u)) : ''}`;
   // chuyển khoản nạp tiền: ghi nhận yêu cầu, công ty xác nhận khi tiền vào tài khoản thì cộng ví
   function depositNow(amount, el) {
-    return act('deposit', { amount, method: 'Chuyển khoản' }, 'Đã gửi yêu cầu nạp ' + money(amount) + ', tiền vào ví khi công ty xác nhận', el) || { error: true };
+    return act('deposit', { amount, method: 'Chuyển khoản' }, 'Đã ghi nhận yêu cầu nạp ' + money(amount) + ', anh chị gửi ảnh bill giúp em', el) || { error: true };
   }
   function depositAct() {
     const d = ADB.load(), me = ADB.user(d, ME);
@@ -711,7 +727,8 @@
       e.preventDefault(); const a = Math.round(+A.value || 0);
       if (!a || a < 10000) return $('#dpE', el).textContent = 'Số tiền nạp tối thiểu 10.000đ.';
       const r = depositNow(a, $('#dpE', el)); if (r.error) return;
-      md.close(); render();
+      md.close(); openBill = true;
+      if (location.hash === '#nap-diem') render(); else location.hash = 'nap-diem';
     });
     setTimeout(() => A.focus(), 60);
   }

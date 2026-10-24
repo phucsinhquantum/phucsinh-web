@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024f">
-<script src="js/lang.js?v=20261024f"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024g">
+<script src="js/lang.js?v=20261024g"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -133,11 +133,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261024f"></script>
-<script src="js/api.js?v=20261024f"></script>
-<script src="js/data.js?v=20261024f"></script>
-<script src="js/app.js?v=20261024f"></script>
-<script src="js/psq-data.js?v=20261024f"></script>
+<script src="js/patch.js?v=20261024g"></script>
+<script src="js/api.js?v=20261024g"></script>
+<script src="js/data.js?v=20261024g"></script>
+<script src="js/app.js?v=20261024g"></script>
+<script src="js/psq-data.js?v=20261024g"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -322,23 +322,15 @@
     </div>`;
   }
 
-  // chờ thanh toán: trang tự hỏi máy chủ, công ty xác nhận đã nhận tiền thì đổi sang báo thành công
-  const payWait = () => `<div class="pay-wait mt-2" id="payWait" role="status" aria-live="polite"><span class="pw-ring" aria-hidden="true"><i></i></span><div><b>Đang chờ xác nhận thanh toán</b><small>Chuyển khoản xong anh chị bấm nút bên cạnh để gửi ảnh bill. Giữ trang này, trang tự cập nhật ngay khi công ty duyệt.</small></div><button class="btn btn-sm btn-gold" type="button" id="pwClaim">${icon('check')} Tôi đã chuyển khoản</button></div>`;
-  let pwT = null;
+  // chờ thanh toán: khách gửi ảnh bill, trang tự hỏi máy chủ và đổi sang báo thành công khi công ty duyệt
+  const payWait = () => PSQ.payWait.html();
   function watchPay(o) {
-    clearInterval(pwT); const t0 = Date.now();
-    pwT = setInterval(() => {
-      const box = $('#payWait'); if (!box || Date.now() - t0 > 45 * 60e3) return clearInterval(pwT);
-      const r = API.act('trackOrder', { id: o.id, phone: o.phone }), x = r.order;
-      if (!x || x.status === 'pending') return;
-      clearInterval(pwT);
-      const bp = $('#pwBill'); if (bp) bp.remove();
-      box.classList.add('paid');
-      box.innerHTML = `<span class="pw-ok" aria-hidden="true">${icon('check')}</span><div><b>Đã nhận thanh toán đơn ${esc(o.id)}</b><small>Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.</small></div>${'<i class="pw-dot"></i>'.repeat(14)}`;
-      box.querySelectorAll('.pw-dot').forEach((d, i) => { const a = i / 14 * Math.PI * 2; d.style.setProperty('--x', Math.cos(a) * (70 + (i % 3) * 25) + 'px'); d.style.setProperty('--y', Math.sin(a) * (40 + (i % 4) * 14) + 'px'); d.style.setProperty('--c', ['#f3c76b', '#4fe6df', '#45e08f', '#b98cff'][i % 4]); });
-      const b = $('.success .badge'); if (b) b.outerHTML = statusBadge(x.status);
-      toast('Đã nhận thanh toán đơn ' + o.id);
-    }, 5000);
+    PSQ.payWait.start({
+      send: bill => API.act('paidClaim', { id: o.id, phone: o.phone, bill }),
+      check: () => { const x = API.act('trackOrder', { id: o.id, phone: o.phone }).order; return x && x.status; },
+      paidTitle: 'Đã nhận thanh toán đơn ' + o.id, paidSub: 'Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.',
+      onPaid: st => { const b = $('.success .badge'); if (b) b.outerHTML = statusBadge(st); }
+    });
   }
 
   function render(scroll) {
@@ -372,34 +364,6 @@
       render(true); toast('Đặt hàng thành công: ' + placed.id);
       if ($('#payWait')) watchPay(placed);
     }
-  });
-  // "Tôi đã chuyển khoản": khách chọn ảnh bill, ảnh thu nhỏ rồi gửi, công ty nhận qua Telegram để đối chiếu
-  let bill = null;
-  const shrink = file => new Promise((ok, no) => {
-    const img = new Image(), u = URL.createObjectURL(file);
-    img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); ok(cv.toDataURL('image/jpeg', .82)); };
-    img.onerror = () => { URL.revokeObjectURL(u); no(); }; img.src = u;
-  });
-  const billPanel = () => `<div class="pw-bill" id="pwBill"><label class="pw-pick" for="pwFile">${bill ? `<img src="${bill}" alt="Ảnh bill đã chọn">` : `${icon('upload')}<span><b>Chọn ảnh bill chuyển khoản</b><small>Chụp màn hình giao dịch thành công trong ứng dụng ngân hàng</small></span>`}</label><input type="file" id="pwFile" accept="image/jpeg,image/png,image/webp" hidden><div class="pw-acts"><button class="btn btn-sm btn-gold" type="button" id="pwSend"${bill ? '' : ' disabled'}>${icon('check')} Gửi bill cho công ty</button><button class="btn btn-sm" type="button" id="pwCancel">Để sau</button></div></div>`;
-  document.addEventListener('click', e => {
-    if (!placed) return;
-    if (e.target.closest('#pwClaim')) { e.target.closest('#pwClaim').hidden = true; $('#payWait').insertAdjacentHTML('afterend', billPanel()); return; }
-    if (e.target.closest('#pwCancel')) { bill = null; $('#pwBill').remove(); const c = $('#pwClaim'); if (c) c.hidden = false; return; }
-    const s = e.target.closest('#pwSend'); if (!s || !bill) return;
-    s.disabled = true; s.textContent = 'Đang gửi...';
-    setTimeout(() => {
-      const r = API.act('paidClaim', { id: placed.id, phone: placed.phone, bill });
-      if (r.error) { s.disabled = false; s.innerHTML = icon('check') + ' Gửi bill cho công ty'; toast(r.error, 'err'); return; }
-      bill = null; $('#pwBill').remove();
-      const box = $('#payWait'); if (box && !box.classList.contains('paid')) { $('b', box).textContent = 'Đã gửi bill, chờ công ty duyệt'; $('small', box).textContent = 'Công ty đang đối chiếu với tài khoản ngân hàng. Anh chị giữ trang này, trang tự đổi khi được duyệt.'; const c = $('#pwClaim'); if (c) { c.hidden = false; c.innerHTML = icon('upload') + ' Gửi lại bill'; } }
-      toast('Đã gửi bill đơn ' + placed.id + ', công ty sẽ duyệt sớm');
-    }, 30);
-  });
-  document.addEventListener('change', e => {
-    if (e.target.id !== 'pwFile' || !e.target.files[0]) return;
-    const f = e.target.files[0];
-    if (!/^image\//.test(f.type)) { toast('Anh chị chọn tệp ảnh giúp em', 'err'); return; }
-    shrink(f).then(u => { bill = u; $('#pwBill').outerHTML = billPanel(); }, () => toast('Không đọc được ảnh này, anh chị chọn ảnh khác', 'err'));
   });
   $('#main').addEventListener('submit', e => { if (e.target.id === 'infoForm') { e.preventDefault(); readForm(); if (validate()) { step = 2; render(true); } } });
   $('#main').addEventListener('change', e => {

@@ -188,6 +188,61 @@
     return `<div class="qr-pay"><img src="${esc(src)}" alt="Mã QR chuyển khoản" width="200" height="236" loading="lazy" onerror="this.parentNode.remove()"><small>Quét mã bằng ứng dụng ngân hàng, số tiền và nội dung tự điền</small></div>`;
   }
 
+  /* ---------- chờ thanh toán + gửi ảnh bill (đơn hàng, gói CTV, gói đại lý, nạp tiền) ----------
+     payWait.html({ sent }) vẽ khung; payWait.start({ send(bill), check(), paidTitle, paidSub, onPaid, open }) gắn xử lý.
+     Mỗi trang chỉ có một khung #payWait. Ảnh bill thu nhỏ còn tối đa 1600px trước khi gửi. */
+  const payWait = (() => {
+    let cfg = null, bill = null, timer = null;
+    const sentTxt = ['Đã gửi bill, chờ công ty duyệt', 'Công ty đang đối chiếu với tài khoản ngân hàng. Anh chị giữ trang này, trang tự đổi khi được duyệt.'];
+    const html = (o = {}) => `<div class="pay-wait mt-2" id="payWait" role="status" aria-live="polite"><span class="pw-ring" aria-hidden="true"><i></i></span><div><b>${o.sent ? sentTxt[0] : 'Đang chờ xác nhận thanh toán'}</b><small>${o.sent ? sentTxt[1] : 'Chuyển khoản xong anh chị bấm nút bên cạnh để gửi ảnh bill. Giữ trang này, trang tự cập nhật ngay khi công ty duyệt.'}</small></div><button class="btn btn-sm btn-gold" type="button" id="pwClaim">${icon(o.sent ? 'upload' : 'check')} ${o.sent ? 'Gửi lại bill' : 'Tôi đã chuyển khoản'}</button></div>`;
+    const panel = () => `<div class="pw-bill" id="pwBill"><label class="pw-pick" for="pwFile">${bill ? `<img src="${bill}" alt="Ảnh bill đã chọn">` : `${icon('upload')}<span><b>Chọn ảnh bill chuyển khoản</b><small>Chụp màn hình giao dịch thành công trong ứng dụng ngân hàng</small></span>`}</label><input type="file" id="pwFile" accept="image/jpeg,image/png,image/webp" hidden><div class="pw-acts"><button class="btn btn-sm btn-gold" type="button" id="pwSend"${bill ? '' : ' disabled'}>${icon('check')} Gửi bill cho công ty</button><button class="btn btn-sm" type="button" id="pwCancel">Để sau</button></div></div>`;
+    const shrink = file => new Promise((ok, no) => {
+      const img = new Image(), u = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); ok(cv.toDataURL('image/jpeg', .82)); };
+      img.onerror = () => { URL.revokeObjectURL(u); no(); }; img.src = u;
+    });
+    const openPanel = () => { const c = $('#pwClaim'), box = $('#payWait'); if (!box || $('#pwBill')) return; if (c) c.hidden = true; box.insertAdjacentHTML('afterend', panel()); };
+    function paid(st) {
+      clearInterval(timer); const box = $('#payWait'); if (!box) return;
+      const bp = $('#pwBill'); if (bp) bp.remove();
+      box.classList.add('paid');
+      box.innerHTML = `<span class="pw-ok" aria-hidden="true">${icon('check')}</span><div><b>${esc(cfg.paidTitle || 'Đã nhận thanh toán')}</b><small>${esc(cfg.paidSub || 'Cảm ơn anh chị!')}</small></div>${'<i class="pw-dot"></i>'.repeat(14)}`;
+      box.querySelectorAll('.pw-dot').forEach((d, i) => { const a = i / 14 * Math.PI * 2; d.style.setProperty('--x', Math.cos(a) * (70 + (i % 3) * 25) + 'px'); d.style.setProperty('--y', Math.sin(a) * (40 + (i % 4) * 14) + 'px'); d.style.setProperty('--c', ['#f3c76b', '#4fe6df', '#45e08f', '#b98cff'][i % 4]); });
+      toast(cfg.paidTitle || 'Đã nhận thanh toán');
+      if (cfg.onPaid) cfg.onPaid(st);
+    }
+    function start(o) {
+      cfg = o; bill = null; clearInterval(timer); const t0 = Date.now();
+      if (o.open) openPanel();
+      timer = setInterval(() => {
+        if (!$('#payWait') || Date.now() - t0 > 45 * 60e3) return clearInterval(timer);
+        const st = cfg.check(); if (st && st !== 'pending') paid(st);
+      }, 5000);
+    }
+    document.addEventListener('click', e => {
+      if (!cfg || !e.target.closest) return;
+      if (e.target.closest('#pwClaim')) { openPanel(); return; }
+      if (e.target.closest('#pwCancel')) { bill = null; $('#pwBill').remove(); const c = $('#pwClaim'); if (c) c.hidden = false; return; }
+      const s = e.target.closest('#pwSend'); if (!s || !bill) return;
+      s.disabled = true; s.textContent = 'Đang gửi...';
+      setTimeout(() => {
+        const r = cfg.send(bill);
+        if (r.error) { s.disabled = false; s.innerHTML = icon('check') + ' Gửi bill cho công ty'; toast(r.error, 'err'); return; }
+        bill = null; $('#pwBill').remove();
+        if (r.status && r.status !== 'pending') return paid(r.status);
+        const box = $('#payWait'); if (box) box.outerHTML = html({ sent: true });
+        toast('Đã gửi bill, công ty sẽ duyệt sớm');
+      }, 30);
+    });
+    document.addEventListener('change', e => {
+      if (!cfg || e.target.id !== 'pwFile' || !e.target.files[0]) return;
+      const f = e.target.files[0];
+      if (!/^image\//.test(f.type)) { toast('Anh chị chọn tệp ảnh giúp em', 'err'); return; }
+      shrink(f).then(u => { bill = u; $('#pwBill').outerHTML = panel(); }, () => toast('Không đọc được ảnh này, anh chị chọn ảnh khác', 'err'));
+    });
+    return { html, start, stop: () => { clearInterval(timer); cfg = null; } };
+  })();
+
   /* ---------- hình vẽ sản phẩm (khi chưa có ảnh thật) ---------- */
   const TONES = [['#6b3d1f', '#3a1f0e', '#c98a52'], ['#4a2a16', '#24130a', '#a8703f'], ['#7a4a26', '#3d2211', '#d9a066'], ['#5b3a22', '#2b190c', '#b98455'], ['#6a3a1c', '#2e170a', '#c28048']];
   let artN = 0;
@@ -546,7 +601,7 @@
     };
   })();
 
-  window.PSQ = { pwa, qr, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   shell();
   ambient();

@@ -159,7 +159,8 @@ const ACTIONS = {
   } },
   // khách bấm "Tôi đã chuyển khoản": nhắc chủ cửa hàng kiểm tra (mỗi đơn tối đa 3 lần)
   paidClaim: { auth: 'guest', run(c) {
-    const id = str(c.args.id, 30).toUpperCase(), ph = normPhone(c.args.phone), o = c.d.orders.find(x => x.id === id && normPhone(x.phone) === ph);
+    // khách tra theo mã đơn + số điện thoại; thành viên gửi cho đơn của chính mình (gói CTV, gói đại lý)
+    const id = str(c.args.id, 30).toUpperCase(), ph = normPhone(c.args.phone), o = c.d.orders.find(x => x.id === id && ((c.me && x.userId === c.me.id) || (ph && normPhone(x.phone) === ph)));
     if (!o) return err('Không tìm thấy đơn hàng.');
     if (o.status !== 'pending') return { status: o.status };
     if ((o.claims || 0) >= 3) return err('Công ty đã nhận được bill, anh chị chờ một chút giúp em.');
@@ -168,9 +169,29 @@ const ACTIONS = {
     const f = c.saveBill(o.id, bill.buf, bill.type);
     (o.bills = o.bills || []).push({ f, at: c.stamp() });
     const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
-    c.notify(`🧾 Khách gửi bill chuyển khoản đơn ${o.id}\n${o.name} · ${o.phone}\nSố tiền ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
+    const what = c.A.isAgentPkgOrder(o) ? 'gói đại lý' : (o.items || []).some(x => x.id === c.A.PKG_ID) ? 'gói kích hoạt CTV' : 'đơn';
+    c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${o.name} · ${o.phone}\nSố tiền ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
     c.log('Khách gửi bill chuyển khoản', o.id);
     return { ok: true };
+  } },
+  // bill nạp tiền vào ví (yêu cầu nạp đang chờ của chính thành viên)
+  topupClaim: { auth: 'member', run(c) {
+    const { d, me } = c, tp = (d.topups || []).find(x => x.id === str(c.args.id, 40) && x.user === me.id);
+    if (!tp) return err('Không tìm thấy yêu cầu nạp tiền.');
+    if (tp.status !== 'pending') return { status: tp.status };
+    if ((tp.claims || 0) >= 3) return err('Công ty đã nhận được bill, anh chị chờ một chút giúp em.');
+    const bill = readBill(c, c.args.bill); if (bill.error) return bill;
+    tp.claims = (tp.claims || 0) + 1;
+    (tp.bills = tp.bills || []).push({ f: c.saveBill(tp.id, bill.buf, bill.type), at: c.stamp() });
+    c.notify(`🧾 Bill nạp tiền ví\n${me.name} (@${me.username})\nSố tiền ${money(tp.amount)}, nội dung ${tp.code || ''}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'topup', ref: tp.id, button: '✅ Duyệt đã nhận tiền' }, bill);
+    c.log('Thành viên gửi bill nạp tiền', `@${me.username}: ${money(tp.amount)}`);
+    return { ok: true };
+  } },
+  // trang chờ thanh toán của thành viên hỏi trạng thái đơn gói hoặc yêu cầu nạp tiền
+  payStatus: { auth: 'member', run(c) {
+    const { d, me } = c, id = str(c.args.id, 40);
+    const x = c.args.kind === 'topup' ? (d.topups || []).find(t => t.id === id && t.user === me.id) : d.orders.find(o => o.id === id && o.userId === me.id);
+    return x ? { status: x.status } : err('Không tìm thấy.');
   } },
   contact: { auth: 'guest', run(c) {
     const a = c.args, m = { id: 'm' + Date.now().toString(36) + crypto.randomBytes(2).toString('hex'), name: str(a.name, 80), phone: str(a.phone, 20), email: str(a.email, 120), topic: str(a.topic, 80), text: str(a.text, 3000), date: new Date().toISOString(), status: 'new' };
