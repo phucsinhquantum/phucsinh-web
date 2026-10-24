@@ -463,7 +463,7 @@
       </aside>
       <div class="toasts" aria-live="polite"></div>
       ${cur === 'admin' ? '' : `<div class="contact-dock" aria-label="Liên hệ nhanh">
-        <a class="cd-btn cd-zalo" href="https://zalo.me/${esc(String(S.zalo || '').replace(/\D/g, ''))}" target="_blank" rel="noopener" aria-label="Chat Zalo"><span class="cd-ico notranslate" translate="no">Zalo</span><span class="cd-tip">Chat Zalo</span></a>
+        <a class="cd-btn cd-zalo" href="${esc((S.social || {}).zalo || 'https://zalo.me/' + String(S.zalo || '').replace(/\D/g, ''))}" target="_blank" rel="noopener" aria-label="Chat Zalo"><span class="cd-ico notranslate" translate="no">Zalo</span><span class="cd-tip">Chat Zalo</span></a>
         <a class="cd-btn cd-mess" href="${S.messenger ? esc(S.messLink()) : 'lien-he.html'}"${S.messenger ? ' target="_blank" rel="noopener"' : ''} aria-label="Nhắn tin Messenger"><span class="cd-ico">${icon('messenger')}</span><span class="cd-tip">Nhắn Messenger</span></a>
         <a class="cd-btn cd-call" href="tel:${esc(String(S.phone || '').replace(/[^\d+]/g, ''))}" aria-label="Gọi ${esc(S.phone || '')}"><span class="cd-ico">${icon('phone')}</span><span class="cd-tip">Gọi ${esc(S.phone || '')}</span></a>
       </div>`}`);
