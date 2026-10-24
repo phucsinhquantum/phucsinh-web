@@ -205,9 +205,13 @@
     // điều kiện để đại lý nhận thu nhập từ đại lý tuyến dưới: trong activeDays ngày gần nhất có đơn tự mua và đơn bán
     activeDays: 30, activeMinBuy: 0, activeMinSell: 0, activeRule: 'any', // any: 1 trong 2 việc · all: cả hai
     holdDays: 30,                                  // khoản bị giữ chờ quá số ngày này mà chưa đủ điều kiện thì hủy
+    // gói đại lý: mua một lần để lên đại lý ngay, nhận điểm vào ví mua hàng để lấy hàng dần (không tính hoa hồng trên gói,
+    // hoa hồng tính khi dùng điểm đặt đơn hàng)
+    agentPkgOn: 1, agentPkgPrice: 16800000, agentPkgPoints: 16800000,
     overrideMode: 'lose'                           // hold: giữ chờ · lose: mất ngay · up: chuyển cho đại lý đủ điều kiện ở tuyến trên
   };
-  const PKG_ID = 'goi-ctv';
+  const PKG_ID = 'goi-ctv', AGENT_PKG_ID = 'goi-daily';
+  const isPkgItem = x => x.id === PKG_ID || x.id === AGENT_PKG_ID;
   // thứ tự hiển thị: hàng trên tiền mặt, điểm khả dụng; hàng dưới hoa hồng bán hàng, điểm thưởng, điểm mua hàng
   // tiền (VNĐ): cash, sales · điểm (PS): avail, bonus, shop
   const WALLETS = {
@@ -275,7 +279,13 @@
     if (!buyer) return true;
     const P = plan(d), sp = buyer.sponsor ? ADB.user(d, buyer.sponsor) : null, date = o.date || now();
     buyer.tier = buyer.tier || 'khach';
-    const isPkg = (o.items || []).some(x => x.id === PKG_ID);
+    const isPkg = (o.items || []).some(x => x.id === PKG_ID), isAgentPkg = (o.items || []).some(x => x.id === AGENT_PKG_ID);
+    if (isAgentPkg) {
+      if (buyer.tier === 'khach') buyer.activated = buyer.activated || date;
+      if (buyer.tier !== 'daily') { buyer.tier = 'daily'; buyer.agentSince = date; }
+      credit(d, buyer.id, 'shop', 'package', P.agentPkgPoints, 'Điểm mua hàng từ gói đại lý', o.id, { date });
+      return true;
+    }
     if (isPkg) {
       if (buyer.tier === 'khach') { buyer.tier = 'ctv'; buyer.activated = date; }
       credit(d, buyer.id, 'shop', 'package', P.pkgPoints, 'Điểm mua hàng từ gói kích hoạt cộng tác viên', o.id, { date });
@@ -435,7 +445,7 @@
     },
     // số dư quỹ kế toán hiện tại (để chặn khoản cộng tay vượt quỹ)
     fundKT(d) { return ADB.fund(d).kt; },
-    PLAN, PKG_ID, WALLETS, TIERS, plan, settleOrder, addCommission, payCommission, credit, legacyWallet,
+    PLAN, PKG_ID, AGENT_PKG_ID, WALLETS, TIERS, plan, settleOrder, addCommission, payCommission, credit, legacyWallet,
     tierOf(u) { return TIERS[(u && u.tier) || 'khach'] || TIERS.khach; },
     // điều kiện nhận thu nhập từ đại lý tuyến dưới tính tại ngày asOf: có đơn tự mua và đơn bán (người mình giới thiệu mua) trong activeDays ngày
     activity(d, id, asOf) {
@@ -463,7 +473,7 @@
     walletOf(w) { return w.wallet || legacyWallet(w.type); },
     // tổng mua đã thanh toán (gồm cả gói kích hoạt)
     // gói kích hoạt chỉ tính phần điểm mua hàng (346k) vào doanh số
-    spent(d, id) { const P = plan(d); return d.orders.filter(o => o.userId === id && PAID(o)).reduce((s, o) => s + o.items.reduce((t, x) => t + (x.id === PKG_ID ? (P.pkgCountsAs ?? P.pkgPoints) * x.qty : x.price * x.qty), 0), 0); },
+    spent(d, id) { const P = plan(d); return d.orders.filter(o => o.userId === id && PAID(o)).reduce((s, o) => s + o.items.reduce((t, x) => t + (x.id === PKG_ID ? (P.pkgCountsAs ?? P.pkgPoints) * x.qty : x.id === AGENT_PKG_ID ? 0 : x.price * x.qty), 0), 0); },
     // số dư 4 ví; khoản rút đang chờ duyệt đã bị giữ lại
     balances(d, id) {
       const b = { sales: 0, avail: 0, bonus: 0, shop: 0, cash: 0 };
@@ -592,7 +602,7 @@
       if (o.exchange && o.exchange.due > 0 && ['ship', 'done'].includes(status)) return { error: `Đơn #${o.id} còn thiếu ${PSQ.money(o.exchange.due)} tiền bù đổi sản phẩm. Xác nhận đã nhận tiền bù trước.` };
       if (status === 'pending' && ADB.locked(o)) return { error: `Đơn #${o.id} đã thanh toán, không chuyển về chờ xác nhận được.` };
       o.status = status;
-      const isPkg = (o.items || []).some(x => x.id === PKG_ID);
+      const isPkg = (o.items || []).some(isPkgItem);
       if (isPkg && status === 'paid') o.status = 'done';
       const r = { ok: true, status: o.status };
       if (['paid', 'ship', 'done'].includes(o.status)) r.stock = ADB.stockOut(d, o);
@@ -634,6 +644,21 @@
       }
       return { diff };
     },
+    isPkgOrder(o) { return (o.items || []).some(isPkgItem); },
+    isAgentPkgOrder(o) { return (o.items || []).some(x => x.id === AGENT_PKG_ID); },
+    // tạo đơn mua gói đại lý
+    buyAgentPackage(d, u, pay) {
+      const P = plan(d), num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
+      const o = { id: 'PSQ' + num, userId: u.id, name: u.name, phone: u.phone || '', email: u.email, address: '', pay: pay || 'bank', items: [{ id: AGENT_PKG_ID, name: 'Gói đại lý', price: P.agentPkgPrice, qty: 1 }], total: P.agentPkgPrice, status: 'pending', date: now() };
+      d.orders.unshift(o); return o;
+    },
+    // số liệu kế hoạch để thay vào chữ {…} trong điều khoản, quyền lợi
+    planVars(d) {
+      const P = plan(d), m = PSQ.money, ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
+      return { gia_goi: m(P.pkgPrice), diem_goi: ps(P.pkgPoints), phi_goi: m(P.pkgPrice - P.pkgPoints), moc_dai_ly: m(P.agentThreshold), hh_ctv: P.ctvRate + '%', hh_daily: P.agentRate + '%', thuong_gt: m(P.refBonus), thu_nhap_daily: P.overrideRate + '%', so_ngay: P.activeDays, thue: P.taxRate + '%', rut_toi_thieu: m(d.settings.minWithdraw || 0), gia_goi_dl: m(P.agentPkgPrice), diem_goi_dl: ps(P.agentPkgPoints), ten: SITE.brand, hotline: SITE.phone, email: SITE.email };
+    },
+    // thay {…} bằng số liệu, trả về HTML đã an toàn
+    fill(text, V) { return PSQ.esc(String(text || '')).replace(/\{(\w+)\}/g, (m0, k) => k in V ? PSQ.esc(String(V[k])) : m0); },
     // tạo đơn mua gói kích hoạt cộng tác viên
     buyPackage(d, u, pay) {
       const P = plan(d), num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;

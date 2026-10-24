@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024a">
-<script src="js/lang.js?v=20261024a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024b">
+<script src="js/lang.js?v=20261024b"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -176,22 +176,23 @@
   </div>
 </div>
 
-<script src="js/data.js?v=20261024a"></script>
-<script src="js/app.js?v=20261024a"></script>
-<script src="js/psq-data.js?v=20261024a"></script>
+<script src="js/data.js?v=20261024b"></script>
+<script src="js/app.js?v=20261024b"></script>
+<script src="js/psq-data.js?v=20261024b"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261024a"></script>
-<script src="js/admin/nguoi-dung.js?v=20261024a"></script>
-<script src="js/admin/noi-dung.js?v=20261024a"></script>
-<script src="js/admin/kho.js?v=20261024a"></script>
-<script src="js/admin/tai-chinh.js?v=20261024a"></script>
-<script src="js/admin/he-thong.js?v=20261024a"></script>
-<script src="js/admin/vong-quay.js?v=20261024a"></script>
-<script src="js/admin/quy-diem.js?v=20261024a"></script>
-<script src="js/admin/gioi-thieu.js?v=20261024a"></script>
-<script src="js/admin/dai-ly.js?v=20261024a"></script>
-<script src="js/admin/danh-gia.js?v=20261024a"></script>
-<script src="js/admin/dieu-khoan.js?v=20261024a"></script>
+<script src="js/admin/pha-he.js?v=20261024b"></script>
+<script src="js/admin/nguoi-dung.js?v=20261024b"></script>
+<script src="js/admin/noi-dung.js?v=20261024b"></script>
+<script src="js/admin/kho.js?v=20261024b"></script>
+<script src="js/admin/tai-chinh.js?v=20261024b"></script>
+<script src="js/admin/he-thong.js?v=20261024b"></script>
+<script src="js/admin/vong-quay.js?v=20261024b"></script>
+<script src="js/admin/quy-diem.js?v=20261024b"></script>
+<script src="js/admin/gioi-thieu.js?v=20261024b"></script>
+<script src="js/admin/dai-ly.js?v=20261024b"></script>
+<script src="js/admin/danh-gia.js?v=20261024b"></script>
+<script src="js/admin/dieu-khoan.js?v=20261024b"></script>
+<script src="js/admin/quyen-loi.js?v=20261024b"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -230,7 +231,7 @@
     ['Tổng quan', [['overview', 'Bảng điều khiển', 'chart', 'dashboard'], ['videos', 'Video khách hàng', 'activity', 'content']]],
     ['Phả hệ', [['tree', 'Sơ đồ phả hệ', 'users', 'tree'], ['pending', 'Chờ lên cây', 'clock', 'tree'], ['leaders', 'Cấp bậc lãnh đạo', 'star', 'tree']]],
     ['Người dùng', [['members', 'Danh sách thành viên', 'users', 'members'], ['admins', 'Danh sách quản trị', 'shield', 'admins'], ['roles', 'Vai trò & phân quyền', 'lock', 'admins']]],
-    ['Trang web', [['about', 'Trang giới thiệu', 'info', 'content'], ['dealers', 'Đại lý uy tín', 'shield', 'content'], ['reviews', 'Khách hàng nói gì', 'chat', 'content'], ['terms', 'Điều khoản đăng ký', 'lock', 'content']]],
+    ['Trang web', [['about', 'Trang giới thiệu', 'info', 'content'], ['dealers', 'Đại lý uy tín', 'shield', 'content'], ['reviews', 'Khách hàng nói gì', 'chat', 'content'], ['perks', 'Quyền lợi CTV, đại lý', 'award', 'content'], ['terms', 'Điều khoản đăng ký', 'lock', 'content']]],
     ['Sản phẩm', [['categories', 'Danh mục sản phẩm', 'grid', 'products'], ['products', 'Quản lý sản phẩm', 'bag', 'products']]],
     ['Kiến thức trầm hương', [['postcats', 'Danh mục kiến thức', 'book', 'content'], ['posts', 'Bài viết kiến thức', 'edit', 'content']]],
     ['Đơn hàng & kho', [['orders', 'Danh sách đơn hàng', 'cart', 'orders'], ['stock', 'Thống kê tồn kho', 'chart', 'stock'], ['receipts', 'Phiếu nhập kho', 'download', 'stock']]],
@@ -337,14 +338,14 @@
     const list = d.orders.filter(o => (!st || o.status === st) && (!q || [o.id, o.name, o.phone, o.email].join(' ').toLowerCase().includes(q)));
     $('#ocount').textContent = list.length + ' đơn';
     $('#olist').innerHTML = list.length ? list.map((o, i) => `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(o.name)}</span><div><b>${esc(o.name)}</b><small>${esc(o.phone || '')}</small></div></div></td>
-      <td><b>#${o.id}</b></td><td class="dim" style="max-width:220px">${isPkg(o) ? '<span class="badge violet">Gói CTV</span><br>' : ''}${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="nowrap gold">${money(o.total)}${o.shopPaid ? `<br><small class="green">Điểm: ${money(o.shopPaid).replace('đ', ' PS')}</small>` : ''}${o.cashPaid ? `<br><small class="cyan">Ví tiền mặt: ${money(o.cashPaid)}</small>` : ''}${o.exchange && o.exchange.due > 0 ? `<br><small class="red">Chờ bù ${money(o.exchange.due)}</small>` : o.exchanges ? '<br><small class="dim">Đã đổi sản phẩm</small>' : ''}</td>
+      <td><b>#${o.id}</b></td><td class="dim" style="max-width:220px">${isPkg(o) ? pkgBadge(o) + '<br>' : ''}${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="nowrap gold">${money(o.total)}${o.shopPaid ? `<br><small class="green">Điểm: ${money(o.shopPaid).replace('đ', ' PS')}</small>` : ''}${o.cashPaid ? `<br><small class="cyan">Ví tiền mặt: ${money(o.cashPaid)}</small>` : ''}${o.exchange && o.exchange.due > 0 ? `<br><small class="red">Chờ bù ${money(o.exchange.due)}</small>` : o.exchanges ? '<br><small class="dim">Đã đổi sản phẩm</small>' : ''}</td>
       <td>${o.pay === 'bank' ? 'Chuyển khoản' : o.pay === 'wallet' ? 'Bằng ví' : 'Khi nhận hàng'}</td>
       <td><select class="input" data-status="${o.id}" aria-label="Trạng thái đơn ${o.id}">${Object.entries(statusName).map(([k, v]) => `<option value="${k}"${k === o.status ? ' selected' : ''}>${v}</option>`).join('')}</select></td>
       <td class="dim nowrap">${fdate(o.date)}</td><td><div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn btn-sm" type="button" data-view="${o.id}">Xem</button>${o.exchange && o.exchange.due > 0 ? `<button class="btn btn-sm btn-gold" type="button" data-topup="${o.id}" title="Xác nhận khách đã chuyển bù ${money(o.exchange.due)}">Đã nhận bù</button>` : ADB.locked(o) && !isPkg(o) ? `<button class="btn btn-sm btn-outline-gold" type="button" data-swap="${o.id}">Đổi SP</button>` : ''}</div></td></tr>`).join('')
       : `<tr><td colspan="8"><div class="empty">Không có đơn phù hợp.</div></td></tr>`;
   }
   $('#oq').addEventListener('input', orders); $('#os').addEventListener('change', orders);
-  const isPkg = o => (o.items || []).some(x => x.id === ADB.PKG_ID);
+  const isPkg = o => ADB.isPkgOrder(o), pkgBadge = o => ADB.isAgentPkgOrder(o) ? '<span class="badge gold">Gói đại lý</span>' : '<span class="badge violet">Gói CTV</span>';
   $('#olist').addEventListener('change', e => {
     const s = e.target.closest('[data-status]'); if (!s) return;
     const d = ADB.load(), o = d.orders.find(x => x.id === s.dataset.status); if (!o) return;
@@ -352,7 +353,7 @@
     const want = s.value, r = ADB.setStatus(d, o, want);
     if (r.error) {
       s.value = from; toast(r.error, 'err');
-      if (want === 'failed' && !(o.exchange && o.exchange.due > 0)) setTimeout(() => exchangeModal(o.id), 400);
+      if (want === 'failed' && !isPkg(o) && !(o.exchange && o.exchange.due > 0)) setTimeout(() => exchangeModal(o.id), 400);
       return;
     }
     const settled = r.settled;
@@ -363,7 +364,7 @@
     ADB.save(d);
     toast(`Đơn #${o.id}: ${statusName[o.status]}`);
     if (buyer && before !== after) setTimeout(() => toast(after === 'daily' ? `${buyer.name} đã lên Đại lý` : `${buyer.name} đã được kích hoạt Cộng tác viên`), 350);
-    else if (settled && isPkg(o)) setTimeout(() => toast(`Đã cộng ${money(ADB.plan(d).pkgPoints).replace('đ', ' PS')} vào ví mua hàng của ${o.name}`), 350);
+    else if (settled && isPkg(o)) setTimeout(() => toast(`Đã cộng ${money(ADB.isAgentPkgOrder(o) ? ADB.plan(d).agentPkgPoints : ADB.plan(d).pkgPoints).replace('đ', ' PS')} vào ví mua hàng của ${o.name}`), 350);
     orders();
   });
   // đổi sản phẩm cho đơn đã thanh toán (không hủy được): cùng giá, nếu không có thì bắt buộc chọn sản phẩm giá cao hơn và khách chuyển bù
@@ -419,7 +420,7 @@
     const b = e.target.closest('[data-view]'); if (!b) return;
     const o = ADB.load().orders.find(x => x.id === b.dataset.view);
     modal(`<div class="card-head"><h3>Đơn #${o.id}</h3>${statusBadge(o.status)}<button class="icon-btn" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-      <dl class="kv"><dt>Khách</dt><dd>${esc(o.name)}</dd><dt>Điện thoại</dt><dd>${esc(o.phone || '')}</dd><dt>Email</dt><dd>${esc(o.email || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Thanh toán</dt><dd>${o.pay === 'bank' ? 'Chuyển khoản' : o.pay === 'wallet' ? 'Bằng ví' : 'Khi nhận hàng'}${o.shopPaid ? ` · ví mua hàng ${money(o.shopPaid).replace('đ', ' PS')}` : ''}${o.cashPaid ? ` · ví tiền mặt ${money(o.cashPaid)}` : ''}</dd>${isPkg(o) ? '<dt>Loại đơn</dt><dd><span class="badge violet">Gói CTV</span></dd>' : ''}<dt>Ngày</dt><dd>${fdate(o.date)}</dd>${o.note ? `<dt>Ghi chú</dt><dd>${esc(o.note)}</dd>` : ''}</dl>
+      <dl class="kv"><dt>Khách</dt><dd>${esc(o.name)}</dd><dt>Điện thoại</dt><dd>${esc(o.phone || '')}</dd><dt>Email</dt><dd>${esc(o.email || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Thanh toán</dt><dd>${o.pay === 'bank' ? 'Chuyển khoản' : o.pay === 'wallet' ? 'Bằng ví' : 'Khi nhận hàng'}${o.shopPaid ? ` · ví mua hàng ${money(o.shopPaid).replace('đ', ' PS')}` : ''}${o.cashPaid ? ` · ví tiền mặt ${money(o.cashPaid)}` : ''}</dd>${isPkg(o) ? '<dt>Loại đơn</dt><dd>' + pkgBadge(o) + '</dd>' : ''}<dt>Ngày</dt><dd>${fdate(o.date)}</dd>${o.note ? `<dt>Ghi chú</dt><dd>${esc(o.note)}</dd>` : ''}</dl>
       <div class="divider"></div>${o.items.map(x => `<div class="row between" style="padding:6px 0"><span>${esc(x.name)} x${x.qty}</span><b>${money(x.price * x.qty)}</b></div>`).join('')}
       <div class="divider"></div><div class="row between"><span class="muted">Tổng</span><b class="gold" style="font-size:18px">${money(o.total)}</b></div>`);
   });

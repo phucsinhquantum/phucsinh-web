@@ -239,11 +239,11 @@ SITE.messLink = () => !SITE.messenger ? '' : /^https?:\/\//i.test(SITE.messenger
 
 // Điều khoản sử dụng hiện ở form đăng ký. Sửa trong Quản trị > Trang web > Điều khoản (lưu psq_terms_v1).
 // Các chữ trong ngoặc nhọn tự thay bằng số liệu trong Thiết lập: {gia_goi} {diem_goi} {moc_dai_ly} {hh_ctv} {hh_daily}
-// {thuong_gt} {thu_nhap_daily} {so_ngay} {thue} {rut_toi_thieu} {ten} {hotline} {email}
+// {thuong_gt} {thu_nhap_daily} {so_ngay} {thue} {rut_toi_thieu} {ten} {hotline} {email} {phi_goi} {gia_goi_dl} {diem_goi_dl}
 window.TERMS_DEFAULT = [
   { t: 'Phạm vi áp dụng', b: 'Điều khoản này áp dụng cho mọi tài khoản đăng ký trên website và ứng dụng {ten}. Khi tích vào ô đồng ý, anh chị xác nhận đã đọc, hiểu và chấp nhận toàn bộ nội dung dưới đây.' },
   { t: 'Tài khoản', b: 'Anh chị cung cấp họ tên, số điện thoại, email đúng sự thật và tự bảo mật mật khẩu. Mỗi người chỉ dùng một tài khoản. Tên truy cập và mã thành viên dùng để giới thiệu, chuyển điểm và đối soát, không đổi được sau khi tạo.\nCông ty có quyền tạm khóa tài khoản có dấu hiệu gian lận, giả mạo thông tin hoặc dùng sai mục đích.' },
-  { t: 'Cấp bậc thành viên', b: 'Khách hàng: đăng ký miễn phí, mua hàng như khách thông thường.\nCộng tác viên: kích hoạt gói {gia_goi}, nhận {diem_goi} vào ví điểm mua hàng. Phần còn lại là phí dịch vụ nền tảng (gian hàng online, khóa học, công cụ) và không hoàn lại sau khi đã kích hoạt.\nĐại lý: tổng tiền mua hàng đã thanh toán cộng dồn đạt {moc_dai_ly}. Gói kích hoạt cộng tác viên không tính vào mốc này.' },
+  { t: 'Cấp bậc thành viên', b: 'Khách hàng: đăng ký miễn phí, mua hàng như khách thông thường.\nCộng tác viên: kích hoạt gói {gia_goi}, nhận {diem_goi} vào ví điểm mua hàng. Phần còn lại là phí dịch vụ nền tảng (gian hàng online, khóa học, công cụ) và không hoàn lại sau khi đã kích hoạt.\nĐại lý: tổng tiền mua hàng đã thanh toán cộng dồn đạt {moc_dai_ly}, hoặc mua gói đại lý {gia_goi_dl} (nhận {diem_goi_dl} vào ví mua hàng). Gói kích hoạt cộng tác viên và gói đại lý không tính vào doanh số cộng dồn, không tính hoa hồng cho người giới thiệu.' },
   { t: 'Hoa hồng và thu nhập', b: 'Hoa hồng tính trên đơn mua hàng của người do anh chị giới thiệu trực tiếp: cộng tác viên {hh_ctv}, đại lý {hh_daily}. Hoa hồng chỉ ghi nhận khi đơn hàng ở trạng thái Hoàn thành.\nThưởng giới thiệu {thuong_gt} khi người được giới thiệu kích hoạt cộng tác viên. Đại lý nhận thêm {thu_nhap_daily} thu nhập từ đơn mua hàng của đại lý do mình giới thiệu, khi đủ điều kiện hoạt động trong {so_ngay} ngày gần nhất.\nThu nhập phụ thuộc vào kết quả bán hàng thực tế của mỗi người. Công ty không cam kết mức thu nhập cố định nào.' },
   { t: 'Ví, điểm và rút tiền', b: '1 điểm PS tương đương 1 đồng và chỉ dùng trong hệ thống {ten}. Điểm mua hàng chỉ dùng để thanh toán đơn hàng.\nKhi rút hoa hồng hoặc chuyển điểm thưởng, hệ thống khấu trừ thuế thu nhập cá nhân {thue} theo quy định. Số tiền rút tối thiểu mỗi lần là {rut_toi_thieu}. Lệnh rút được kế toán duyệt và chuyển khoản về tài khoản ngân hàng đúng tên chủ tài khoản.' },
   { t: 'Đơn hàng, đổi sản phẩm', b: 'Đơn đã thanh toán không hủy được vì hoa hồng và điểm đã được ghi nhận. Anh chị có thể đổi sang sản phẩm cùng giá, hoặc sản phẩm giá cao hơn và chuyển bù phần chênh lệch.\nSản phẩm lỗi do sản xuất hoặc giao sai mẫu được đổi trong 7 ngày theo chính sách đổi trả. Sản phẩm trầm hương không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.' },
@@ -256,3 +256,19 @@ window.TERMS = (function () {
   return window.TERMS_DEFAULT.map(x => ({ ...x }));
 })();
 
+
+// Quyền lợi từng cấp bậc (form đăng ký, trang Thành viên, trang kích hoạt). Sửa trong Quản trị > Trang web > Quyền lợi CTV, đại lý (lưu psq_perks_v1).
+// Dùng được các chữ {…} như điều khoản, thêm {phi_goi} {gia_goi_dl} {diem_goi_dl}.
+window.PERKS_DEFAULT = {
+  khach: ['Mua hàng điền mã giảm giá để nhận chiết khấu'],
+  ctv: ['Nhận {diem_goi} vào ví mua hàng', 'Nhận ngay khóa học xây kênh và bán hàng online trị giá 5.000.000đ', 'Tặng công cụ làm video hàng loạt và livestream đa nền tảng trị giá 15.000.000đ', 'Thưởng {thuong_gt} khi người mình giới thiệu kích hoạt CTV', 'Bán hàng nhận hoa hồng {hh_ctv}'],
+  ctvFee: ['Khóa học xây kênh và bán hàng online trị giá 5.000.000đ', 'Tặng công cụ làm video hàng loạt và livestream đa nền tảng trị giá 15.000.000đ'],
+  daily: ['Nhận ngay gian hàng online trị giá 10.000.000đ', 'Khóa học cao cấp cầm tay chỉ việc trị giá 15.000.000đ', 'Bộ công cụ tạo video hàng loạt và livestream đa nền tảng trị giá 30.000.000đ', 'Bán hàng nhận hoa hồng {hh_daily}', 'Hưởng {thu_nhap_daily} thu nhập của đại lý tuyến dưới'],
+  dailyPkg: ['Lên Đại lý ngay khi công ty xác nhận thanh toán', 'Nhận đủ {diem_goi_dl} vào ví mua hàng, lấy hàng dần theo nhu cầu', 'Hưởng toàn bộ quyền lợi Đại lý']
+};
+window.PERKS = (function () {
+  const D = window.PERKS_DEFAULT, out = {};
+  let v = null; try { v = JSON.parse(localStorage.getItem('psq_perks_v1')); } catch (e) {}
+  Object.keys(D).forEach(k => { out[k] = v && Array.isArray(v[k]) ? v[k].filter(x => typeof x === 'string' && x.trim()) : D[k].slice(); });
+  return out;
+})();

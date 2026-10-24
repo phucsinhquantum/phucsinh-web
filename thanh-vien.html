@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024a">
-<script src="js/lang.js?v=20261024a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024b">
+<script src="js/lang.js?v=20261024b"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,9 +216,9 @@
   <div id="view"></div>
 </div>
 
-<script src="js/data.js?v=20261024a"></script>
-<script src="js/app.js?v=20261024a"></script>
-<script src="js/psq-data.js?v=20261024a"></script>
+<script src="js/data.js?v=20261024b"></script>
+<script src="js/app.js?v=20261024b"></script>
+<script src="js/psq-data.js?v=20261024b"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -253,7 +253,12 @@
   const note = `<p class="biz-note">${icon('info')}Bản chạy thử: nạp tiền được xác nhận ngay, rút tiền do kế toán lập lệnh và công ty duyệt, chưa chuyển tiền thật.</p>`;
   const pctOf = (v, t) => t > 0 ? Math.round(v / t * 100) : 0;
   const isPkg = o => (o.items || []).some(x => x.id === ADB.PKG_ID);
+  const anyPkg = o => ADB.isPkgOrder(o);
   const pkgOrder = (d, id) => d.orders.find(o => o.userId === id && o.status !== 'failed' && isPkg(o));
+  const agentOrder = (d, id) => d.orders.find(o => o.userId === id && o.status !== 'failed' && ADB.isAgentPkgOrder(o));
+  // quyền lợi từng cấp (Quản trị > Trang web > Quyền lợi CTV, đại lý)
+  const perks = (d, k) => { const V = ADB.planVars(d); return (window.PERKS[k] || []).map(x => ADB.fill(x, V)); };
+  const perkLi = (d, k) => perks(d, k).map(x => `<li>${x}</li>`).join('');
   const PAYN = { bank: 'Chuyển khoản', cod: 'Thanh toán khi nhận hàng', shop: 'Ví điểm mua hàng', wallet: 'Thanh toán bằng ví' };
 
   /* ---------- tên truy cập ---------- */
@@ -274,7 +279,7 @@
   /* ---------- menu ---------- */
   let ME = null;
   const MENU = (d, me) => [
-    ['', [['tong-quan', 'Tổng quan', 'grid'], (me.tier || 'khach') === 'khach' && ['kich-hoat', 'Kích hoạt CTV', 'sparkle'], ['dai-ly', 'Danh sách đại lý', 'users'], ['khach-hang', 'Khách hàng', 'user'], ['lanh-dao', 'Cấp bậc lãnh đạo', 'star']].filter(Boolean)],
+    ['', [['tong-quan', 'Tổng quan', 'grid'], (me.tier || 'khach') === 'khach' && ['kich-hoat', 'Kích hoạt CTV', 'sparkle'], me.tier !== 'daily' && ADB.plan(d).agentPkgOn && ['len-dai-ly', 'Đăng ký đại lý', 'award'], ['dai-ly', 'Danh sách đại lý', 'users'], ['khach-hang', 'Khách hàng', 'user'], ['lanh-dao', 'Cấp bậc lãnh đạo', 'star']].filter(Boolean)],
     ['Mua hàng', [['san-pham', 'Sản phẩm', 'bag'], ['gio-hang', 'Giỏ hàng', 'cart'], ['don-hang', 'Đơn hàng của tôi', 'truck']]],
     ['Tài chính', [['vi', 'Ví của tôi', 'wallet'], ['giao-dich', 'Giao dịch của tôi', 'activity'], ['hoa-hong', 'Hoa hồng', 'award'], ['nap-diem', 'Nạp tiền', 'plus']]],
     ['Tài khoản', [['ho-so', 'Hồ sơ của tôi', 'user'], ['dia-chi', 'Sổ địa chỉ', 'pin']]]
@@ -385,12 +390,41 @@
     return `<div class="step" style="--c:${ADB.TIERS.ctv.color}"><span class="sdot">${icon(ctvDone ? 'check' : 'star')}</span>
         <div class="row between wrap" style="gap:6px"><b>Cộng tác viên</b>${ctvDone ? `<span class="badge ok">Đã đạt${me.activated ? ' ' + fdate(me.activated) : ''}</span>` : o ? '<span class="badge pending">Chờ xác nhận thanh toán</span>' : `<a class="btn btn-sm btn-gold" href="#kich-hoat">Kích hoạt</a>`}</div>
         <span class="dim" style="font-size:13px">Kích hoạt gói ${money(P.pkgPrice)}</span>
-        <ul><li>Nhận ${ps(P.pkgPoints)} vào ví mua hàng</li><li>Khóa học xây kênh và bán hàng online trị giá 5.000.000đ</li><li>Công cụ làm video hàng loạt và livestream đa nền tảng trị giá 15.000.000đ</li><li>Thưởng ${money(P.refBonus)} khi người mình giới thiệu kích hoạt CTV</li><li>Hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu</li></ul></div>
+        <ul>${perkLi(d, 'ctv')}</ul></div>
       <div class="step" style="--c:${ADB.TIERS.daily.color}"><span class="sdot">${icon(agDone ? 'check' : 'award')}</span>
-        <div class="row between wrap" style="gap:6px"><b>Đại lý</b>${agDone ? `<span class="badge ok">Đã đạt${me.agentSince ? ' ' + fdate(me.agentSince) : ''}</span>` : `<span class="dim nowrap" style="font-size:12.5px">${pctOf(Math.min(spent, P.agentThreshold), P.agentThreshold)}%</span>`}</div>
+        <div class="row between wrap" style="gap:6px"><b>Đại lý</b>${agDone ? `<span class="badge ok">Đã đạt${me.agentSince ? ' ' + fdate(me.agentSince) : ''}</span>` : agentOrder(d, me.id) ? '<span class="badge pending">Chờ xác nhận gói đại lý</span>' : P.agentPkgOn ? `<a class="btn btn-sm btn-gold" href="#len-dai-ly">Đăng ký ngay</a>` : `<span class="dim nowrap" style="font-size:12.5px">${pctOf(Math.min(spent, P.agentThreshold), P.agentThreshold)}%</span>`}</div>
         <div><div class="progress mt-1"><i style="width:${Math.max(2, Math.min(100, pctOf(spent, P.agentThreshold)))}%"></i></div>
           <span class="dim" style="font-size:13px">Tổng mua ${money(spent)} / ${money(P.agentThreshold)}${agDone ? '' : ', còn ' + money(left)}. ${P.pkgCountsAs ? 'Gói kích hoạt được tính ' + money(P.pkgCountsAs) + '.' : 'Gói kích hoạt không tính vào doanh số.'}</span></div>
-        <ul><li>Gian hàng online trị giá 10.000.000đ</li><li>Khóa học cao cấp cầm tay chỉ việc trị giá 15.000.000đ</li><li>Bộ công cụ tạo video hàng loạt và livestream đa nền tảng trị giá 30.000.000đ</li><li>Hoa hồng ${P.agentRate}% đơn hàng của người mình giới thiệu</li><li>Hưởng ${P.overrideRate}% thu nhập của đại lý tuyến dưới (vào ví điểm thưởng và ví mua hàng)</li></ul></div>`;
+        <ul>${perkLi(d, 'daily')}</ul></div>`;
+  }
+
+  /* ---------- ĐĂNG KÝ ĐẠI LÝ NGAY (gói đại lý) ---------- */
+  function pAgent(box, d, me, redo) {
+    const P = ADB.plan(d), o = agentOrder(d, me.id), B = SITE.bank, spent = ADB.spent(d, me.id);
+    if (me.tier === 'daily') {
+      box.innerHTML = ph('Đăng ký đại lý') + `<div class="card glow-cyan"><div class="row" style="gap:14px"><span class="stat-ico green">${icon('check')}</span><div><b>Tài khoản đã là Đại lý</b><div class="dim" style="font-size:13px">${me.agentSince ? 'Từ ngày ' + fdate(me.agentSince) : ''}</div></div></div><a class="btn btn-sm btn-outline-gold mt-2" href="#tong-quan">Về tổng quan</a></div>`;
+      return;
+    }
+    if (!P.agentPkgOn) { box.innerHTML = ph('Đăng ký đại lý') + `<div class="card"><p class="muted">Hiện công ty chưa mở đăng ký gói đại lý. Anh chị lên Đại lý khi tổng mua cộng dồn đạt ${money(P.agentThreshold)}.</p></div>`; return; }
+    const intro = `<div class="card glow-gold">${head('Gói đại lý', 'lên Đại lý ngay, không cần chờ cộng dồn')}
+      <div class="ref-code" style="letter-spacing:.04em">${money(P.agentPkgPrice)}</div>
+      <div class="pkg-split mt-2"><div><span class="dim" style="font-size:12.5px">Vào ví mua hàng</span><b class="green">${ps(P.agentPkgPoints)}</b><span class="dim" style="font-size:12.5px">Lấy hàng dần theo nhu cầu</span></div>
+        <div><span class="dim" style="font-size:12.5px">Cách thường</span><b class="gold">${money(P.agentThreshold)}</b><span class="dim" style="font-size:12.5px">Tổng mua cộng dồn, anh chị đang có ${money(spent)}</span></div></div>
+      <ul class="pkg-list mt-2">${perkLi(d, 'dailyPkg')}</ul>
+      <p class="muted mt-2" style="font-size:13px">Quyền lợi Đại lý:</p><ul class="pkg-list">${perkLi(d, 'daily')}</ul></div>`;
+    const status = o ? `<div class="card glow-cyan">${head('Đơn gói đại lý #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>
+        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản lên Đại lý ngay khi công ty xác nhận đã nhận tiền.</p></div>`
+      : `<div class="card glow-cyan">${head('Đăng ký ngay', 'thanh toán bằng chuyển khoản')}
+        <p class="muted" style="font-size:14px">Bấm nút bên dưới để tạo đơn gói đại lý. Trang sẽ hiện thông tin chuyển khoản với nội dung là mã đơn.</p>
+        <button class="btn btn-gold btn-block btn-lg mt-2" type="button" id="agBuy">${icon('award')} Đăng ký đại lý ${money(P.agentPkgPrice)}</button>
+        <p class="dim mt-2" style="font-size:12.5px">Gói đại lý không tính hoa hồng cho người giới thiệu. Hoa hồng được tính khi anh chị dùng điểm để đặt đơn hàng.</p></div>`;
+    box.innerHTML = ph('Đăng ký đại lý', 'Lên Đại lý ngay bằng gói đại lý') + `<div class="grid g-2">${intro}${status}</div>`;
+    const btn = $('#agBuy', box); if (btn) btn.addEventListener('click', () => {
+      const dd = ADB.load(), u = ADB.user(dd, me.id); if (agentOrder(dd, u.id)) return redo();
+      const ord = ADB.buyAgentPackage(dd, u, 'bank');
+      save(dd, 'Đặt gói đại lý', `${u.name}: đơn ${ord.id}, ${money(ord.total)}`, 'Đã tạo đơn ' + ord.id + ', anh chị chuyển khoản để lên đại lý'); redo();
+    });
   }
 
   /* ---------- KÍCH HOẠT CTV ---------- */
@@ -404,7 +438,7 @@
       <div class="ref-code" style="letter-spacing:.04em">${money(P.pkgPrice)}</div>
       <div class="pkg-split mt-2"><div><span class="dim" style="font-size:12.5px">Vào ví mua hàng</span><b class="green">${ps(P.pkgPoints)}</b><span class="dim" style="font-size:12.5px">Dùng mua sản phẩm trên web</span></div>
         <div><span class="dim" style="font-size:12.5px">Phí nền tảng</span><b class="gold">${money(P.pkgPrice - P.pkgPoints)}</b>
-          <ul class="pkg-list"><li>Khóa học xây kênh và bán hàng online trị giá 5.000.000đ</li><li>Tặng công cụ làm video hàng loạt và livestream đa nền tảng trị giá 15.000.000đ</li></ul></div></div>
+          <ul class="pkg-list">${perkLi(d, 'ctvFee')}</ul></div></div>
       <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${money(P.refBonus)} khi người đó kích hoạt CTV. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn kích hoạt #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
         <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>
@@ -472,7 +506,7 @@
         ${(o.items || []).map(x => `<div class="row between" style="padding:6px 0;gap:10px"><span>${esc(x.name)} x${x.qty}</span><b class="nowrap">${money(x.price * x.qty)}</b></div>`).join('')}
         <div class="divider"></div>${o.shopPaid ? `<div class="row between"><span class="muted">Trả bằng ví điểm mua hàng</span><b class="green">${ps(o.shopPaid)}</b></div>` : ''}${o.cashPaid ? `<div class="row between"><span class="muted">Trả bằng ví tiền mặt</span><b class="cyan">${money(o.cashPaid)}</b></div>` : ''}<div class="row between mt-1"><span class="muted">Tổng</span><b class="gold">${money(o.total)}</b></div>
         <p class="dim mt-2" style="font-size:13px">Ngày đặt ${fdate(o.date)} · ${esc(PAYN[o.pay] || o.pay || '')}</p>
-        ${isPkg(o) && o.status === 'pending' ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>` : ''}`);
+        ${anyPkg(o) && o.status === 'pending' ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>` : ''}`);
     }));
   }
 
@@ -787,21 +821,20 @@
     setTimeout(() => (U || A).focus(), 60);
   }
 
-  const PANES = { 'tong-quan': pOverview, 'kich-hoat': pActivate, 'dai-ly': pTeam, 'khach-hang': pCustomers, 'lanh-dao': pLeader, 'don-hang': pOrders, vi: pWallet, 'giao-dich': pTx, 'hoa-hong': pCom, 'nap-diem': pTopup, 'ho-so': pProfile, 'dia-chi': pAddr };
+  const PANES = { 'tong-quan': pOverview, 'kich-hoat': pActivate, 'len-dai-ly': pAgent, 'dai-ly': pTeam, 'khach-hang': pCustomers, 'lanh-dao': pLeader, 'don-hang': pOrders, vi: pWallet, 'giao-dich': pTx, 'hoa-hong': pCom, 'nap-diem': pTopup, 'ho-so': pProfile, 'dia-chi': pAddr };
 
   /* ---------- chưa đăng nhập ---------- */
   // nội dung điều khoản khi đăng ký: window.TERMS (sửa ở Quản trị > Trang web > Điều khoản), thay số liệu theo Thiết lập
   function termsHtml(P) {
-    const st = ADB.load().settings, V = { gia_goi: money(P.pkgPrice), diem_goi: ps(P.pkgPoints), moc_dai_ly: money(P.agentThreshold), hh_ctv: P.ctvRate + '%', hh_daily: P.agentRate + '%', thuong_gt: money(P.refBonus), thu_nhap_daily: P.overrideRate + '%', so_ngay: P.activeDays, thue: P.taxRate + '%', rut_toi_thieu: money(st.minWithdraw || 0), ten: SITE.brand, hotline: SITE.phone, email: SITE.email };
-    const fill = t => esc(t).replace(/\{(\w+)\}/g, (m, k) => k in V ? esc(String(V[k])) : m);
+    const V = ADB.planVars(ADB.load()), fill = t => ADB.fill(t, V);
     return (window.TERMS || []).map((x, i) => `<h4>${i + 1}. ${fill(x.t || '')}</h4>${String(x.b || '').split(/\n+/).filter(Boolean).map(p => `<p>${fill(p)}</p>`).join('')}`).join('');
   }
   function guest(mode = 'login') {
     const d = ADB.load(), P = ADB.plan(d), T = ADB.TIERS;
     const tiers = [
-      ['khach', 'user', 'Đăng ký tài khoản miễn phí', ['Mua hàng điền mã giảm giá để nhận chiết khấu']],
-      ['ctv', 'star', `Đăng ký gói ${money(P.pkgPrice)}`, [`Nhận ${ps(P.pkgPoints)} vào tài khoản mua hàng`, 'Nhận ngay khóa học xây kênh và bán hàng online trị giá 5.000.000đ', 'Tặng công cụ làm video hàng loạt và livestream đa nền tảng trị giá 15.000.000đ', `Bán hàng nhận hoa hồng ${P.ctvRate}%`]],
-      ['daily', 'award', `Tổng mua cộng dồn ${money(P.agentThreshold)}`, ['Nhận ngay gian hàng online trị giá 10.000.000đ', 'Khóa học cao cấp cầm tay chỉ việc trị giá 15.000.000đ', 'Bộ công cụ tạo video hàng loạt và livestream đa nền tảng trị giá 30.000.000đ', `Bán hàng nhận hoa hồng ${P.agentRate}%`]]
+      ['khach', 'user', 'Đăng ký tài khoản miễn phí', perks(d, 'khach')],
+      ['ctv', 'star', `Đăng ký gói ${money(P.pkgPrice)}`, perks(d, 'ctv')],
+      ['daily', 'award', P.agentPkgOn ? `Mua gói ${money(P.agentPkgPrice)} hoặc tổng mua cộng dồn ${money(P.agentThreshold)}` : `Tổng mua cộng dồn ${money(P.agentThreshold)}`, perks(d, 'daily')]
     ];
     view.innerHTML = `<div class="auth-wrap">
       <div class="card glow-mix auth-art"><div class="hero-bg"></div>
