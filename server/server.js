@@ -46,6 +46,7 @@ if (env.OWNER_EMAIL && !D.users.some(u => (u.email || '').toLowerCase() === env.
   console.log('Đã tạo tài khoản chủ sở hữu', env.OWNER_EMAIL);
 }
 A().wheel(D);
+if (A().agentSync(D)) console.log('Đã cập nhật thành viên đủ mốc lên đại lý');
 store.setJSON('db', D);
 // đường dẫn đặt mật khẩu lần đầu cho chủ sở hữu chưa có mật khẩu
 D.users.filter(u => u.role === 'admin' && !u.pass).forEach(u => {
