@@ -155,14 +155,14 @@
       credit(d, c.user, 'sales', c.kind === 'ref' ? 'referral' : 'commission', c.amount, c.kind === 'ref' ? `Thưởng giới thiệu CTV ${(ADB.user(d, c.from) || {}).name || ''}` : `Hoa hồng ${c.rate}% đơn ${c.order}`, c.order, { date: c.date });
     }
     c.status = 'paid';
-    // đại lý B có thu nhập từ đơn mua hàng (kể cả thu nhập B nhận từ tầng dưới): đại lý A (người giới thiệu B) hưởng 40%, tính tiếp lên trên.
-    // Thưởng giới thiệu CTV (200k) chỉ trả cho người giới thiệu, không tính là thu nhập để tuyến trên hưởng.
+    // B (đại lý hoặc CTV) có thu nhập từ đơn mua hàng (kể cả thu nhập B nhận từ tầng dưới): đại lý A (người giới thiệu B) hưởng 40%, tính tiếp lên trên.
+    // CTV do đại lý tuyển cũng tính (anh Tuân chốt 24/10). Thưởng giới thiệu CTV (200k) không tính là thu nhập để tuyến trên hưởng.
     if (c.kind !== 'ref') {
       const r = ADB.user(d, c.user), P = plan(d), depth = (c.depth || 0) + 1, amount = pct(c.amount, P.overrideRate), date = c.paidAt || c.date;
       let up = r && r.sponsor && ADB.user(d, r.sponsor), hops = 0;
       // chuyển lên trên: bỏ qua đại lý chưa đủ điều kiện
       if (P.overrideMode === 'up') while (up && up.tier === 'daily' && !ADB.activity(d, up.id, date).ok && hops++ < 30) up = up.sponsor && ADB.user(d, up.sponsor);
-      if (r && r.tier === 'daily' && up && up.tier === 'daily' && depth <= 30 && amount >= 1) {
+      if (r && (r.tier === 'daily' || r.tier === 'ctv') && up && up.tier === 'daily' && depth <= 30 && amount >= 1) {
         const ok = ADB.activity(d, up.id, date).ok, status = ok ? 'paid' : P.overrideMode === 'lose' ? 'missed' : 'hold';
         addCommission(d, { kind: 'override', order: c.order, user: up.id, from: r.id, level: depth + 1, depth, rate: P.overrideRate, base: c.amount, amount, date, status,
           note: ok ? (hops ? 'Chuyển lên từ đại lý chưa đủ điều kiện' : '') : status === 'hold' ? 'Đang giữ, chờ đủ điều kiện nhận' : 'Chưa đủ điều kiện nhận (' + (P.activeRule === 'all' ? 'tự mua và có đơn bán' : 'tự mua hoặc có đơn bán') + ' trong ' + P.activeDays + ' ngày)' });

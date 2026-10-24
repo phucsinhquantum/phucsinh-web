@@ -227,7 +227,7 @@
     ['refBonus', 'Thưởng giới thiệu CTV', 'money', 'Người giới thiệu (CTV hoặc đại lý) nhận khi người mới kích hoạt gói. Khoản này không tính là thu nhập để tuyến trên hưởng.'],
     ['ctvRate', 'Hoa hồng của CTV', 'pct', 'Trên mọi đơn mua hàng của người mình giới thiệu trực tiếp (khách hàng, CTV hay đại lý), trả khi công ty đã nhận tiền (đơn Đã thanh toán).'],
     ['agentRate', 'Hoa hồng của đại lý', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp.'],
-    ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập từ đơn mua hàng của đại lý mình giới thiệu, tính dồn lên các đại lý tuyến trên. Thưởng giới thiệu CTV không tính.'],
+    ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập từ đơn mua hàng của đại lý và CTV mình giới thiệu, tính dồn lên các đại lý tuyến trên. Thưởng giới thiệu CTV không tính.'],
     ['overrideShop', 'Phần vào ví mua hàng', 'pct', 'Tỉ lệ của khoản thu nhập trên vào ví mua hàng, còn lại vào ví điểm thưởng.'],
     ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng và khi chuyển điểm thưởng sang khả dụng.'],
     ['agentThreshold', 'Mốc lên đại lý', 'money', 'Tổng tiền mua đã thanh toán cộng dồn để tự lên đại lý.'],
@@ -337,7 +337,7 @@
               <p class="red full" id="mcE" style="font-size:13px;min-height:18px;margin:0"></p>
               <div class="row full" style="gap:8px"><button class="btn btn-gold btn-sm" type="submit">${icon('check')} Lưu</button>${g.configured ? `<button class="btn btn-sm" type="button" id="mcT">${icon('mail')} Gửi thư thử tới ${esc(PSQ.auth.user().email)}</button>` : ''}</div></form>
             <div class="divider"></div><h3 style="font-size:15px">Báo đơn qua Telegram</h3>
-            <p class="dim" style="font-size:13px;margin:6px 0 10px">Đơn mới, yêu cầu nạp tiền, rút tiền, lời nhắn liên hệ được Trợ Lý Phúc Sinh nhắn cho anh, kèm nút xác nhận đã nhận tiền.</p>
+            <p class="dim" style="font-size:13px;margin:6px 0 10px">Đơn mới, bill chuyển khoản, yêu cầu nạp tiền, rút tiền, lời nhắn liên hệ được Trợ Lý Phúc Sinh nhắn cho anh (đăng ký thành viên không báo), kèm nút xác nhận đã nhận tiền.</p>
             <button class="btn btn-sm" type="button" id="tgT">${icon('chat')} Gửi tin thử Telegram</button> <span id="tgR" style="font-size:13px"></span>
             <p class="dim" style="font-size:13px;margin:14px 0 10px">Nhắc giao hàng: mỗi ngày từ 8h đến 18h, trợ lý nhắc các đơn Đã thanh toán mà chưa ship (đặt từ hôm trước), kèm ảnh sản phẩm và nút Đã ship, Chưa ship.</p>
             <button class="btn btn-sm" type="button" id="tgS">${icon('truck')} Gửi nhắc giao hàng ngay</button> <span id="tgSR" style="font-size:13px"></span>`;

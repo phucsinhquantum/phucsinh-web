@@ -143,7 +143,6 @@ const ACTIONS = {
     d.users.push(u);
     c.log('Đăng ký thành viên', `${u.name} (@${u.username})${sp ? ', giới thiệu bởi ' + sp.name : ''}`, u);
     A.wheelSync(d);
-    c.notify(`Thành viên mới: ${u.name} (@${u.username}, ${u.code})${sp ? '\nGiới thiệu bởi: ' + sp.name : ''}`);
     if (verify) { verifyMail(c, u); return { needVerify: true, email: u.email }; }
     welcomeMail(c, u);
     return { user: clean(u), login: u.id };

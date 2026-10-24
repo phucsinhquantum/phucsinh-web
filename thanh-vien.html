@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024n">
-<script src="js/lang.js?v=20261024n"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024o">
+<script src="js/lang.js?v=20261024o"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,11 +216,11 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261024n"></script>
-<script src="js/api.js?v=20261024n"></script>
-<script src="js/data.js?v=20261024n"></script>
-<script src="js/app.js?v=20261024n"></script>
-<script src="js/psq-data.js?v=20261024n"></script>
+<script src="js/patch.js?v=20261024o"></script>
+<script src="js/api.js?v=20261024o"></script>
+<script src="js/data.js?v=20261024o"></script>
+<script src="js/app.js?v=20261024o"></script>
+<script src="js/psq-data.js?v=20261024o"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -579,7 +579,7 @@
     const sum = k => C.filter(c => c.kind === k && !['hold', 'missed', 'cancel'].includes(c.status)).reduce((s, c) => s + c.amount, 0);
     const KC = { ref: ['gold', 'gift'], direct: ['cyan', 'trend'], override: ['violet', 'users'] };
     const rows = C.filter(c => !comK || c.kind === comK);
-    box.innerHTML = ph('Hoa hồng', `CTV ${P.ctvRate}%, đại lý ${P.agentRate}% đơn hàng của người mình giới thiệu; đại lý hưởng ${P.overrideRate}% thu nhập của đại lý tuyến dưới`) + `
+    box.innerHTML = ph('Hoa hồng', `CTV ${P.ctvRate}%, đại lý ${P.agentRate}% đơn hàng của người mình giới thiệu; đại lý hưởng ${P.overrideRate}% thu nhập của đại lý và CTV tuyến dưới`) + `
       <div class="grid g-3">${Object.keys(CK).map(k => `<div class="card stat glow-gold"><div class="stat-top"><span class="stat-ico ${KC[k][0]}">${icon(KC[k][1])}</span>${CK[k]}</div><div class="stat-val" style="font-size:clamp(17px,1.6vw,22px)">${k === 'override' ? ps(sum(k)) : money(sum(k))}</div></div>`).join('')}</div>
       <div class="card glow-mix mt-2">${head('Chi tiết hoa hồng', rows.length + ' khoản', `<div class="chips" id="comF">${[['', 'Tất cả'], ...Object.entries(CK)].map(([k, l]) => `<button class="chip${comK === k ? ' on' : ''}" type="button" data-k="${k}">${l}</button>`).join('')}</div>`)}
         ${rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Từ thành viên</th><th>Cách tính</th><th>Số tiền / điểm</th><th>Trạng thái</th></tr></thead><tbody>${rows.slice(0, 200).map(c => { const f = ADB.user(d, c.from) || {}; return `<tr><td class="dim nowrap">${fdate(c.date)}</td><td class="nowrap">${esc(CK[c.kind] || c.kind || '')}<br><small class="dim">Đơn #${esc(c.order)}</small></td><td><b class="nowrap">${esc(f.name || '')}</b>${f.username ? `<br><small class="dim">@${esc(f.username)}</small>` : ''}</td><td class="dim nowrap" style="font-size:12.5px">${c.kind === 'ref' ? 'Thưởng cố định' : (c.rate || 0) + '% x ' + money(c.base || 0)}</td><td class="nowrap"><b class="gold">${c.kind === 'override' ? ps(c.amount) : money(c.amount)}</b></td><td><span class="badge ${(CS[c.status] || [])[1] || ''}">${(CS[c.status] || [c.status])[0]}</span></td></tr>`; }).join('')}</tbody></table></div>`
