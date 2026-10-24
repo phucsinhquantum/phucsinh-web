@@ -57,6 +57,10 @@ git -C /opt/web/phucsinhquantum-thu pull
 docker restart psq-api-thu
 ```
 
+## Sửa tệp .env
+
+`docker restart` không đọc lại `.env`. Sửa `.env` xong phải tạo lại container bằng lệnh ở bước 5 (`docker compose ... up -d`, cùng các biến NAME, WEB_DIR, DATA_DIR_HOST, PROXY_NET). Dữ liệu nằm ở thư mục dữ liệu nên không mất.
+
 ## Khi anh duyệt xong, đưa lên bản chính
 
 Làm như trên với các giá trị của bản chính:
