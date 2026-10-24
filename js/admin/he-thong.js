@@ -335,8 +335,12 @@
               <div class="field"><label>Tên người gửi</label><input class="input" name="fromName" value="${esc(g.fromName || SITE.brand)}"></div>
               <div class="field full"><label>Mật khẩu ứng dụng 16 ký tự${g.configured ? ' (để trống nếu không đổi)' : ''}</label><input class="input" name="pass" type="password" autocomplete="new-password" spellcheck="false"></div>
               <p class="red full" id="mcE" style="font-size:13px;min-height:18px;margin:0"></p>
-              <div class="row full" style="gap:8px"><button class="btn btn-gold btn-sm" type="submit">${icon('check')} Lưu</button>${g.configured ? `<button class="btn btn-sm" type="button" id="mcT">${icon('mail')} Gửi thư thử tới ${esc(PSQ.auth.user().email)}</button>` : ''}</div></form>`;
+              <div class="row full" style="gap:8px"><button class="btn btn-gold btn-sm" type="submit">${icon('check')} Lưu</button>${g.configured ? `<button class="btn btn-sm" type="button" id="mcT">${icon('mail')} Gửi thư thử tới ${esc(PSQ.auth.user().email)}</button>` : ''}</div></form>
+            <div class="divider"></div><h3 style="font-size:15px">Báo đơn qua Telegram</h3>
+            <p class="dim" style="font-size:13px;margin:6px 0 10px">Đơn mới, yêu cầu nạp tiền, rút tiền, lời nhắn liên hệ được Trợ Lý Phúc Sinh nhắn cho anh, kèm nút xác nhận đã nhận tiền.</p>
+            <button class="btn btn-sm" type="button" id="tgT">${icon('chat')} Gửi tin thử Telegram</button> <span id="tgR" style="font-size:13px"></span>`;
           $('#mcF', mc).addEventListener('submit', e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), r = API.act('mailSet', f); if (r.error) return $('#mcE', mc).textContent = r.error; toast('Đã lưu email gửi thư'); draw(); });
+          $('#tgT', mc).addEventListener('click', e => { const b = e.currentTarget, out = $('#tgR', mc); b.disabled = true; out.textContent = 'Đang gửi...'; const r = API.act('notifyTest'); b.disabled = false; out.className = r.error ? 'red' : 'green'; out.textContent = r.error || 'Đã gửi, anh mở Telegram xem tin của Trợ Lý Phúc Sinh.'; });
           const t = $('#mcT', mc); if (t) t.addEventListener('click', () => { t.disabled = true; t.textContent = 'Đang gửi...'; const r = API.act('mailTest'); if (r.error) { $('#mcE', mc).textContent = r.error; t.disabled = false; t.textContent = 'Gửi lại thư thử'; } else { toast('Đã gửi thư thử tới ' + r.to + ', anh mở hộp thư kiểm tra'); draw(); } });
         };
         draw();

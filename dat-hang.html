@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024d">
-<script src="js/lang.js?v=20261024d"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024e">
+<script src="js/lang.js?v=20261024e"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -133,11 +133,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261024d"></script>
-<script src="js/api.js?v=20261024d"></script>
-<script src="js/data.js?v=20261024d"></script>
-<script src="js/app.js?v=20261024d"></script>
-<script src="js/psq-data.js?v=20261024d"></script>
+<script src="js/patch.js?v=20261024e"></script>
+<script src="js/api.js?v=20261024e"></script>
+<script src="js/data.js?v=20261024e"></script>
+<script src="js/app.js?v=20261024e"></script>
+<script src="js/psq-data.js?v=20261024e"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -314,12 +314,30 @@
         <div class="box" style="padding:16px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--line)">
           <dl class="kv"><dt>Tổng đơn hàng</dt><dd><b class="${sp || cp ? '' : 'gold'}" style="font-size:${sp || cp ? 15 : 18}px">${money(o.total)}</b></dd>${sp ? `<dt>Đã dùng điểm</dt><dd class="green">${PS(sp)}</dd>` : ''}${cp ? `<dt>Ví tiền mặt</dt><dd class="cyan">${money(cp)}</dd>` : ''}${sp || cp ? `<dt>Còn phải trả</dt><dd><b class="gold" style="font-size:18px">${money(due)}</b></dd>` : ''}<dt>Giao đến</dt><dd>${esc(o.address)}</dd><dt>Thanh toán</dt><dd>${due === 0 ? (sp && cp ? 'Ví điểm mua hàng và ví tiền mặt' : cp ? 'Ví tiền mặt' : 'Ví điểm mua hàng') : bank ? 'Chuyển khoản ngân hàng' : 'Khi nhận hàng (COD)'}</dd></dl>
         </div>
-        ${bank ? `<div class="bank mt-2"><p style="font-size:14px;margin-bottom:10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Số tiền</dt><dd>${money(due)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due, o.id)}</div>`
+        ${bank ? `<div class="bank mt-2"><p style="font-size:14px;margin-bottom:10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Số tiền</dt><dd>${money(due)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due, o.id)}</div>${payWait()}`
           : due === 0 ? `<p class="pts-note mt-2">${icon('check')}<span>Đơn đã thanh toán đủ bằng ví. ${sp ? `Ví mua hàng còn <b>${PS(shopBal())}</b>. ` : ''}${cp ? `Ví tiền mặt còn <b>${money(cashBal())}</b>. ` : ''} Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận giao hàng.</span></p>`
           : `<p class="pts-note mt-2">${icon('truck')}<span>Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận. Anh chị kiểm tra hàng rồi thanh toán ${money(due)} khi nhận.</span></p>`}
       </div>
       <div class="actions"><a class="btn btn-gold" href="thanh-vien.html">${icon('user')} Xem đơn hàng</a><a class="btn btn-outline-gold" href="san-pham.html">Tiếp tục mua sắm</a></div>
     </div>`;
+  }
+
+  // chờ thanh toán: trang tự hỏi máy chủ, công ty xác nhận đã nhận tiền thì đổi sang báo thành công
+  const payWait = () => `<div class="pay-wait mt-2" id="payWait" role="status" aria-live="polite"><span class="pw-ring" aria-hidden="true"><i></i></span><div><b>Đang chờ xác nhận thanh toán</b><small>Chuyển khoản xong anh chị bấm nút bên cạnh và giữ trang này, trang tự cập nhật ngay khi công ty nhận được tiền.</small></div><button class="btn btn-sm btn-gold" type="button" id="pwClaim">${icon('check')} Tôi đã chuyển khoản</button></div>`;
+  let pwT = null;
+  function watchPay(o) {
+    clearInterval(pwT); const t0 = Date.now();
+    pwT = setInterval(() => {
+      const box = $('#payWait'); if (!box || Date.now() - t0 > 45 * 60e3) return clearInterval(pwT);
+      const r = API.act('trackOrder', { id: o.id, phone: o.phone }), x = r.order;
+      if (!x || x.status === 'pending') return;
+      clearInterval(pwT);
+      box.classList.add('paid');
+      box.innerHTML = `<span class="pw-ok" aria-hidden="true">${icon('check')}</span><div><b>Đã nhận thanh toán đơn ${esc(o.id)}</b><small>Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.</small></div>${'<i class="pw-dot"></i>'.repeat(14)}`;
+      box.querySelectorAll('.pw-dot').forEach((d, i) => { const a = i / 14 * Math.PI * 2; d.style.setProperty('--x', Math.cos(a) * (70 + (i % 3) * 25) + 'px'); d.style.setProperty('--y', Math.sin(a) * (40 + (i % 4) * 14) + 'px'); d.style.setProperty('--c', ['#f3c76b', '#4fe6df', '#45e08f', '#b98cff'][i % 4]); });
+      const b = $('.success .badge'); if (b) b.outerHTML = statusBadge(x.status);
+      toast('Đã nhận thanh toán đơn ' + o.id);
+    }, 5000);
   }
 
   function render(scroll) {
@@ -351,7 +369,14 @@
       if (res.error) { b.disabled = false; toast(res.error, 'err'); return; }
       placed = res.order;
       render(true); toast('Đặt hàng thành công: ' + placed.id);
+      if ($('#payWait')) watchPay(placed);
     }
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('#pwClaim'); if (!b || !placed) return;
+    b.disabled = true; const r = API.act('paidClaim', { id: placed.id, phone: placed.phone });
+    if (r.error) { b.disabled = false; toast(r.error, 'err'); return; }
+    b.textContent = 'Đã báo công ty'; toast('Đã báo công ty kiểm tra chuyển khoản đơn ' + placed.id);
   });
   $('#main').addEventListener('submit', e => { if (e.target.id === 'infoForm') { e.preventDefault(); readForm(); if (validate()) { step = 2; render(true); } } });
   $('#main').addEventListener('change', e => {

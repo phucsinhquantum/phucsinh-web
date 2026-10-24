@@ -146,6 +146,18 @@ const ACTIONS = {
     const o = id && ph && c.d.orders.find(x => x.id.toUpperCase() === id && normPhone(x.phone) === ph);
     return o ? { order: pick(o, ['id', 'status', 'date', 'items', 'total']) } : { order: null };
   } },
+  // khách bấm "Tôi đã chuyển khoản": nhắc chủ cửa hàng kiểm tra (mỗi đơn tối đa 3 lần)
+  paidClaim: { auth: 'guest', run(c) {
+    const id = str(c.args.id, 30).toUpperCase(), ph = normPhone(c.args.phone), o = c.d.orders.find(x => x.id === id && normPhone(x.phone) === ph);
+    if (!o) return err('Không tìm thấy đơn hàng.');
+    if (o.status !== 'pending') return { status: o.status };
+    if ((o.claims || 0) >= 3) return err('Công ty đã nhận được thông báo, anh chị chờ một chút giúp em.');
+    o.claims = (o.claims || 0) + 1;
+    const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
+    c.notify(`Khách báo đã chuyển khoản đơn ${o.id}\n${o.name} · ${o.phone}\nSố tiền ${(due).toLocaleString('vi-VN')}đ, nội dung ${o.id}\nAnh kiểm tra tài khoản BIDV rồi bấm xác nhận.`, { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' });
+    c.log('Khách báo đã chuyển khoản', o.id);
+    return { ok: true };
+  } },
   contact: { auth: 'guest', run(c) {
     const a = c.args, m = { id: 'm' + Date.now().toString(36) + crypto.randomBytes(2).toString('hex'), name: str(a.name, 80), phone: str(a.phone, 20), email: str(a.email, 120), topic: str(a.topic, 80), text: str(a.text, 3000), date: new Date().toISOString(), status: 'new' };
     if (m.name.length < 2 || !/^(\+?84|0)\d{8,10}$/.test(m.phone.replace(/[\s.-]/g, '')) || m.text.length < 5) return err('Anh chị kiểm tra lại họ tên, số điện thoại và nội dung.');
@@ -334,6 +346,10 @@ const ACTIONS = {
     const to = str(c.args.to, 120) || c.me.email;
     try { await c.sendNow(to, 'Thư thử từ ' + c.site.brand, 'Thử', wrapMail(c.site, 'Gửi thư thành công', '<p>Email gửi thư tự động của web đã hoạt động.</p>')); return { ok: true, to }; }
     catch (e) { return err(e.message); }
+  } },
+  notifyTest: { auth: 'owner', async: true, async run(c) {
+    const r = await c.notifyNow(`Tin thử từ web ${c.site.brand}: báo đơn mới qua Telegram đã hoạt động.`);
+    return r.ok ? { ok: true } : err('Chưa gửi được: ' + (r.error || 'không rõ lỗi'));
   } },
   mailResend: { auth: 'admin', run(c) {
     const m = (c.d.mails || []).find(x => x.id === c.args.id); if (!m) return err('Không tìm thấy thư.');

@@ -128,7 +128,7 @@ async function api(req, res, url) {
     const ctx = {
       d: D, me, args: body.args || {}, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc,
       log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
-      mail, mailReady: () => !!mailCfg(), notify: (text, confirm) => tell(text, confirm),
+      mail, mailReady: () => !!mailCfg(), notify: (text, confirm) => tell(text, confirm), notifyNow: text => notify(env, { text }), notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
       sendNow: (to, subject, type, html) => sendMail(mailCfg(), { to, subject, html }).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
     };
     let r;
