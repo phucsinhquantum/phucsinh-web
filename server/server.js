@@ -46,6 +46,7 @@ if (env.OWNER_EMAIL && !D.users.some(u => (u.email || '').toLowerCase() === env.
   console.log('Đã tạo tài khoản chủ sở hữu', env.OWNER_EMAIL);
 }
 A().wheel(D);
+{ const n = A().settleSync(D); if (n) console.log('Đã ghi nhận hoa hồng cho', n, 'đơn đã thanh toán'); }
 if (A().agentSync(D)) console.log('Đã cập nhật thành viên đủ mốc lên đại lý');
 store.setJSON('db', D);
 // đường dẫn đặt mật khẩu lần đầu cho chủ sở hữu chưa có mật khẩu
@@ -56,7 +57,7 @@ D.users.filter(u => u.role === 'admin' && !u.pass).forEach(u => {
 
 const save = () => store.setJSON('db', D);
 const stamp = () => { const t = new Date(Date.now() + 7 * 36e5); return t.toISOString().slice(0, 10) + ' ' + t.toISOString().slice(11, 16); };
-function after() { try { A().wheelSync(D); A().releaseHeld(D); A().agentSync(D); } catch (e) { console.error(e); } save(); }
+function after() { try { A().wheelSync(D); A().releaseHeld(D); A().settleSync(D); A().agentSync(D); } catch (e) { console.error(e); } save(); }
 
 /* ---------- thư và báo tin ---------- */
 const mailCfg = () => store.getJSON('secret:mail');

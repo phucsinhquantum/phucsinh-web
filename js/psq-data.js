@@ -175,10 +175,10 @@
     if (c.status === 'paid') payCommission(d, c);
     return c;
   }
-  // ghi nhận một đơn đã hoàn thành: kích hoạt CTV, hoa hồng, lên đại lý (chạy 1 lần mỗi đơn).
-  // Hoa hồng chỉ trả khi đơn Hoàn thành; đơn gói kích hoạt tự chuyển Hoàn thành khi đã thanh toán (xem markPaid).
+  // ghi nhận một đơn đã thanh toán: kích hoạt CTV, hoa hồng, lên đại lý (chạy 1 lần mỗi đơn).
+  // Hoa hồng ghi ngay khi công ty đã nhận tiền (Đã thanh toán, Đang giao, Hoàn thành): đơn đã trả chỉ đổi lên, không trả hàng (anh Tuân chốt 24/10).
   function settleOrder(d, o) {
-    if (!o || o.settled || o.status !== 'done') return false;
+    if (!o || o.settled || !PAID(o)) return false;
     const buyer = ADB.user(d, o.userId); o.settled = true;
     if (!buyer) return true;
     const P = plan(d), sp = buyer.sponsor ? ADB.user(d, buyer.sponsor) : null, date = o.date || now();
@@ -438,7 +438,7 @@
       if (!items) o.stockOut = false; return true;
     },
     // đổi trạng thái đơn theo luật: chặn hủy đơn đã nhận tiền, chặn giao hoặc hoàn thành khi còn thiếu tiền bù,
-    // đơn gói kích hoạt tự Hoàn thành khi đã thanh toán, trừ hoặc trả kho, ghi nhận hoa hồng khi Hoàn thành
+    // đơn gói kích hoạt tự Hoàn thành khi đã thanh toán, trừ hoặc trả kho, ghi nhận hoa hồng khi đã thanh toán
     setStatus(d, o, status) {
       if (status === o.status) return { ok: true };
       if (status === 'failed' && ADB.locked(o)) return { error: `Đơn #${o.id} đã thanh toán, hoa hồng và điểm đã ghi nhận nên không hủy được. Anh chị chỉ có thể đổi sang sản phẩm khác bằng hoặc cao hơn số tiền.` };
@@ -454,13 +454,15 @@
       if (PAID(o)) r.agent = ADB.agentUp(d, o.userId);
       return r;
     },
-    // lên đại lý ngay khi tổng đơn đã thanh toán (công ty đã nhận tiền) đủ mốc; hoa hồng vẫn chờ đơn Hoàn thành
+    // lên đại lý ngay khi tổng đơn đã thanh toán (công ty đã nhận tiền) đủ mốc
     agentUp(d, id) {
       const u = ADB.user(d, id), P = plan(d);
       if (!u || u.role === 'admin' || u.tier === 'daily' || ADB.spent(d, id) < P.agentThreshold) return false;
       u.tier = 'daily'; u.agentSince = now(); return true;
     },
     // rà toàn bộ thành viên (máy chủ chạy sau mỗi lần lưu), sửa cả tài khoản đã đủ mốc từ trước
+    // ghi nhận các đơn đã thanh toán mà chưa tính hoa hồng (đơn trước khi đổi luật, đơn quản trị lưu thẳng)
+    settleSync(d) { let n = 0; d.orders.filter(o => PAID(o) && !o.settled).sort((a, b) => String(a.date).localeCompare(String(b.date))).forEach(o => { if (settleOrder(d, o)) n++; }); return n; },
     agentSync(d) { let n = 0; new Set(d.orders.filter(PAID).map(o => o.userId)).forEach(id => { if (ADB.agentUp(d, id)) n++; }); return n; },
     // sản phẩm có thể đổi cho đơn đã thanh toán: same: cùng giá với phần hàng đã trả; more: giá cao hơn (khách chuyển bù)
     exchangeOptions(d, o) {
