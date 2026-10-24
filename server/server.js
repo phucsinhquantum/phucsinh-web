@@ -55,7 +55,7 @@ D.users.filter(u => u.role === 'admin' && !u.pass).forEach(u => {
 
 const save = () => store.setJSON('db', D);
 const stamp = () => { const t = new Date(Date.now() + 7 * 36e5); return t.toISOString().slice(0, 10) + ' ' + t.toISOString().slice(11, 16); };
-function after() { try { A().wheelSync(D); A().releaseHeld(D); } catch (e) { console.error(e); } save(); }
+function after() { try { A().wheelSync(D); A().releaseHeld(D); A().agentSync(D); } catch (e) { console.error(e); } save(); }
 
 /* ---------- thư và báo tin ---------- */
 const mailCfg = () => store.getJSON('secret:mail');

@@ -443,8 +443,17 @@
       if (['paid', 'ship', 'done'].includes(o.status)) r.stock = ADB.stockOut(d, o);
       if (o.status === 'failed') { r.refunded = ADB.refundOrder(d, o); r.restocked = ADB.stockBack(d, o); }
       r.settled = settleOrder(d, o);
+      if (PAID(o)) r.agent = ADB.agentUp(d, o.userId);
       return r;
     },
+    // lên đại lý ngay khi tổng đơn đã thanh toán (công ty đã nhận tiền) đủ mốc; hoa hồng vẫn chờ đơn Hoàn thành
+    agentUp(d, id) {
+      const u = ADB.user(d, id), P = plan(d);
+      if (!u || u.role === 'admin' || u.tier === 'daily' || ADB.spent(d, id) < P.agentThreshold) return false;
+      u.tier = 'daily'; u.agentSince = now(); return true;
+    },
+    // rà toàn bộ thành viên (máy chủ chạy sau mỗi lần lưu), sửa cả tài khoản đã đủ mốc từ trước
+    agentSync(d) { let n = 0; new Set(d.orders.filter(PAID).map(o => o.userId)).forEach(id => { if (ADB.agentUp(d, id)) n++; }); return n; },
     // sản phẩm có thể đổi cho đơn đã thanh toán: same: cùng giá với phần hàng đã trả; more: giá cao hơn (khách chuyển bù)
     exchangeOptions(d, o) {
       const paid = itemsTotal(o), ok = p => p.id !== PKG_ID && p.active !== false && ADB.stockOf(d, p.id) !== 0;
