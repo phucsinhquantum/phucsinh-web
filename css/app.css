@@ -970,3 +970,8 @@ html.reduce-motion .gift-blink svg { animation: none !important; color: #ff4d4d;
 @media (max-width: 1280px) { .ctv-txt small { display: none; } }
 @media (max-width: 760px) { .ctv-cta { height: 40px; padding: 0 10px 0 6px; gap: 6px; border-radius: 12px; } .ctv-txt { display: none; } .ctv-short { display: inline; } .ctv-hot { font-size: 10px; padding: 3px 5px; } }
 @media (prefers-reduced-motion: reduce) { html.reduce-motion .ctv-cta, html.reduce-motion .ctv-cta::after, html.reduce-motion .ctv-hot { animation: none; } }
+
+/* mã QR chuyển khoản */
+.qr-pay { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 12px; }
+.qr-pay img { width: 200px; height: auto; border-radius: 12px; background: #fff; padding: 6px; }
+.qr-pay small { font-size: 12px; color: var(--muted, #9aa7ab); text-align: center; }

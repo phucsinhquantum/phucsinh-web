@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024c">
-<script src="js/lang.js?v=20261024c"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024d">
+<script src="js/lang.js?v=20261024d"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,11 +216,11 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261024c"></script>
-<script src="js/api.js?v=20261024c"></script>
-<script src="js/data.js?v=20261024c"></script>
-<script src="js/app.js?v=20261024c"></script>
-<script src="js/psq-data.js?v=20261024c"></script>
+<script src="js/patch.js?v=20261024d"></script>
+<script src="js/api.js?v=20261024d"></script>
+<script src="js/data.js?v=20261024d"></script>
+<script src="js/app.js?v=20261024d"></script>
+<script src="js/psq-data.js?v=20261024d"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -403,7 +403,7 @@
       <ul class="pkg-list mt-2">${perkLi(d, 'dailyPkg')}</ul>
       <p class="muted mt-2" style="font-size:13px">Quyền lợi Đại lý:</p><ul class="pkg-list">${perkLi(d, 'daily')}</ul></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn gói đại lý #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
-        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>
         <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản lên Đại lý ngay khi công ty xác nhận đã nhận tiền.</p></div>`
       : `<div class="card glow-cyan">${head('Đăng ký ngay', 'thanh toán bằng chuyển khoản')}
         <p class="muted" style="font-size:14px">Bấm nút bên dưới để tạo đơn gói đại lý. Trang sẽ hiện thông tin chuyển khoản với nội dung là mã đơn.</p>
@@ -429,7 +429,7 @@
           <ul class="pkg-list">${perkLi(d, 'ctvFee')}</ul></div></div>
       <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${money(P.refBonus)} khi người đó kích hoạt CTV. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn kích hoạt #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
-        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>
         <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản được kích hoạt Cộng tác viên ngay khi công ty xác nhận đã nhận tiền. Anh chị có thể xem trạng thái tại Đơn hàng của tôi.</p></div>`
       : `<div class="card glow-cyan">${head('Kích hoạt ngay', 'thanh toán bằng chuyển khoản')}
         <p class="muted" style="font-size:14px">Bấm nút bên dưới để tạo đơn kích hoạt. Trang sẽ hiện thông tin chuyển khoản với nội dung là mã đơn.</p>
@@ -492,7 +492,7 @@
         ${(o.items || []).map(x => `<div class="row between" style="padding:6px 0;gap:10px"><span>${esc(x.name)} x${x.qty}</span><b class="nowrap">${money(x.price * x.qty)}</b></div>`).join('')}
         <div class="divider"></div>${o.shopPaid ? `<div class="row between"><span class="muted">Trả bằng ví điểm mua hàng</span><b class="green">${ps(o.shopPaid)}</b></div>` : ''}${o.cashPaid ? `<div class="row between"><span class="muted">Trả bằng ví tiền mặt</span><b class="cyan">${money(o.cashPaid)}</b></div>` : ''}<div class="row between mt-1"><span class="muted">Tổng</span><b class="gold">${money(o.total)}</b></div>
         <p class="dim mt-2" style="font-size:13px">Ngày đặt ${fdate(o.date)} · ${esc(PAYN[o.pay] || o.pay || '')}</p>
-        ${anyPkg(o) && o.status === 'pending' ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl></div>` : ''}`);
+        ${anyPkg(o) && o.status === 'pending' ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(o.total, o.id)}</div>` : ''}`);
     }));
   }
 
@@ -688,7 +688,7 @@
   /* ---------- nạp tiền vào ví tiền mặt ---------- */
   // nội dung chuyển khoản để hệ thống nhận diện người nạp
   const depCode = u => 'NAP ' + String(u.username || u.code || '').toUpperCase();
-  const bankBox = (u, a) => `<dl class="kv dep-bank"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd>${a ? `<dt>Số tiền</dt><dd><b>${money(a)}</b></dd>` : ''}<dt>Nội dung</dt><dd><b class="cyan">${esc(depCode(u))}</b> <button class="link-btn" type="button" data-copy-dep="${esc(depCode(u))}">Sao chép</button></dd></dl>`;
+  const bankBox = (u, a) => `<dl class="kv dep-bank"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd>${a ? `<dt>Số tiền</dt><dd><b>${money(a)}</b></dd>` : ''}<dt>Nội dung</dt><dd><b class="cyan">${esc(depCode(u))}</b> <button class="link-btn" type="button" data-copy-dep="${esc(depCode(u))}">Sao chép</button></dd></dl>${a ? PSQ.qr(a, depCode(u)) : ''}`;
   // chuyển khoản nạp tiền: ghi nhận yêu cầu, công ty xác nhận khi tiền vào tài khoản thì cộng ví
   function depositNow(amount, el) {
     return act('deposit', { amount, method: 'Chuyển khoản' }, 'Đã gửi yêu cầu nạp ' + money(amount) + ', tiền vào ví khi công ty xác nhận', el) || { error: true };

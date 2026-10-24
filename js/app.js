@@ -180,6 +180,13 @@
     cart.clear(); return { order: r.order };
   }
 
+  // mã QR chuyển khoản (VietQR): quét bằng ứng dụng ngân hàng, số tiền và nội dung tự điền
+  function qr(amount, info) {
+    const B = S.bank || {}; if (!B.account || !B.name) return '';
+    const src = `https://img.vietqr.io/image/${encodeURIComponent(B.name.replace(/\s+/g, ''))}-${encodeURIComponent(B.account.replace(/\s/g, ''))}-compact2.png?amount=${Math.round(amount) || ''}&addInfo=${encodeURIComponent(info || '')}&accountName=${encodeURIComponent(B.owner || '')}`;
+    return `<div class="qr-pay"><img src="${esc(src)}" alt="Mã QR chuyển khoản" width="200" height="236" loading="lazy" onerror="this.parentNode.remove()"><small>Quét mã bằng ứng dụng ngân hàng, số tiền và nội dung tự điền</small></div>`;
+  }
+
   /* ---------- hình vẽ sản phẩm (khi chưa có ảnh thật) ---------- */
   const TONES = [['#6b3d1f', '#3a1f0e', '#c98a52'], ['#4a2a16', '#24130a', '#a8703f'], ['#7a4a26', '#3d2211', '#d9a066'], ['#5b3a22', '#2b190c', '#b98455'], ['#6a3a1c', '#2e170a', '#c28048']];
   let artN = 0;
@@ -538,7 +545,7 @@
     };
   })();
 
-  window.PSQ = { pwa, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { pwa, qr, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   shell();
   ambient();
