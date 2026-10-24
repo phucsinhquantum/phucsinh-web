@@ -11,8 +11,8 @@ window.SITE = {
   slogan: 'Tinh hoa trầm hương Việt',
   logo: 'img/logo-psq.png',
   phone: '0931 133 199',
-  zalo: '0931133199',
-  messenger: '',                   // TODO: tên trang Facebook để mở Messenger (m.me/ten-trang); để trống sẽ mở trang Liên hệ
+  zalo: '0839153514',             // Zalo của bot An An chăm sóc khách hàng
+  messenger: 'phucsinhquantum',    // tên trang Facebook (m.me/ten-trang); bot An An trả lời tin nhắn trang này
   email: 'phucsinhquantum@gmail.com',
   address: '41 Nguyễn Đình Chiểu, Phường Sài Gòn, TP. Hồ Chí Minh',
   hours: 'Thứ 2 đến Chủ nhật, 8:00 đến 20:00',
@@ -232,8 +232,12 @@ window.ABOUT_DEFAULT = JSON.parse(JSON.stringify({ about: window.ABOUT, team: wi
     if (v.social) ['facebook', 'youtube', 'tiktok', 'zalo'].forEach(k => { if (typeof v.social[k] === 'string') SITE.social[k] = v.social[k].trim(); });
   } catch (e) {}
 })();
-// đường dẫn Messenger: nhận tên trang (m.me/ten-trang) hoặc link đầy đủ
-SITE.messLink = () => !SITE.messenger ? '' : /^https?:\/\//i.test(SITE.messenger) ? SITE.messenger : 'https://m.me/' + SITE.messenger.replace(/^@/, '');
+// đường dẫn Messenger: nhận tên trang, link m.me hoặc link trang facebook.com/ten-trang (đổi sang m.me để mở thẳng khung chat)
+SITE.messLink = () => {
+  const m = String(SITE.messenger || '').trim(); if (!m) return '';
+  const fb = m.match(/^https?:\/\/(?:www\.|m\.)?facebook\.com\/([A-Za-z0-9.\-]+)\/?$/i);
+  return fb ? 'https://m.me/' + fb[1] : /^https?:\/\//i.test(m) ? m : 'https://m.me/' + m.replace(/^@/, '');
+};
 
 // Điều khoản sử dụng hiện ở form đăng ký. Sửa trong Quản trị > Trang web > Điều khoản (lưu psq_terms_v1).
 // Các chữ trong ngoặc nhọn tự thay bằng số liệu trong Thiết lập: {gia_goi} {diem_goi} {moc_dai_ly} {hh_ctv} {hh_daily}

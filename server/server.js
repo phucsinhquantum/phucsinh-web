@@ -33,6 +33,16 @@ const PRODUCT_KEYS = ['psq_products_v1', 'psq_site_v1'];
 
 const store = openStore(DATA_DIR);
 const content = new Map(CONTENT_KEYS.map(k => [k, store.getJSON(k)]));
+// 24/10: nút Zalo và Messenger nổi dẫn vào bot An An (anh Tuân chốt), chạy một lần
+if (!store.getJSON('mig:anan')) {
+  const v = content.get('psq_site_v1');
+  if (v && typeof v === 'object') {
+    if (!v.zalo || String(v.zalo).replace(/\D/g, '') === '0931133199') v.zalo = '0839153514';
+    if (!v.messenger) v.messenger = 'phucsinhquantum';
+    content.set('psq_site_v1', v); store.setJSON('psq_site_v1', v);
+  }
+  store.setJSON('mig:anan', 1);
+}
 let D = store.getJSON('db') || {};
 let ACTOR = null;
 let E = null;
