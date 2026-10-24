@@ -8,7 +8,8 @@
      POST /api/admin/patch {patch}  quản trị lưu thay đổi (ghép theo từng phần tử, xem js/patch.js)
      POST /api/admin/content {key, value}  quản trị lưu nội dung trang (psq_*_v1)
      GET/POST /api/confirm?t=...    trang xác nhận đã nhận tiền mở từ tin Telegram
-     GET  /api/bill?f=...[&t=...]   ảnh bill chuyển khoản (quản trị, hoặc kèm mã xác nhận của đơn đó) */
+     GET  /api/bill?f=...[&t=...]   ảnh bill chuyển khoản (quản trị, hoặc kèm mã xác nhận của đơn đó)
+     GET/POST /api/ship?t=...       trang Đã ship / Chưa ship mở từ tin nhắc giao hàng */
 'use strict';
 const http = require('http');
 const fs = require('fs');
@@ -18,7 +19,7 @@ const { openStore } = require('./store');
 const { createEngine, esc, today } = require('./engine');
 const { ACTIONS, scopeFor, hashPass, clean } = require('./actions');
 const { sendMail } = require('./mail');
-const { notify } = require('./notify');
+const { notify, sendTo, chatName, chatsOf } = require('./notify');
 const P = require('../js/patch.js');
 
 const env = process.env;
@@ -135,7 +136,9 @@ async function api(req, res, url) {
   const me = meOf(req), route = url.pathname;
   if (req.method === 'GET' && route === '/api/boot') return send(res, 200, bootPayload(me));
   if (route === '/api/confirm') return confirmPage(req, res, url);
+  if (route === '/api/ship') return shipPage(req, res, url);
   if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
+  if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
   if (req.method !== 'POST') return send(res, 405, { error: 'Sai phương thức.' });
   // chống gửi giả từ trang khác: trình duyệt chỉ gửi được tiêu đề này khi cùng tên miền
   if (req.headers['x-psq'] !== '1') return send(res, 403, { error: 'Yêu cầu không hợp lệ.' });
@@ -155,7 +158,7 @@ async function api(req, res, url) {
     const ctx = {
       d: D, me, args: body.args || {}, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc,
       log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
-      mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, notifyNow: text => notify(env, { text }), notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+      mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
       sendNow: (to, subject, type, html) => sendMail(mailCfg(), { to, subject, html }).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
     };
     let r;
@@ -240,6 +243,77 @@ async function confirmPage(req, res, url) {
     <form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">✅ Đã nhận ${money(tp.amount)}</button></form><p style="font-size:13px">Chỉ bấm khi tiền đã vào tài khoản.</p>`);
 }
 
+/* ---------- nhắc giao hàng: đơn Đã thanh toán chưa ship, từ ngày sau ngày đặt, 8h-18h giờ VN, mỗi đơn 1 lần/ngày ----------
+   Người nhận: SHIP_CHAT_ID (mặc định TELEGRAM_CHAT_ID). Mỗi người một đường dẫn riêng nên biết ai bấm Đã ship. */
+const vnNow = () => new Date(Date.now() + 7 * 36e5);
+const vnDay = () => vnNow().toISOString().slice(0, 10);
+const shipChats = () => chatsOf(env.SHIP_CHAT_ID || env.TELEGRAM_CHAT_ID);
+const toShip = day => D.orders.filter(o => o.status === 'paid' && !A().isPkgOrder(o) && String(o.date || '').slice(0, 10) < day);
+function productPhoto(o) {
+  for (const x of o.items || []) {
+    const p = E.PRODUCTS.find(q => q.id === x.id), img = p && (p.image || (p.images || [])[0]);
+    if (!img || /^https?:/.test(img)) continue;
+    const f = path.normalize(path.join(WEB_ROOT, img)), ext = path.extname(f).toLowerCase();
+    if (!f.startsWith(WEB_ROOT + path.sep) || !BILL_MIME[ext.slice(1).replace('jpeg', 'jpg')]) continue;
+    try { return { buf: fs.readFileSync(f), type: BILL_MIME[ext.slice(1).replace('jpeg', 'jpg')] }; } catch (e) {}
+  }
+  return null;
+}
+const shipText = (o, n) => `🚚 Nhắc giao hàng${n > 1 ? ` (lần ${n})` : ''}: đơn ${o.id}
+Đặt ngày ${String(o.date || '').slice(0, 10).split('-').reverse().join('/')}, đã thanh toán
+Khách: ${o.name} · ${o.phone || ''}
+Địa chỉ: ${o.address || ''}
+${(o.items || []).map(x => `• ${x.qty} x ${x.name}`).join('\n')}
+Tổng: ${(Math.round(o.total) || 0).toLocaleString('vi-VN')}đ${o.note ? `\nGhi chú: ${o.note}` : ''}
+Đã gửi hàng thì bấm "Đã ship", chưa thì bấm "Chưa ship", mai em nhắc tiếp.`;
+async function remindShip(force) {
+  const h = vnNow().getUTCHours(), day = vnDay(), chats = shipChats();
+  if (!env.TELEGRAM_BOT_TOKEN || !chats.length) return { sent: 0, error: 'Chưa cấu hình Telegram.' };
+  if (!force && (h < 8 || h >= 18)) return { sent: 0 };
+  const list = toShip(force ? '9999' : day).filter(o => force || o.remindedOn !== day);
+  // đánh dấu và lưu trước khi gửi, để lần kiểm tra sau không nhắc trùng dù đang gửi dở
+  const jobs = list.map(o => { o.reminds = (o.reminds || 0) + 1; o.remindedOn = day; return { o, photo: productPhoto(o), text: shipText(o, o.reminds) }; });
+  if (jobs.length) save();
+  let sent = 0; const errors = [];
+  for (const { o, photo, text } of jobs) {
+    for (const chat of chats) {
+      const link = k => `${BASE}/api/ship?t=${store.newToken('ship', `${o.id}:${chat}:${k}`, 72)}`;
+      const r = await sendTo(env, chat, { text, photo, buttons: [[{ text: '🚚 Đã ship', url: link('yes') }, { text: '⏳ Chưa ship', url: link('no') }]] });
+      if (r.ok) sent++; else errors.push(r.error);
+    }
+  }
+  errors.forEach(e => console.error('[nhắc ship lỗi]', e));
+  return { sent, orders: list.length, error: errors[0] || '' };
+}
+async function shipPage(req, res, url) {
+  let t = url.searchParams.get('t');
+  if (req.method === 'POST') { const raw = await readBody(req, 4096); t = new URLSearchParams(raw).get('t'); }
+  const ref = store.token('ship', t), [id, chat, kind] = String(ref || '').split(':'), who = ref ? await chatName(env, chat) : '';
+  const page = (title, body) => send(res, 200, `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(title)}</title>
+    <style>body{font-family:system-ui,Arial,sans-serif;background:#0e1417;color:#eee;margin:0;padding:24px 16px}main{max-width:460px;margin:auto;background:#151d21;border:1px solid #3a3122;border-radius:16px;padding:22px}h1{font-size:20px;color:#f3c76b;margin:0 0 12px}dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0 0 18px}dt{color:#9aa7ab}dd{margin:0}button{width:100%;padding:14px;border:0;border-radius:12px;background:#f3c76b;color:#1a1408;font-size:16px;font-weight:700}p{color:#c9d1d3}</style></head><body><main>${body}</main></body></html>`);
+  const o = id && D.orders.find(x => x.id === id);
+  if (!o) return page('Đường dẫn hết hạn', '<h1>Đường dẫn đã hết hạn</h1><p>Anh chờ tin nhắc mới, hoặc vào Quản trị > Đơn hàng để cập nhật.</p>');
+  if (o.status !== 'paid') { return page('Đơn đã cập nhật', `<h1>Đơn ${esc(o.id)} đã được cập nhật</h1><p>${o.shipBy ? `${esc(o.shipBy)} đã xác nhận ship lúc ${esc(o.shipAt || '')}.` : 'Trạng thái hiện tại: ' + esc(o.status) + '.'}</p>`); }
+  const info = `<dl><dt>Đơn</dt><dd><b>${esc(o.id)}</b></dd><dt>Khách</dt><dd>${esc(o.name)} · ${esc(o.phone || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Sản phẩm</dt><dd>${(o.items || []).map(x => esc(x.qty + ' x ' + x.name)).join('<br>')}</dd><dt>Người bấm</dt><dd>${esc(who)}</dd></dl>`;
+  if (kind === 'no') {
+    store.useToken(t);
+    (o.shipLog = o.shipLog || []).push({ at: stamp(), by: who, ship: false });
+    (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: who, action: 'Nhắc giao hàng', detail: `${o.id}: chưa ship (từ Telegram)` }); save();
+    return page('Chưa ship', `<h1>⏳ Đã ghi nhận: đơn ${esc(o.id)} chưa ship</h1><p>Mai trợ lý nhắc tiếp.</p>`);
+  }
+  if (req.method === 'POST') {
+    const owner = D.users.find(u => A().isOwner(u)) || null;
+    ACTOR = owner; const r = A().setStatus(D, o, 'ship'); ACTOR = null;
+    if (r.error) return page('Chưa cập nhật được', `<h1>Chưa cập nhật được</h1><p>${esc(r.error)}</p>`);
+    store.useToken(t); o.shipBy = who; o.shipAt = stamp();
+    (o.shipLog = o.shipLog || []).push({ at: o.shipAt, by: who, ship: true });
+    (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: who, action: 'Cập nhật đơn hàng', detail: `${o.id}: Đã ship, chuyển sang Đang giao (từ Telegram)` });
+    after();
+    return page('Đã ship', `<h1>🚚 Đơn ${esc(o.id)} đã chuyển sang Đang giao</h1><p>Người xác nhận: ${esc(who)}, lúc ${esc(o.shipAt)}. Đơn này không nhắc lại nữa.</p>`);
+  }
+  return page('Xác nhận đã ship ' + o.id, `<h1>Xác nhận đã gửi hàng</h1>${info}<form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">🚚 Đã ship đơn ${esc(o.id)}</button></form><p style="font-size:13px">Chỉ bấm khi hàng đã giao cho bên vận chuyển.</p>`);
+}
+
 /* ---------- tệp tĩnh (khi chạy riêng, không qua Caddy) ---------- */
 function serveStatic(req, res, url) {
   let p = decodeURIComponent(url.pathname); if (p.endsWith('/')) p += 'index.html';
@@ -264,4 +338,7 @@ server.listen(PORT, () => console.log(`Máy chủ PSQ chạy cổng ${PORT}, d�
 // sao lưu mỗi ngày, dọn phiên hết hạn, nhả hoa hồng đang giữ
 const daily = () => { try { const f = store.backup(); if (f) console.log('Đã sao lưu', f); store.cleanup(); A().releaseHeld(D) && save(); } catch (e) { console.error('[sao lưu lỗi]', e); } };
 daily(); setInterval(daily, 36e5);
+// nhắc giao hàng: kiểm tra mỗi 10 phút, mỗi đơn chỉ nhắc 1 lần mỗi ngày trong giờ 8h-18h
+const shipTick = () => remindShip().catch(e => console.error('[nhắc ship]', e));
+setTimeout(shipTick, 15e3); setInterval(shipTick, 10 * 6e4);
 process.on('SIGTERM', () => { save(); process.exit(0); });

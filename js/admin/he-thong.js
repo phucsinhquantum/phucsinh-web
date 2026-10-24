@@ -338,9 +338,12 @@
               <div class="row full" style="gap:8px"><button class="btn btn-gold btn-sm" type="submit">${icon('check')} Lưu</button>${g.configured ? `<button class="btn btn-sm" type="button" id="mcT">${icon('mail')} Gửi thư thử tới ${esc(PSQ.auth.user().email)}</button>` : ''}</div></form>
             <div class="divider"></div><h3 style="font-size:15px">Báo đơn qua Telegram</h3>
             <p class="dim" style="font-size:13px;margin:6px 0 10px">Đơn mới, yêu cầu nạp tiền, rút tiền, lời nhắn liên hệ được Trợ Lý Phúc Sinh nhắn cho anh, kèm nút xác nhận đã nhận tiền.</p>
-            <button class="btn btn-sm" type="button" id="tgT">${icon('chat')} Gửi tin thử Telegram</button> <span id="tgR" style="font-size:13px"></span>`;
+            <button class="btn btn-sm" type="button" id="tgT">${icon('chat')} Gửi tin thử Telegram</button> <span id="tgR" style="font-size:13px"></span>
+            <p class="dim" style="font-size:13px;margin:14px 0 10px">Nhắc giao hàng: mỗi ngày từ 8h đến 18h, trợ lý nhắc các đơn Đã thanh toán mà chưa ship (đặt từ hôm trước), kèm ảnh sản phẩm và nút Đã ship, Chưa ship.</p>
+            <button class="btn btn-sm" type="button" id="tgS">${icon('truck')} Gửi nhắc giao hàng ngay</button> <span id="tgSR" style="font-size:13px"></span>`;
           $('#mcF', mc).addEventListener('submit', e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), r = API.act('mailSet', f); if (r.error) return $('#mcE', mc).textContent = r.error; toast('Đã lưu email gửi thư'); draw(); });
           $('#tgT', mc).addEventListener('click', e => { const b = e.currentTarget, out = $('#tgR', mc); b.disabled = true; out.textContent = 'Đang gửi...'; const r = API.act('notifyTest'); b.disabled = false; out.className = r.error ? 'red' : 'green'; out.textContent = r.error || 'Đã gửi, anh mở Telegram xem tin của Trợ Lý Phúc Sinh.'; });
+          $('#tgS', mc).addEventListener('click', e => { const b = e.currentTarget, out = $('#tgSR', mc); b.disabled = true; out.textContent = 'Đang gửi...'; setTimeout(() => { const r = API.act('shipRemindNow'); b.disabled = false; out.className = r.error ? 'red' : 'green'; out.textContent = r.error || (r.orders ? `Đã nhắc ${r.orders} đơn chưa ship.` : 'Không có đơn nào đang chờ ship.'); }, 30); });
           const t = $('#mcT', mc); if (t) t.addEventListener('click', () => { t.disabled = true; t.textContent = 'Đang gửi...'; const r = API.act('mailTest'); if (r.error) { $('#mcE', mc).textContent = r.error; t.disabled = false; t.textContent = 'Gửi lại thư thử'; } else { toast('Đã gửi thư thử tới ' + r.to + ', anh mở hộp thư kiểm tra'); draw(); } });
         };
         draw();

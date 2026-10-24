@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024k">
-<script src="js/lang.js?v=20261024k"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024l">
+<script src="js/lang.js?v=20261024l"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -176,25 +176,25 @@
   </div>
 </div>
 
-<script src="js/patch.js?v=20261024k"></script>
-<script src="js/api.js?v=20261024k"></script>
-<script src="js/data.js?v=20261024k"></script>
-<script src="js/app.js?v=20261024k"></script>
-<script src="js/psq-data.js?v=20261024k"></script>
+<script src="js/patch.js?v=20261024l"></script>
+<script src="js/api.js?v=20261024l"></script>
+<script src="js/data.js?v=20261024l"></script>
+<script src="js/app.js?v=20261024l"></script>
+<script src="js/psq-data.js?v=20261024l"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261024k"></script>
-<script src="js/admin/nguoi-dung.js?v=20261024k"></script>
-<script src="js/admin/noi-dung.js?v=20261024k"></script>
-<script src="js/admin/kho.js?v=20261024k"></script>
-<script src="js/admin/tai-chinh.js?v=20261024k"></script>
-<script src="js/admin/he-thong.js?v=20261024k"></script>
-<script src="js/admin/vong-quay.js?v=20261024k"></script>
-<script src="js/admin/quy-diem.js?v=20261024k"></script>
-<script src="js/admin/gioi-thieu.js?v=20261024k"></script>
-<script src="js/admin/dai-ly.js?v=20261024k"></script>
-<script src="js/admin/danh-gia.js?v=20261024k"></script>
-<script src="js/admin/dieu-khoan.js?v=20261024k"></script>
-<script src="js/admin/quyen-loi.js?v=20261024k"></script>
+<script src="js/admin/pha-he.js?v=20261024l"></script>
+<script src="js/admin/nguoi-dung.js?v=20261024l"></script>
+<script src="js/admin/noi-dung.js?v=20261024l"></script>
+<script src="js/admin/kho.js?v=20261024l"></script>
+<script src="js/admin/tai-chinh.js?v=20261024l"></script>
+<script src="js/admin/he-thong.js?v=20261024l"></script>
+<script src="js/admin/vong-quay.js?v=20261024l"></script>
+<script src="js/admin/quy-diem.js?v=20261024l"></script>
+<script src="js/admin/gioi-thieu.js?v=20261024l"></script>
+<script src="js/admin/dai-ly.js?v=20261024l"></script>
+<script src="js/admin/danh-gia.js?v=20261024l"></script>
+<script src="js/admin/dieu-khoan.js?v=20261024l"></script>
+<script src="js/admin/quyen-loi.js?v=20261024l"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -420,7 +420,7 @@
     const b = e.target.closest('[data-view]'); if (!b) return;
     const o = ADB.load().orders.find(x => x.id === b.dataset.view);
     modal(`<div class="card-head"><h3>Đơn #${o.id}</h3>${statusBadge(o.status)}<button class="icon-btn" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-      <dl class="kv"><dt>Khách</dt><dd>${esc(o.name)}</dd><dt>Điện thoại</dt><dd>${esc(o.phone || '')}</dd><dt>Email</dt><dd>${esc(o.email || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Thanh toán</dt><dd>${o.pay === 'bank' ? 'Chuyển khoản' : o.pay === 'wallet' ? 'Bằng ví' : o.pay === 'points' ? 'Điểm khả dụng' : 'Khi nhận hàng'}${o.shopPaid ? ` · ví mua hàng ${money(o.shopPaid).replace('đ', ' PS')}` : ''}${o.cashPaid ? ` · ví tiền mặt ${money(o.cashPaid)}` : ''}${o.availPaid ? ` · ví điểm khả dụng ${money(o.availPaid).replace('đ', ' PS')}` : ''}</dd>${isPkg(o) ? '<dt>Loại đơn</dt><dd>' + pkgBadge(o) + '</dd>' : ''}<dt>Ngày</dt><dd>${fdate(o.date)}</dd>${o.note ? `<dt>Ghi chú</dt><dd>${esc(o.note)}</dd>` : ''}${(o.bills || []).length ? `<dt>Bill chuyển khoản</dt><dd class="bill-list">${o.bills.map(b => `<a href="/api/bill?f=${encodeURIComponent(b.f)}" target="_blank" rel="noopener" title="Gửi lúc ${esc(b.at || '')}"><img src="/api/bill?f=${encodeURIComponent(b.f)}" alt="Bill chuyển khoản" loading="lazy" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin:0 6px 6px 0"></a>`).join('')}</dd>` : ''}</dl>
+      <dl class="kv"><dt>Khách</dt><dd>${esc(o.name)}</dd><dt>Điện thoại</dt><dd>${esc(o.phone || '')}</dd><dt>Email</dt><dd>${esc(o.email || '')}</dd><dt>Địa chỉ</dt><dd>${esc(o.address || '')}</dd><dt>Thanh toán</dt><dd>${o.pay === 'bank' ? 'Chuyển khoản' : o.pay === 'wallet' ? 'Bằng ví' : o.pay === 'points' ? 'Điểm khả dụng' : 'Khi nhận hàng'}${o.shopPaid ? ` · ví mua hàng ${money(o.shopPaid).replace('đ', ' PS')}` : ''}${o.cashPaid ? ` · ví tiền mặt ${money(o.cashPaid)}` : ''}${o.availPaid ? ` · ví điểm khả dụng ${money(o.availPaid).replace('đ', ' PS')}` : ''}</dd>${isPkg(o) ? '<dt>Loại đơn</dt><dd>' + pkgBadge(o) + '</dd>' : ''}<dt>Ngày</dt><dd>${fdate(o.date)}</dd>${o.note ? `<dt>Ghi chú</dt><dd>${esc(o.note)}</dd>` : ''}${o.shipBy ? `<dt>Xác nhận ship</dt><dd>${esc(o.shipBy)}, ${esc(o.shipAt || '')}</dd>` : ''}${(o.bills || []).length ? `<dt>Bill chuyển khoản</dt><dd class="bill-list">${o.bills.map(b => `<a href="/api/bill?f=${encodeURIComponent(b.f)}" target="_blank" rel="noopener" title="Gửi lúc ${esc(b.at || '')}"><img src="/api/bill?f=${encodeURIComponent(b.f)}" alt="Bill chuyển khoản" loading="lazy" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin:0 6px 6px 0"></a>`).join('')}</dd>` : ''}</dl>
       <div class="divider"></div>${o.items.map(x => `<div class="row between" style="padding:6px 0"><span>${esc(x.name)} x${x.qty}</span><b>${money(x.price * x.qty)}</b></div>`).join('')}
       <div class="divider"></div><div class="row between"><span class="muted">Tổng</span><b class="gold" style="font-size:18px">${money(o.total)}</b></div>`);
   });

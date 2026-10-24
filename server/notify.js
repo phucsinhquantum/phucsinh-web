@@ -36,4 +36,34 @@ async function notify(env, { text, url, button, kind, photo }) {
   return { ok: res.some(r => r.status === 'fulfilled'), error: errors.join('; ') };
 }
 
-module.exports = { notify };
+// gửi riêng cho một người (mỗi người một nút riêng, ví dụ nhắc giao hàng). buttons: [[{ text, url }]]
+async function sendTo(env, chat, { text, photo, buttons }) {
+  if (!env.TELEGRAM_BOT_TOKEN) return { ok: false, error: 'Chưa cấu hình Telegram.' };
+  const base = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/`, markup = buttons ? JSON.stringify({ inline_keyboard: buttons }) : null;
+  let r;
+  if (photo) {
+    const f = new FormData();
+    f.append('chat_id', chat); f.append('caption', text.slice(0, 1024));
+    if (markup) f.append('reply_markup', markup);
+    f.append('photo', new Blob([photo.buf], { type: photo.type }), 'anh.' + (photo.type.split('/')[1] || 'jpg'));
+    r = await fetch(base + 'sendPhoto', { method: 'POST', body: f });
+  } else {
+    r = await fetch(base + 'sendMessage', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true, ...(markup ? { reply_markup: JSON.parse(markup) } : {}) }) });
+  }
+  if (r.ok) return { ok: true };
+  const t = await r.text(); return { ok: false, error: 'Telegram ' + r.status + ' ' + t.slice(0, 200) };
+}
+// tên hiển thị của một người trên Telegram (để ghi ai đã bấm xác nhận); không đọc tin nhắn của bot
+const names = new Map();
+async function chatName(env, chat) {
+  if (names.has(chat)) return names.get(chat);
+  let n = 'Telegram ' + chat;
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(chat)}`).then(x => x.json());
+    const c = r && r.result; if (c) n = [c.first_name, c.last_name].filter(Boolean).join(' ') + (c.username ? ' (@' + c.username + ')' : '') || n;
+  } catch (e) {}
+  names.set(chat, n); return n;
+}
+const chatsOf = v => String(v || '').split(/[,\s]+/).filter(Boolean);
+
+module.exports = { notify, sendTo, chatName, chatsOf };

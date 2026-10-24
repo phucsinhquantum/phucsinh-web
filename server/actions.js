@@ -402,6 +402,11 @@ const ACTIONS = {
     const r = await c.notifyNow(`Tin thử từ web ${c.site.brand}: báo đơn mới qua Telegram đã hoạt động.`);
     return r.ok ? { ok: true } : err('Chưa gửi được: ' + (r.error || 'không rõ lỗi'));
   } },
+  shipRemindNow: { auth: 'owner', async: true, async run(c) {
+    const r = await c.remindShip(true);
+    if (r.error && !r.sent) return err('Chưa gửi được: ' + r.error);
+    return { sent: r.sent, orders: r.orders || 0 };
+  } },
   mailResend: { auth: 'admin', run(c) {
     const m = (c.d.mails || []).find(x => x.id === c.args.id); if (!m) return err('Không tìm thấy thư.');
     if (m.secret) return err('Thư đặt lại mật khẩu không gửi lại được, người dùng yêu cầu lại.');
