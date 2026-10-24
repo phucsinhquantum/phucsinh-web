@@ -7,7 +7,8 @@
      GET  /api/admin/db             toàn bộ dữ liệu (quản trị)
      POST /api/admin/patch {patch}  quản trị lưu thay đổi (ghép theo từng phần tử, xem js/patch.js)
      POST /api/admin/content {key, value}  quản trị lưu nội dung trang (psq_*_v1)
-     GET/POST /api/confirm?t=...    trang xác nhận đã nhận tiền mở từ tin Telegram */
+     GET/POST /api/confirm?t=...    trang xác nhận đã nhận tiền mở từ tin Telegram
+     GET  /api/bill?f=...[&t=...]   ảnh bill chuyển khoản (quản trị, hoặc kèm mã xác nhận của đơn đó) */
 'use strict';
 const http = require('http');
 const fs = require('fs');
@@ -66,10 +67,33 @@ function mail(to, subject, type, html, opt = {}) {
   if (!mailCfg()) { m.error = 'Chưa cấu hình email gửi thư'; return; }
   sendMail(mailCfg(), { to, subject, html }).then(() => { m.status = 'sent'; }, e => { m.status = 'failed'; m.error = e.message; console.error('[thư lỗi]', to, e.message); }).finally(save);
 }
-function tell(text, confirm) {
+function tell(text, confirm, photo) {
   let url = null;
   if (confirm) url = `${BASE}/api/confirm?t=${store.newToken('confirm', confirm.kind + ':' + confirm.ref, 24 * 14)}`;
-  notify(env, { text, url, button: confirm && confirm.button, kind: confirm && confirm.kind }).catch(e => console.error('[báo tin]', e.message));
+  notify(env, { text, url, button: confirm && confirm.button, kind: confirm && confirm.kind, photo }).catch(e => console.error('[báo tin]', e.message));
+}
+
+/* ---------- ảnh bill chuyển khoản: lưu trong thư mục dữ liệu, không nằm trong thư mục web ---------- */
+const BILL_DIR = path.join(DATA_DIR, 'bills');
+const BILL_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+const BILL_MIME = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+function saveBill(ref, buf, type) {
+  fs.mkdirSync(BILL_DIR, { recursive: true });
+  const f = `${String(ref).replace(/[^\w-]/g, '')}-${Date.now().toString(36)}${require('crypto').randomBytes(4).toString('hex')}.${BILL_TYPES[type]}`;
+  fs.writeFileSync(path.join(BILL_DIR, f), buf);
+  return f;
+}
+function serveBill(req, res, url, me) {
+  const f = url.searchParams.get('f') || '', m = /^([\w-]+)-[a-z0-9]+\.(jpg|png|webp)$/.exec(f);
+  if (!m) return send(res, 404, { error: 'Không có ảnh.' });
+  const has = o => !!o && (o.bills || []).some(b => b.f === f);
+  let ok = isAdmin(me) && (D.orders.some(has) || (D.topups || []).some(has));
+  if (!ok) { const [kind, id] = String(store.token('confirm', url.searchParams.get('t')) || '').split(':'); ok = has(kind === 'order' ? D.orders.find(x => x.id === id) : (D.topups || []).find(x => x.id === id)); }
+  if (!ok) return send(res, 403, { error: 'Không xem được ảnh này.' });
+  fs.readFile(path.join(BILL_DIR, f), (e, buf) => {
+    if (e) return send(res, 404, { error: 'Không có ảnh.' });
+    res.writeHead(200, { 'content-type': BILL_MIME[m[2]], 'cache-control': 'private, max-age=86400', 'x-content-type-options': 'nosniff' }); res.end(buf);
+  });
 }
 
 /* ---------- http ---------- */
@@ -109,10 +133,11 @@ async function api(req, res, url) {
   const me = meOf(req), route = url.pathname;
   if (req.method === 'GET' && route === '/api/boot') return send(res, 200, bootPayload(me));
   if (route === '/api/confirm') return confirmPage(req, res, url);
+  if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
   if (req.method !== 'POST') return send(res, 405, { error: 'Sai phương thức.' });
   // chống gửi giả từ trang khác: trình duyệt chỉ gửi được tiêu đề này khi cùng tên miền
   if (req.headers['x-psq'] !== '1') return send(res, 403, { error: 'Yêu cầu không hợp lệ.' });
-  const raw = await readBody(req, route.startsWith('/api/admin') ? 25e6 : 2e6);
+  const raw = await readBody(req, route.startsWith('/api/admin') ? 25e6 : 3e6);
   let body; try { body = raw ? JSON.parse(raw) : {}; } catch (e) { return send(res, 400, { error: 'Dữ liệu không đọc được.' }); }
 
   if (route === '/api/logout') { store.endSession(cookies(req).psq_sid); return send(res, 200, { ok: true }, { 'set-cookie': sidCookie('', 0) }); }
@@ -128,7 +153,7 @@ async function api(req, res, url) {
     const ctx = {
       d: D, me, args: body.args || {}, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc,
       log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
-      mail, mailReady: () => !!mailCfg(), notify: (text, confirm) => tell(text, confirm), notifyNow: text => notify(env, { text }), notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+      mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, notifyNow: text => notify(env, { text }), notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
       sendNow: (to, subject, type, html) => sendMail(mailCfg(), { to, subject, html }).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
     };
     let r;
@@ -186,6 +211,7 @@ async function confirmPage(req, res, url) {
   const o = kind === 'order' && D.orders.find(x => x.id === id), tp = kind === 'topup' && (D.topups || []).find(x => x.id === id);
   if (!o && !tp) return page('Đường dẫn hết hạn', '<h1>Đường dẫn đã hết hạn hoặc đã dùng</h1><p>Anh vào Quản trị để xem và xác nhận.</p>');
   const money = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ';
+  const billImgs = (x, t) => (x.bills || []).length ? `<p style="margin:0 0 8px"><b>Ảnh bill khách gửi</b> (đối chiếu với tài khoản ngân hàng)</p>${x.bills.map(b => `<a href="/api/bill?f=${encodeURIComponent(b.f)}&t=${encodeURIComponent(t)}" target="_blank"><img src="/api/bill?f=${encodeURIComponent(b.f)}&t=${encodeURIComponent(t)}" alt="Bill chuyển khoản" style="display:block;width:100%;border-radius:10px;margin:0 0 10px;border:1px solid #3a3122"></a>`).join('')}` : '<p style="font-size:13px">Khách chưa gửi ảnh bill.</p>';
   const owner = D.users.find(u => A().isOwner(u)) || null;
   if (o) {
     const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
@@ -196,7 +222,7 @@ async function confirmPage(req, res, url) {
       ACTOR = null; store.useToken(t); after();
       return page('Đã xác nhận', r.error ? `<h1>Chưa xác nhận được</h1><p>${esc(r.error)}</p>` : `<h1>✅ Đã xác nhận đơn ${esc(o.id)}</h1><p>Đơn chuyển sang ${o.status === 'done' ? 'Hoàn thành' : 'Đã thanh toán'}.</p>`);
     }
-    return page('Xác nhận đơn ' + o.id, `<h1>Xác nhận đã nhận tiền</h1><dl><dt>Đơn</dt><dd><b>${esc(o.id)}</b></dd><dt>Khách</dt><dd>${esc(o.name)} · ${esc(o.phone || '')}</dd><dt>Sản phẩm</dt><dd>${o.items.map(x => esc(x.qty + ' x ' + x.name)).join('<br>')}</dd><dt>Số tiền</dt><dd><b>${money(due)}</b></dd><dt>Nội dung CK</dt><dd>${esc(o.id)}</dd></dl>
+    return page('Xác nhận đơn ' + o.id, `<h1>Xác nhận đã nhận tiền</h1><dl><dt>Đơn</dt><dd><b>${esc(o.id)}</b></dd><dt>Khách</dt><dd>${esc(o.name)} · ${esc(o.phone || '')}</dd><dt>Sản phẩm</dt><dd>${o.items.map(x => esc(x.qty + ' x ' + x.name)).join('<br>')}</dd><dt>Số tiền</dt><dd><b>${money(due)}</b></dd><dt>Nội dung CK</dt><dd>${esc(o.id)}</dd></dl>${billImgs(o, t)}
       <form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">✅ Đã nhận ${money(due)}</button></form><p style="font-size:13px">Chỉ bấm khi tiền đã vào tài khoản.</p>`);
   }
   const u = A().user(D, tp.user) || {};
@@ -208,7 +234,7 @@ async function confirmPage(req, res, url) {
     ACTOR = null; store.useToken(t); after();
     return page('Đã xác nhận', `<h1>✅ Đã cộng ${money(tp.amount)} vào ví của ${esc(u.name || '')}</h1>`);
   }
-  return page('Xác nhận nạp tiền', `<h1>Xác nhận nạp tiền vào ví</h1><dl><dt>Thành viên</dt><dd>${esc(u.name || '')} (@${esc(u.username || '')})</dd><dt>Số tiền</dt><dd><b>${money(tp.amount)}</b></dd><dt>Hình thức</dt><dd>${esc(tp.method)}</dd><dt>Nội dung CK</dt><dd>${esc(tp.code || '')}</dd></dl>
+  return page('Xác nhận nạp tiền', `<h1>Xác nhận nạp tiền vào ví</h1><dl><dt>Thành viên</dt><dd>${esc(u.name || '')} (@${esc(u.username || '')})</dd><dt>Số tiền</dt><dd><b>${money(tp.amount)}</b></dd><dt>Hình thức</dt><dd>${esc(tp.method)}</dd><dt>Nội dung CK</dt><dd>${esc(tp.code || '')}</dd></dl>${billImgs(tp, t)}
     <form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">✅ Đã nhận ${money(tp.amount)}</button></form><p style="font-size:13px">Chỉ bấm khi tiền đã vào tài khoản.</p>`);
 }
 

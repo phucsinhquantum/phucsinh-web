@@ -72,6 +72,17 @@ const wrapMail = (site, title, body) => `<div style="font-family:Arial,sans-seri
   <p style="color:#777;font-size:13px;margin-top:24px">${site.brand} · Hotline ${site.phone} · ${site.email}<br>${site.address}</p></div>`;
 
 /* ---------- các thao tác ---------- */
+// ảnh bill: data URL JPG/PNG/WebP, tối đa 1,5MB, kiểm tra cả phần đầu tệp
+function readBill(c, url) {
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(url || ''));
+  if (!m) return err('Anh chị chọn ảnh bill chuyển khoản (JPG, PNG) giúp em.');
+  const buf = Buffer.from(m[2], 'base64'), type = m[1];
+  if (buf.length < 200 || buf.length > 1.5e6) return err('Ảnh bill quá lớn hoặc bị lỗi, anh chị chọn ảnh khác.');
+  const sig = { 'image/jpeg': b => b[0] === 0xff && b[1] === 0xd8, 'image/png': b => b.slice(1, 4).toString() === 'PNG', 'image/webp': b => b.slice(8, 12).toString() === 'WEBP' };
+  if (!sig[type](buf)) return err('Tệp này không phải ảnh, anh chị chọn lại.');
+  return { buf, type };
+}
+
 const ACTIONS = {
   /* ===== khách chưa đăng nhập ===== */
   checkRef: { auth: 'guest', run(c) {
@@ -151,11 +162,14 @@ const ACTIONS = {
     const id = str(c.args.id, 30).toUpperCase(), ph = normPhone(c.args.phone), o = c.d.orders.find(x => x.id === id && normPhone(x.phone) === ph);
     if (!o) return err('Không tìm thấy đơn hàng.');
     if (o.status !== 'pending') return { status: o.status };
-    if ((o.claims || 0) >= 3) return err('Công ty đã nhận được thông báo, anh chị chờ một chút giúp em.');
+    if ((o.claims || 0) >= 3) return err('Công ty đã nhận được bill, anh chị chờ một chút giúp em.');
+    const bill = readBill(c, c.args.bill); if (bill.error) return bill;
     o.claims = (o.claims || 0) + 1;
+    const f = c.saveBill(o.id, bill.buf, bill.type);
+    (o.bills = o.bills || []).push({ f, at: c.stamp() });
     const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
-    c.notify(`Khách báo đã chuyển khoản đơn ${o.id}\n${o.name} · ${o.phone}\nSố tiền ${(due).toLocaleString('vi-VN')}đ, nội dung ${o.id}\nAnh kiểm tra tài khoản BIDV rồi bấm xác nhận.`, { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' });
-    c.log('Khách báo đã chuyển khoản', o.id);
+    c.notify(`🧾 Khách gửi bill chuyển khoản đơn ${o.id}\n${o.name} · ${o.phone}\nSố tiền ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
+    c.log('Khách gửi bill chuyển khoản', o.id);
     return { ok: true };
   } },
   contact: { auth: 'guest', run(c) {

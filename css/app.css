@@ -994,3 +994,12 @@ html.reduce-motion .gift-blink svg { animation: none !important; color: #ff4d4d;
 @keyframes pw-pop { 0% { transform: scale(.9); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
 @keyframes pw-burst { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: 0; transform: translate(var(--x), var(--y)) rotate(220deg); } }
 html.reduce-motion .pw-ring, html.reduce-motion .pw-ring i, html.reduce-motion .pw-dot { animation: none; }
+
+.pw-bill { margin-top: 10px; padding: 12px; border-radius: 14px; border: 1px dashed rgba(243,199,107,.45); background: rgba(0,0,0,.18); text-align: left; animation: pw-pop .3s ease; }
+.pw-pick { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px; border-radius: 10px; }
+.pw-pick:hover { background: rgba(243,199,107,.06); }
+.pw-pick > .i { flex: none; width: 34px; height: 34px; padding: 7px; border-radius: 10px; background: rgba(243,199,107,.14); color: #f3c76b; }
+.pw-pick b { display: block; font-size: 14px; }
+.pw-pick small { display: block; color: var(--muted, #9aa7ab); font-size: 12.5px; }
+.pw-pick img { display: block; max-width: 100%; max-height: 320px; margin: auto; border-radius: 10px; }
+.pw-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
