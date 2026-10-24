@@ -316,8 +316,10 @@
         });
         const site = { brand: v('shopName'), phone: v('hotline'), zalo: v('zalo'), email: v('email'), address: v('address'), hours: v('hours'), mapEmbed: v('mapEmbed'), messenger: v('messenger'),
           bank: { name: v('bankName'), account: v('bankAccount'), owner: v('bankOwner') }, social: { facebook: v('facebook'), zalo: v('zaloOA'), youtube: v('youtube'), tiktok: v('tiktok') } };
+        const t0 = Date.now();
         try { localStorage.setItem('psq_site_v1', JSON.stringify(site)); } catch (er) {}
         ADB.log(d2, 'Thiết lập hệ thống', `Gói ${money(plan.pkgPrice)} (${money(plan.pkgPoints)} PS); giới thiệu ${money(plan.refBonus)}; CTV ${plan.ctvRate}%, đại lý ${plan.agentRate}%, thu nhập đại lý ${plan.overrideRate}% (${plan.overrideShop}% vào ví mua hàng); thuế ${plan.taxRate}%; lên đại lý ${money(plan.agentThreshold)}; gói tính vào doanh số ${money(plan.pkgCountsAs)}; rút tối thiểu ${money(mw)}`); ADB.save(d2);
+        if (API.failAt >= t0) return;
         toast('Đã lưu thiết lập hệ thống');
       });
       // email gửi thư: mật khẩu ứng dụng chỉ lưu trên máy chủ, không hiện lại

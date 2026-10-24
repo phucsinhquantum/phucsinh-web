@@ -22,6 +22,8 @@
     } catch (e) { return { error: OFFLINE, offline: true }; }
     let r; try { r = JSON.parse(x.responseText); } catch (e) { r = { error: x.status ? 'Máy chủ trả lời lỗi (' + x.status + '), anh chị thử lại.' : OFFLINE, offline: !x.status }; }
     if (x.status >= 400 && !r.error) r.error = 'Lỗi ' + x.status;
+    // máy chủ không nhận ra quản trị: phiên đã hết hoặc tab khác vừa đăng nhập tài khoản khác
+    if (x.status === 403 && url.indexOf('/api/admin/') === 0) r.error = 'Phiên đăng nhập quản trị đã hết, hoặc trình duyệt vừa đăng nhập tài khoản khác ở tab khác. Anh chị tải lại trang, đăng nhập lại tài khoản quản trị rồi lưu lại.';
     return r;
   }
   function put(p) {
@@ -62,10 +64,16 @@
     logout() { call('POST', '/api/logout', {}); API.me = null; API.boot(); },
     saveContent(key, value) {
       const r = call('POST', '/api/admin/content', { key, value });
-      if (r.error) API.fail('Chưa lưu được nội dung lên máy chủ: ' + r.error);
+      if (r.error) API.fail(r.error);
       return !r.error;
     },
-    fail(msg) { if (window.PSQ && PSQ.toast) PSQ.toast(msg, 'err'); else alert(msg); }
+    failAt: 0,
+    fail(msg) {
+      const dup = msg === API.lastFail && Date.now() - API.failAt < 3000;
+      API.failAt = Date.now(); API.lastFail = msg;
+      if (dup) return;
+      if (window.PSQ && PSQ.toast) PSQ.toast(msg, 'err'); else alert(msg);
+    }
   };
   window.API = API;
 
