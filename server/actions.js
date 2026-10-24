@@ -95,6 +95,17 @@ function payByPoints(c, o, what) {
   return { order: o, paidByPoints: true };
 }
 
+function verifyMail(c, u) {
+  u.verifySent = Date.now();
+  const t = c.store.newToken('verify', u.id, 72);
+  c.mail(u.email, 'Kích hoạt tài khoản ' + c.site.brand, 'Kích hoạt', wrapMail(c.site, 'Kích hoạt tài khoản của anh chị',
+    `<p>Chào ${c.e(u.name)},</p><p>Cảm ơn anh chị đã đăng ký thành viên. Anh chị bấm nút bên dưới để kích hoạt tài khoản <b>@${c.e(u.username)}</b>.</p><p><a href="${c.base}/thanh-vien.html?kich-hoat=${t}" style="display:inline-block;padding:12px 22px;border-radius:10px;background:#f3c76b;color:#1a1408;font-weight:700;text-decoration:none">Kích hoạt tài khoản</a></p><p style="font-size:13px;color:#777">Đường dẫn dùng 1 lần trong 72 giờ. Nếu anh chị không đăng ký, hãy bỏ qua thư này.</p>`), { secret: true });
+}
+function welcomeMail(c, u) {
+  c.mail(u.email, 'Chào mừng anh chị đến với ' + c.site.brand, 'Đăng ký', wrapMail(c.site, 'Chào mừng ' + c.e(u.name) + '!',
+    `<p>Tài khoản thành viên của anh chị đã được tạo.</p><p>Tên truy cập: <b>@${c.e(u.username)}</b><br>Mã giới thiệu: <b>${c.e(u.code)}</b></p><p><a href="${c.base}/thanh-vien.html">Vào trang thành viên</a></p>`));
+}
+
 const ACTIONS = {
   /* ===== khách chưa đăng nhập ===== */
   checkRef: { auth: 'guest', run(c) {
@@ -127,12 +138,14 @@ const ACTIONS = {
     if (ref && !sp) return err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.');
     if (sp) { u.sponsor = sp.id; const auto = d.settings && d.settings.autoPlace; u.placed = !!auto; u.parent = auto ? sp.id : null; }
     else { u.sponsor = null; u.placed = true; }
+    // email gửi thư đã cài: tài khoản chờ kích hoạt qua thư; chưa cài thì dùng được ngay
+    const verify = c.mailReady(); if (verify) u.verified = false;
     d.users.push(u);
     c.log('Đăng ký thành viên', `${u.name} (@${u.username})${sp ? ', giới thiệu bởi ' + sp.name : ''}`, u);
     A.wheelSync(d);
-    c.mail(u.email, 'Chào mừng anh chị đến với ' + c.site.brand, 'Đăng ký', wrapMail(c.site, 'Chào mừng ' + c.e(u.name) + '!',
-      `<p>Tài khoản thành viên của anh chị đã được tạo.</p><p>Tên truy cập: <b>@${c.e(u.username)}</b><br>Mã giới thiệu: <b>${c.e(u.code)}</b></p><p><a href="${c.base}/thanh-vien.html">Vào trang thành viên</a></p>`));
     c.notify(`Thành viên mới: ${u.name} (@${u.username}, ${u.code})${sp ? '\nGiới thiệu bởi: ' + sp.name : ''}`);
+    if (verify) { verifyMail(c, u); return { needVerify: true, email: u.email }; }
+    welcomeMail(c, u);
     return { user: clean(u), login: u.id };
   } },
   login: { auth: 'guest', run(c) {
@@ -142,6 +155,7 @@ const ACTIONS = {
     const u = c.d.users.find(x => (x.email || '').toLowerCase() === k || (x.username || '').toLowerCase() === k || (x.code || '').toLowerCase() === k || (ph.length >= 9 && normPhone(x.phone) === ph));
     if (!u || !verifyPass(p, u.pass)) return err(u && !u.pass ? 'Tài khoản chưa đặt mật khẩu. Anh chị bấm Quên mật khẩu để đặt.' : 'Email, tên truy cập hoặc mật khẩu chưa đúng.');
     if (u.status === 'locked') return err('Tài khoản này đang bị khóa. Anh chị liên hệ ' + c.site.phone + '.');
+    if (u.verified === false) return err('Tài khoản chưa kích hoạt. Anh chị mở email ' + u.email + ' (xem cả mục Thư rác) và bấm nút Kích hoạt trong thư.');
     u.lastLogin = c.stamp();
     if (u.role === 'admin') c.log('Đăng nhập', 'Đăng nhập trang quản trị', u);
     return { user: clean(u), login: u.id };
@@ -156,11 +170,28 @@ const ACTIONS = {
     }
     return { ok: true, sent: !!c.mailReady() };
   } },
+  // bấm đường dẫn kích hoạt trong thư: tài khoản hoạt động, đăng nhập luôn
+  verifyEmail: { auth: 'guest', run(c) {
+    const id = c.store.token('verify', c.args.token), u = id && c.A.user(c.d, id);
+    if (!u) return err('Đường dẫn kích hoạt đã hết hạn hoặc đã dùng. Anh chị đăng nhập để được gửi lại thư kích hoạt.');
+    c.store.useToken(c.args.token);
+    if (u.verified === false) { u.verified = true; u.verifiedAt = c.stamp(); c.log('Kích hoạt tài khoản', '@' + u.username, u); welcomeMail(c, u); }
+    if (u.status === 'locked') return err('Tài khoản này đang bị khóa. Anh chị liên hệ ' + c.site.phone + '.');
+    return { user: clean(u), login: u.id };
+  } },
+  resendVerify: { auth: 'guest', run(c) {
+    const k = str(c.args.email, 120).toLowerCase(), u = k && c.d.users.find(x => (x.email || '').toLowerCase() === k || (x.username || '').toLowerCase() === k);
+    if (u && u.verified === false && u.status !== 'locked') {
+      const now = Date.now(); if (u.verifySent && now - u.verifySent < 60e3) return err('Thư vừa được gửi, anh chị chờ 1 phút rồi thử lại.');
+      verifyMail(c, u);
+    }
+    return { ok: true };
+  } },
   resetPass: { auth: 'guest', run(c) {
     const id = c.store.token('reset', c.args.token), u = id && c.A.user(c.d, id), p = String(c.args.pass || '');
     if (!u) return err('Đường dẫn đặt lại mật khẩu đã hết hạn hoặc đã dùng. Anh chị yêu cầu lại.');
     if (p.length < 6 || p.length > 100) return err('Mật khẩu mới cần ít nhất 6 ký tự.');
-    u.pass = hashPass(p); u.passChanged = c.today(); c.store.useToken(c.args.token); c.store.endSessionsOf(u.id);
+    u.pass = hashPass(p); u.passChanged = c.today(); if (u.verified === false) u.verified = true; c.store.useToken(c.args.token); c.store.endSessionsOf(u.id);
     c.log('Đặt lại mật khẩu', '@' + (u.username || u.email), u);
     return { user: clean(u), login: u.id };
   } },

@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024m">
-<script src="js/lang.js?v=20261024m"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024n">
+<script src="js/lang.js?v=20261024n"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -177,25 +177,25 @@
   </div>
 </div>
 
-<script src="js/patch.js?v=20261024m"></script>
-<script src="js/api.js?v=20261024m"></script>
-<script src="js/data.js?v=20261024m"></script>
-<script src="js/app.js?v=20261024m"></script>
-<script src="js/psq-data.js?v=20261024m"></script>
+<script src="js/patch.js?v=20261024n"></script>
+<script src="js/api.js?v=20261024n"></script>
+<script src="js/data.js?v=20261024n"></script>
+<script src="js/app.js?v=20261024n"></script>
+<script src="js/psq-data.js?v=20261024n"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261024m"></script>
-<script src="js/admin/nguoi-dung.js?v=20261024m"></script>
-<script src="js/admin/noi-dung.js?v=20261024m"></script>
-<script src="js/admin/kho.js?v=20261024m"></script>
-<script src="js/admin/tai-chinh.js?v=20261024m"></script>
-<script src="js/admin/he-thong.js?v=20261024m"></script>
-<script src="js/admin/vong-quay.js?v=20261024m"></script>
-<script src="js/admin/quy-diem.js?v=20261024m"></script>
-<script src="js/admin/gioi-thieu.js?v=20261024m"></script>
-<script src="js/admin/dai-ly.js?v=20261024m"></script>
-<script src="js/admin/danh-gia.js?v=20261024m"></script>
-<script src="js/admin/dieu-khoan.js?v=20261024m"></script>
-<script src="js/admin/quyen-loi.js?v=20261024m"></script>
+<script src="js/admin/pha-he.js?v=20261024n"></script>
+<script src="js/admin/nguoi-dung.js?v=20261024n"></script>
+<script src="js/admin/noi-dung.js?v=20261024n"></script>
+<script src="js/admin/kho.js?v=20261024n"></script>
+<script src="js/admin/tai-chinh.js?v=20261024n"></script>
+<script src="js/admin/he-thong.js?v=20261024n"></script>
+<script src="js/admin/vong-quay.js?v=20261024n"></script>
+<script src="js/admin/quy-diem.js?v=20261024n"></script>
+<script src="js/admin/gioi-thieu.js?v=20261024n"></script>
+<script src="js/admin/dai-ly.js?v=20261024n"></script>
+<script src="js/admin/danh-gia.js?v=20261024n"></script>
+<script src="js/admin/dieu-khoan.js?v=20261024n"></script>
+<script src="js/admin/quyen-loi.js?v=20261024n"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -290,8 +290,8 @@
     const revDay = days.map(x => ok.filter(o => o.date === x).reduce((s, o) => s + o.total, 0));
     const cntDay = days.map(x => d.orders.filter(o => o.date === x).length);
     const rev = ok.reduce((s, o) => s + o.total, 0);
-    const last15 = revDay.slice(15).reduce((a, b) => a + b, 0), prev15 = revDay.slice(0, 15).reduce((a, b) => a + b, 0) || 1;
-    const growth = (last15 / prev15 - 1) * 100;
+    const last15 = revDay.slice(15).reduce((a, b) => a + b, 0), prev15 = revDay.slice(0, 15).reduce((a, b) => a + b, 0);
+    const growth = prev15 > 0 ? (last15 / prev15 - 1) * 100 : null;  // kỳ trước chưa có doanh thu thì không tính %
     const members = d.users.filter(u => u.role !== 'admin');
     const newMembers = members.filter(u => u.created >= day(30)).length;
     const doneRate = d.orders.length ? d.orders.filter(o => ['paid', 'done', 'ship'].includes(o.status)).length / d.orders.length * 100 : 0;
@@ -300,7 +300,7 @@
       ['Doanh thu', short(rev), 'wallet', 'gold', spark(weekly, '#f3c76b'), 'glow-gold'],
       ['Thành viên mới', newMembers.toLocaleString('vi-VN'), 'users', 'violet', `<span class="dim" style="font-size:12px;font-weight:500">/ ${members.length} tổng</span><div class="dim" style="font-size:12px;font-weight:500;margin-top:4px">CTV ${members.filter(u => u.tier === 'ctv').length} · Đại lý ${members.filter(u => u.tier === 'daily').length}</div>`, 'glow-cyan'],
       ['Đơn hàng', d.orders.length.toLocaleString('vi-VN'), 'bag', 'green', `<span class="badge pending">${d.orders.filter(o => o.status === 'pending').length} chờ</span>`, 'glow-cyan'],
-      ['Tăng trưởng', `<span class="${growth >= 0 ? 'green' : 'red'}">${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%</span>`, 'trend', 'gold', '', 'glow-gold'],
+      ['Tăng trưởng', growth === null ? `<span class="${last15 ? 'green' : 'dim'}">${last15 ? 'Mới' : '0%'}</span>` : `<span class="${growth >= 0 ? 'green' : 'red'}">${growth >= 0 ? '+' : ''}${Math.abs(growth) >= 1000 ? Math.round(growth).toLocaleString('vi-VN') : growth.toFixed(1)}%</span>`, 'trend', 'gold', growth === null ? '<span class="dim" style="font-size:12px;font-weight:500">15 ngày trước chưa có doanh thu</span>' : '<span class="dim" style="font-size:12px;font-weight:500">so với 15 ngày trước</span>', 'glow-gold'],
       ['Tỷ lệ hoàn tất', doneRate.toFixed(1) + '%', 'activity', 'red', '', 'glow-cyan']
     ];
     $('#kpis').innerHTML = K.map(([l, v, ic, c, extra, g]) => `<div class="card ${g} stat kpi"><div class="stat-top"><span class="stat-ico ${c}">${icon(ic)}</span>${l}</div><div class="stat-val">${v}${extra}</div></div>`).join('');
@@ -484,11 +484,14 @@
       .map(([id, name, color, n], i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat"><div class="stat-top"><span class="dot" style="color:${color}"></span>${name}</div><div class="stat-val">${n.toLocaleString('vi-VN')}</div></div>`).join('');
     const list = d.users.filter(u => (!r || (r === 'admin' ? u.role === 'admin' : u.role !== 'admin')) && (!t || (u.role !== 'admin' && tierId(u) === t)) && (!q || [u.name, u.email, u.phone, u.username, u.code].join(' ').toLowerCase().includes(q)));
     $('#mcount').textContent = list.length + ' tài khoản';
-    $('#mlist').innerHTML = list.length ? list.map((u, i) => { const k = ADB.tierOf(u); return `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(u.name)}</span><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small></div></div></td><td class="nowrap">${u.username ? '@' + esc(u.username) : ''}${u.code ? `<br><small class="dim">${esc(u.code)}</small>` : ''}</td><td class="nowrap">${esc(u.phone || '')}</td>
+    $('#mlist').innerHTML = list.length ? list.map((u, i) => { const k = ADB.tierOf(u); return `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(u.name)}</span><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small>${u.verified === false ? `<small><span class="badge pending">Chưa kích hoạt email</span> <button class="link-btn gold" type="button" data-verify="${u.id}" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">Kích hoạt giúp</button></small>` : ''}</div></div></td><td class="nowrap">${u.username ? '@' + esc(u.username) : ''}${u.code ? `<br><small class="dim">${esc(u.code)}</small>` : ''}</td><td class="nowrap">${esc(u.phone || '')}</td>
       <td><span class="badge ${u.role === 'admin' ? 'failed' : 'ship'}">${u.role === 'admin' ? 'Quản trị' : 'Thành viên'}</span></td>
       <td>${u.role === 'admin' ? '<span class="dim">-</span>' : `<span class="badge nowrap" style="color:${k.color};border-color:${k.color}55;background:${k.color}14">${esc(k.name)}</span>`}</td><td class="nowrap">${u.role === 'admin' ? '' : money(ADB.spent(d, u.id))}</td><td class="dim nowrap">${fdate(u.created)}</td></tr>`; }).join('')
       : `<tr><td colspan="7"><div class="empty">Không có thành viên phù hợp.</div></td></tr>`;
   }
+  $('#mlist').addEventListener('click', e => { const b = e.target.closest('[data-verify]'); if (!b) return;
+    const dd = ADB.load(), u = dd.users.find(x => x.id === b.dataset.verify); if (!u || !confirm(`Kích hoạt tài khoản ${u.name} (${u.email}) mà không cần thư?`)) return;
+    u.verified = true; u.verifiedAt = new Date().toISOString().slice(0, 10) + ' (quản trị)'; if (ADB.save(dd)) { toast('Đã kích hoạt tài khoản ' + u.name); membersPane(); } });
   $('#mq').addEventListener('input', membersPane); $('#mr').addEventListener('change', membersPane); $('#mt').addEventListener('change', membersPane);
 
   /* ---------- tin nhắn ---------- */

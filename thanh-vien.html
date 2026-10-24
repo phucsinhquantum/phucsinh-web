@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024m">
-<script src="js/lang.js?v=20261024m"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024n">
+<script src="js/lang.js?v=20261024n"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,11 +216,11 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261024m"></script>
-<script src="js/api.js?v=20261024m"></script>
-<script src="js/data.js?v=20261024m"></script>
-<script src="js/app.js?v=20261024m"></script>
-<script src="js/psq-data.js?v=20261024m"></script>
+<script src="js/patch.js?v=20261024n"></script>
+<script src="js/api.js?v=20261024n"></script>
+<script src="js/data.js?v=20261024n"></script>
+<script src="js/app.js?v=20261024n"></script>
+<script src="js/psq-data.js?v=20261024n"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -876,11 +876,11 @@
     const later = (fn, ms = 350) => { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
     const fr = $('#fr');
     if (fr) { const hint = () => { const c = fr.value.trim().toUpperCase(), r = c ? API.act('checkRef', { code: c }) : {};
-      $('#frHint').innerHTML = !c ? '' : r.name ? `Người giới thiệu: <b class="gold">${esc(r.name)}</b>` : `<span class="red">${esc(r.error || 'Mã giới thiệu chưa đúng.')}</span>`; };
+      if (!$('#frHint')) return; $('#frHint').innerHTML = !c ? '' : r.name ? `Người giới thiệu: <b class="gold">${esc(r.name)}</b>` : `<span class="red">${esc(r.error || 'Mã giới thiệu chưa đúng.')}</span>`; };
       fr.addEventListener('input', later(hint)); if (fr.value) hint(); }
     const fu = $('#fu'), unameErr = v => { if (!v) return ''; if (!UNAME.test(v)) return 'Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.'; const r = API.act('checkUsername', { username: v }); return r.error || ''; };
     if (fu) fu.addEventListener('input', later(() => { const v = fu.value.trim().toLowerCase(), er = unameErr(v);
-      $('#fuHint').innerHTML = !v ? 'Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.' : er ? `<span class="red">${er}</span>` : `<span class="green">Dùng được: @${esc(v)}</span>`; }));
+      if (!$('#fuHint')) return; $('#fuHint').innerHTML = !v ? 'Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.' : er ? `<span class="red">${er}</span>` : `<span class="green">Dùng được: @${esc(v)}</span>`; }));
     // điều khoản: phải kéo đọc tới cuối thì ô đồng ý mới bấm được
     const tm = $('#terms'); if (tm) { const ag = $('#agree'), seen = () => { if (tm.scrollTop + tm.clientHeight >= tm.scrollHeight - 12) { ag.disabled = false; $('#termsBox').classList.add('end'); $('#termsHint').textContent = 'Đã đọc hết ✓'; $('#termsHint').classList.add('green'); tm.removeEventListener('scroll', seen); } }; tm.addEventListener('scroll', seen, { passive: true }); seen(); }
     $('#af').addEventListener('submit', e => {
@@ -904,11 +904,38 @@
         if (!f.agree) return err.textContent = 'Anh chị cần đồng ý với điều khoản.';
       }
       btn.disabled = true;
-      const r = mode === 'login' ? auth.login(f.email, f.pass) : auth.register({ name: f.name, username: wanted || '', phone: f.phone, email: f.email, pass: f.pass, ref: f.ref, agree: !!f.agree });
+      const r = mode === 'login' ? auth.login(f.email, f.pass) : API.act('register', { name: f.name, username: wanted || '', phone: f.phone, email: f.email, pass: f.pass, ref: f.ref, agree: !!f.agree });
       btn.disabled = false;
-      if (r.error) return err.textContent = r.error;
-      location.href = 'thanh-vien.html' + (mode === 'register' ? '#tong-quan' : location.hash);
+      if (r.error) {
+        err.textContent = r.error;
+        if (/chưa kích hoạt/.test(r.error)) { err.insertAdjacentHTML('beforeend', ' <button type="button" class="link gold" id="rsV" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">Gửi lại thư kích hoạt</button>'); $('#rsV').addEventListener('click', () => { const x = API.act('resendVerify', { email: (f.email || '').trim() }); toast(x.error || 'Đã gửi lại thư kích hoạt, anh chị mở hộp thư (cả mục Thư rác).', x.error ? 'err' : undefined); }); }
+        return;
+      }
+      if (mode === 'register') return registered(r, f);
+      location.href = 'thanh-vien.html' + location.hash;
     });
+  }
+
+  // màn hình sau khi tạo tài khoản: chờ kích hoạt qua email, hoặc vào trang thành viên ngay (khi chưa cài email gửi thư)
+  function registered(r, f) {
+    const wait = r.needVerify;
+    view.innerHTML = `<div class="card glow-mix" style="max-width:560px;margin:24px auto;padding:clamp(22px,4vw,36px);text-align:center">
+      <span class="pw-ok" style="margin:0 auto 14px;width:56px;height:56px" aria-hidden="true">${icon('check')}</span>
+      <h2 class="display" style="font-size:clamp(24px,3vw,32px)">Đăng ký thành công!</h2>
+      ${wait ? `<p class="mt-2">Anh chị vui lòng kiểm tra email <b class="gold">${esc(r.email)}</b> và bấm nút <b>Kích hoạt tài khoản</b> trong thư để bắt đầu sử dụng.</p>
+      <p class="dim mt-1" style="font-size:13px">Không thấy thư? Anh chị xem cả mục Thư rác hoặc Quảng cáo. Đường dẫn kích hoạt dùng được trong 72 giờ.</p>
+      <div class="row mt-3" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn btn-gold" type="button" id="rgRe">${icon('upload')} Gửi lại thư kích hoạt</button><a class="btn btn-outline-gold" href="thanh-vien.html">Về trang đăng nhập</a></div>`
+      : `<p class="mt-2">Chào mừng <b class="gold">${esc(f.name)}</b> đến với ${esc(SITE.brand)}. Tài khoản của anh chị đã sẵn sàng.</p>
+      <div class="row mt-3" style="justify-content:center"><a class="btn btn-gold" href="thanh-vien.html#tong-quan">${icon('user')} Vào trang thành viên</a></div>`}
+    </div>`;
+    scrollTo({ top: 0, behavior: 'smooth' });
+    const b = $('#rgRe'); if (b) b.addEventListener('click', () => { b.disabled = true; const x = API.act('resendVerify', { email: r.email }); toast(x.error || 'Đã gửi lại thư kích hoạt', x.error ? 'err' : undefined); setTimeout(() => { b.disabled = false; }, 60e3); });
+  }
+  // mở đường dẫn kích hoạt trong thư
+  if (PSQ.qs('kich-hoat')) {
+    const r = API.act('verifyEmail', { token: PSQ.qs('kich-hoat') });
+    history.replaceState(null, '', 'thanh-vien.html');
+    if (r.error) toast(r.error, 'err'); else { toast('Đã kích hoạt tài khoản, chào mừng anh chị!'); location.replace('thanh-vien.html#tong-quan'); return; }
   }
 
   const u = auth.user();
