@@ -411,8 +411,8 @@
         <div class="side-in card">
           <a class="brand notranslate" translate="no" href="index.html"><img src="${S.logo}" alt="${esc(S.short)}"><b>${esc(S.brand)}</b></a>
           <nav class="nav">${NAV.map(link).join('')}</nav>
-          <div class="nav-label">Quản lý</div>
-          <nav class="nav">${link({ id: 'admin', href: 'quan-tri.html', label: 'Quản trị', icon: 'grid' })}</nav>
+          ${u && u.role === 'admin' && u.status !== 'locked' ? `<div class="nav-label">Quản lý</div>
+          <nav class="nav">${link({ id: 'admin', href: 'quan-tri.html', label: 'Quản trị', icon: 'grid' })}</nav>` : ''}
           <div class="nav-label nav-cats">Danh mục</div>
           <nav class="nav nav-cats">${CATEGORIES.slice(0, 4).map((c, i) => `<a href="san-pham.html?cat=${c.id}"><span class="dot" style="color:${['#4fe6df', '#b98cff', '#45e08f', '#f3c76b'][i]}"></span><span>${esc(c.name)}</span></a>`).join('')}</nav>
           <div class="side-promo"><div class="card glow-cyan" style="padding:16px">
