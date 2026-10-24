@@ -1003,3 +1003,11 @@ html.reduce-motion .pw-ring, html.reduce-motion .pw-ring i, html.reduce-motion .
 .pw-pick small { display: block; color: var(--muted, #9aa7ab); font-size: 12.5px; }
 .pw-pick img { display: block; max-width: 100%; max-height: 320px; margin: auto; border-radius: 10px; }
 .pw-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+.pts-pay { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(79,230,223,.3); background: rgba(79,230,223,.06); text-align: left; }
+.pts-pay > div { flex: 1; min-width: 0; }
+.pts-pay b { font-size: 14px; }
+.pts-pay small { display: block; color: var(--muted, #9aa7ab); font-size: 12.5px; margin-top: 2px; }
+.pts-pay small b { font-size: inherit; }
+.pts-pay #ptBuy { flex: none; }
+@media (max-width: 560px) { .pts-pay { flex-wrap: wrap; } .pts-pay #ptBuy { width: 100%; } }

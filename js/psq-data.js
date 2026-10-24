@@ -407,12 +407,20 @@
       credit(d, u.id, 'cash', 'spend', -amount, 'Thanh toán đơn ' + order.id, order.id);
       order.cashPaid = amount; return amount;
     },
+    // trả trọn đơn (gói CTV, gói đại lý) bằng ví điểm khả dụng, 1 PS = 1đ; không đủ điểm thì không trừ
+    spendAvail(d, u, order) {
+      const b = ADB.balances(d, u.id).avail, due = order.total - (order.shopPaid || 0) - (order.cashPaid || 0);
+      if (b < due) return { error: `Ví điểm khả dụng còn ${(Math.round(b) || 0).toLocaleString('vi-VN')} PS, chưa đủ ${due.toLocaleString('vi-VN')} PS.` };
+      credit(d, u.id, 'avail', 'spend', -due, 'Thanh toán đơn ' + order.id, order.id);
+      order.availPaid = due; order.pay = 'points'; return { paid: due };
+    },
     // đơn bị hủy: hoàn lại phần đã trả bằng ví (1 lần)
     refundOrder(d, o) {
-      if (!o || o.refunded || !o.userId || !(o.shopPaid || o.cashPaid)) return 0;
+      if (!o || o.refunded || !o.userId || !(o.shopPaid || o.cashPaid || o.availPaid)) return 0;
+      credit(d, o.userId, 'avail', 'refund', o.availPaid || 0, 'Hoàn điểm đơn hủy ' + o.id, o.id);
       credit(d, o.userId, 'shop', 'refund', o.shopPaid || 0, 'Hoàn điểm đơn hủy ' + o.id, o.id);
       credit(d, o.userId, 'cash', 'refund', o.cashPaid || 0, 'Hoàn tiền đơn hủy ' + o.id, o.id);
-      o.refunded = true; return (o.shopPaid || 0) + (o.cashPaid || 0);
+      o.refunded = true; return (o.shopPaid || 0) + (o.cashPaid || 0) + (o.availPaid || 0);
     },
     // đơn đã nhận tiền (đã thanh toán, đã hoàn thành, hoặc đang giao mà không phải trả khi nhận hàng): không hủy được, chỉ đổi sản phẩm
     locked(o) { return !!o && (o.settled || ['paid', 'done'].includes(o.status) || (o.status === 'ship' && o.pay !== 'cod')); },

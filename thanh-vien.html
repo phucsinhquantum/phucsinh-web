@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024h">
-<script src="js/lang.js?v=20261024h"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024i">
+<script src="js/lang.js?v=20261024i"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,11 +216,11 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261024h"></script>
-<script src="js/api.js?v=20261024h"></script>
-<script src="js/data.js?v=20261024h"></script>
-<script src="js/app.js?v=20261024h"></script>
-<script src="js/psq-data.js?v=20261024h"></script>
+<script src="js/patch.js?v=20261024i"></script>
+<script src="js/api.js?v=20261024i"></script>
+<script src="js/data.js?v=20261024i"></script>
+<script src="js/app.js?v=20261024i"></script>
+<script src="js/psq-data.js?v=20261024i"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -258,6 +258,17 @@
       send: bill => kind === 'topup' ? API.act('topupClaim', { id: x.id, bill }) : API.act('paidClaim', { id: x.id, bill }),
       check: () => API.act('payStatus', { kind, id: x.id }).status });
   };
+  // trả gói bằng ví điểm khả dụng (1 PS = 1đ): đủ điểm thì hệ thống tự kích hoạt, không cần công ty duyệt
+  const ptsBox = (d, me, price, o) => {
+    if (o && o.status !== 'pending') return '';
+    const b = ADB.balances(d, me.id).avail, ok = b >= price;
+    return `<div class="pts-pay mt-2"><div><b>Trả bằng điểm khả dụng</b><small>Ví điểm khả dụng: <b class="${ok ? 'green' : 'gold'}">${ps(b)}</b>${ok ? ', đủ để thanh toán. Kích hoạt ngay, không cần chờ duyệt.' : `, cần ${ps(price)}. Anh chị nhận thêm điểm từ thành viên khác hoặc chuyển khoản.`}</small></div><button class="btn btn-sm ${ok ? 'btn-gold' : ''}" type="button" id="ptBuy"${ok ? '' : ' disabled'}>${icon('gem')} Trả ${ps(price)}</button></div>`;
+  };
+  const bindPts = (box, name, price, done, redo) => { const b = $('#ptBuy', box); if (b) b.addEventListener('click', () => {
+    if (!confirm(`Trừ ${ps(price)} từ ví điểm khả dụng để ${done.toLowerCase()}?`)) return;
+    b.disabled = true; PSQ.payWait.stop();
+    if (act(name, { pay: 'points' }, done + ' thành công')) redo(); else b.disabled = false;
+  }); };
   const waitBox = x => x.status === 'pending' ? PSQ.payWait.html({ sent: !!(x.bills || []).length }) : '';
   const act = (name, args, msg, el) => { const r = API.act(name, args); if (r.error) { if (el) el.textContent = r.error; else toast(r.error, 'err'); return null; } if (msg) toast(typeof msg === 'function' ? msg(r) : msg); return r; };
   const head = (t, sub, right = '') => `<div class="card-head" style="flex-wrap:wrap"><div><h3>${t}</h3>${sub ? `<div class="sub">${sub}</div>` : ''}</div>${right ? `<div style="margin-left:auto">${right}</div>` : ''}</div>`;
@@ -412,14 +423,15 @@
       <ul class="pkg-list mt-2">${perkLi(d, 'dailyPkg')}</ul>
       <p class="muted mt-2" style="font-size:13px">Quyền lợi Đại lý:</p><ul class="pkg-list">${perkLi(d, 'daily')}</ul></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn gói đại lý #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
-        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}
-        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản lên Đại lý ngay khi công ty duyệt bill chuyển khoản.</p></div>`
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}${ptsBox(d, me, o.total, o)}
+        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản lên Đại lý ngay khi công ty duyệt bill chuyển khoản, hoặc ngay lập tức nếu trả bằng điểm.</p></div>`
       : `<div class="card glow-cyan">${head('Đăng ký ngay', 'thanh toán bằng chuyển khoản')}
-        <p class="muted" style="font-size:14px">Bấm nút bên dưới để tạo đơn gói đại lý. Trang sẽ hiện thông tin chuyển khoản với nội dung là mã đơn.</p>
-        <button class="btn btn-gold btn-block btn-lg mt-2" type="button" id="agBuy">${icon('award')} Đăng ký đại lý ${money(P.agentPkgPrice)}</button>
+        <p class="muted" style="font-size:14px">Chuyển khoản: bấm nút bên dưới để tạo đơn, trang hiện thông tin chuyển khoản với nội dung là mã đơn. Hoặc trả bằng điểm khả dụng nếu ví đủ điểm.</p>
+        <button class="btn btn-gold btn-block btn-lg mt-2" type="button" id="agBuy">${icon('award')} Đăng ký đại lý ${money(P.agentPkgPrice)}</button>${ptsBox(d, me, P.agentPkgPrice)}
         <p class="dim mt-2" style="font-size:12.5px">Gói đại lý không tính hoa hồng cho người giới thiệu. Hoa hồng được tính khi anh chị dùng điểm để đặt đơn hàng.</p></div>`;
     box.innerHTML = ph('Đăng ký đại lý', 'Lên Đại lý ngay bằng gói đại lý') + `<div class="grid g-2">${intro}${status}</div>`;
     if (o && o.status === 'pending') billWait('order', o, redo, 'Đã nhận thanh toán gói đại lý', 'Chúc mừng anh chị đã lên Đại lý!');
+    bindPts(box, 'buyAgentPackage', o ? o.total : P.agentPkgPrice, 'Lên đại lý', redo);
     const btn = $('#agBuy', box); if (btn) btn.addEventListener('click', () => {
       btn.disabled = true; if (act('buyAgentPackage', {}, r => 'Đã tạo đơn ' + r.order.id + ', anh chị chuyển khoản rồi gửi ảnh bill')) redo(); else btn.disabled = false;
     });
@@ -439,14 +451,15 @@
           <ul class="pkg-list">${perkLi(d, 'ctvFee')}</ul></div></div>
       <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${money(P.refBonus)} khi người đó kích hoạt CTV. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn kích hoạt #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
-        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}
-        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản được kích hoạt Cộng tác viên ngay khi công ty duyệt bill chuyển khoản. Anh chị có thể xem trạng thái tại Đơn hàng của tôi.</p></div>`
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}${ptsBox(d, me, o.total, o)}
+        <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản được kích hoạt Cộng tác viên ngay khi công ty duyệt bill chuyển khoản, hoặc ngay lập tức nếu trả bằng điểm. Anh chị có thể xem trạng thái tại Đơn hàng của tôi.</p></div>`
       : `<div class="card glow-cyan">${head('Kích hoạt ngay', 'thanh toán bằng chuyển khoản')}
-        <p class="muted" style="font-size:14px">Bấm nút bên dưới để tạo đơn kích hoạt. Trang sẽ hiện thông tin chuyển khoản với nội dung là mã đơn.</p>
-        <button class="btn btn-gold btn-block btn-lg mt-2" type="button" id="pkBuy">${icon('sparkle')} Kích hoạt gói ${money(P.pkgPrice)}</button>
+        <p class="muted" style="font-size:14px">Chuyển khoản: bấm nút bên dưới để tạo đơn, trang hiện thông tin chuyển khoản với nội dung là mã đơn. Hoặc trả bằng điểm khả dụng nếu ví đủ điểm.</p>
+        <button class="btn btn-gold btn-block btn-lg mt-2" type="button" id="pkBuy">${icon('sparkle')} Kích hoạt gói ${money(P.pkgPrice)}</button>${ptsBox(d, me, P.pkgPrice)}
         <p class="dim mt-2" style="font-size:12.5px">Tài khoản được kích hoạt sau khi công ty xác nhận thanh toán.</p></div>`;
     box.innerHTML = ph('Kích hoạt cộng tác viên', 'Mở gian hàng online và bắt đầu nhận hoa hồng') + `<div class="grid g-2">${intro}${status}</div>`;
     if (o && o.status === 'pending') billWait('order', o, redo, 'Đã nhận thanh toán gói kích hoạt', 'Chúc mừng anh chị đã là Cộng tác viên!');
+    bindPts(box, 'buyPackage', o ? o.total : P.pkgPrice, 'Kích hoạt CTV', redo);
     const btn = $('#pkBuy', box); if (btn) btn.addEventListener('click', () => {
       btn.disabled = true; if (act('buyPackage', {}, r => 'Đã tạo đơn ' + r.order.id + ', anh chị chuyển khoản rồi gửi ảnh bill')) redo(); else btn.disabled = false;
     });

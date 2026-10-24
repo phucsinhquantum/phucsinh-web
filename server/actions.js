@@ -83,6 +83,18 @@ function readBill(c, url) {
   return { buf, type };
 }
 
+// trả đơn gói bằng ví điểm khả dụng: đủ điểm thì trừ ví, đơn tự thanh toán, tài khoản lên hạng ngay, không cần duyệt
+function payByPoints(c, o, what) {
+  const { d, A, me } = c;
+  if (o.status !== 'pending') return { order: o };
+  const r = A.spendAvail(d, me, o);
+  if (r.error) { if (o.pay === 'points' && !o.availPaid) d.orders.splice(d.orders.indexOf(o), 1); return r; }
+  const s = A.setStatus(d, o, 'paid'); if (s.error) return s;
+  c.log(what + ' bằng điểm', `${me.name}: đơn ${o.id}, ${money(r.paid).replace('đ', ' PS')} từ ví điểm khả dụng`);
+  c.notify(`✅ ${what} bằng điểm khả dụng\n${me.name} (@${me.username}) · đơn ${o.id}\nĐã trừ ${money(r.paid).replace('đ', ' PS')}, hệ thống tự kích hoạt, anh không cần duyệt.`);
+  return { order: o, paidByPoints: true };
+}
+
 const ACTIONS = {
   /* ===== khách chưa đăng nhập ===== */
   checkRef: { auth: 'guest', run(c) {
@@ -287,7 +299,9 @@ const ACTIONS = {
   buyPackage: { auth: 'member', run(c) {
     const { d, A, me } = c;
     if ((me.tier || 'khach') !== 'khach') return err('Tài khoản đã kích hoạt.');
-    const has = d.orders.find(o => o.userId === me.id && o.status !== 'failed' && (o.items || []).some(x => x.id === A.PKG_ID)); if (has) return { order: has };
+    const has = d.orders.find(o => o.userId === me.id && o.status !== 'failed' && (o.items || []).some(x => x.id === A.PKG_ID));
+    if (c.args.pay === 'points') return payByPoints(c, has || A.buyPackage(d, me, 'points'), 'Kích hoạt CTV');
+    if (has) return { order: has };
     const o = A.buyPackage(d, me, 'bank');
     c.log('Đặt gói kích hoạt CTV', `${me.name}: đơn ${o.id}, ${money(o.total)}`);
     c.notify(`Đơn gói kích hoạt CTV ${o.id}\n${me.name} (@${me.username}) · ${me.phone || ''}\nSố tiền ${money(o.total)}, nội dung chuyển khoản ${o.id}`, { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' });
@@ -297,7 +311,9 @@ const ACTIONS = {
     const { d, A, me } = c;
     if (!A.plan(d).agentPkgOn) return err('Hiện công ty chưa mở đăng ký gói đại lý.');
     if (me.tier === 'daily') return err('Tài khoản đã là Đại lý.');
-    const has = d.orders.find(o => o.userId === me.id && o.status !== 'failed' && A.isAgentPkgOrder(o)); if (has) return { order: has };
+    const has = d.orders.find(o => o.userId === me.id && o.status !== 'failed' && A.isAgentPkgOrder(o));
+    if (c.args.pay === 'points') return payByPoints(c, has || A.buyAgentPackage(d, me, 'points'), 'Lên đại lý');
+    if (has) return { order: has };
     const o = A.buyAgentPackage(d, me, 'bank');
     c.log('Đặt gói đại lý', `${me.name}: đơn ${o.id}, ${money(o.total)}`);
     c.notify(`Đơn gói đại lý ${o.id}\n${me.name} (@${me.username}) · ${me.phone || ''}\nSố tiền ${money(o.total)}, nội dung chuyển khoản ${o.id}`, { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' });
