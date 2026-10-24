@@ -33,8 +33,10 @@ Code: nhánh `may-chu` của repo phucsinhquantum/phucsinh-web. Máy chủ là N
    ```
    thu.phucsinhquantum.com {
      encode gzip
-     @hidden path /server/* /notes/* /.git/* *.md
-     respond @hidden 404
+     @hidden path /server /server/* /notes /notes/* /.git /.git/* *.md
+     handle @hidden {
+       respond 404
+     }
      handle /api/* {
        reverse_proxy psq-api-thu:8080
      }
@@ -64,7 +66,7 @@ Làm như trên với các giá trị của bản chính:
 - `NAME=psq-api`;
 - `BASE_URL=https://phucsinhquantum.com`.
 
-Khối Caddy của phucsinhquantum.com thêm `handle /api/*`, giống bản thử.
+Khối Caddy của phucsinhquantum.com thêm `handle /api/*` và `handle @hidden`, giống bản thử. Chú ý: `respond` phải nằm trong `handle @hidden`, đặt ngoài thì các khối `handle` khác chạy trước và không chặn được.
 
 ## Sao lưu
 
