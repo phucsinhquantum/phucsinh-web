@@ -1,7 +1,7 @@
 /* Phúc Sinh QuanTum: dữ liệu mở rộng cho quản trị và trang thành viên
-   (phả hệ giới thiệu, ví, hoa hồng, nạp điểm, kho, chi phí, nhật ký, thư, địa chỉ, quỹ tri ân, thiết lập).
-   Tất cả lưu chung trong psq_db_v1 trên trình duyệt để chạy thử. Bản chính thức cần máy chủ và cơ sở dữ liệu.
-   Cần nạp sau js/data.js và js/app.js. */
+   (phả hệ giới thiệu, ví, hoa hồng, nạp điểm, kho, chi phí, nhật ký, thư, địa chỉ, quỹ điểm, thiết lập).
+   Dữ liệu gốc nằm trên máy chủ (server/). Máy chủ chạy chính tệp này để tính hoa hồng, ví;
+   trình duyệt dùng nó để hiển thị. Cần nạp sau js/data.js và js/app.js. */
 (function () {
   const { db, today } = PSQ;
   const VERSION = 7;
@@ -11,7 +11,7 @@
     fundRate: 1,                                 // % doanh thu đơn hoàn thành trích vào Quỹ tri ân (mẫu)
     minWithdraw: 200000,
     autoPlace: false,                            // tự xếp lên cây khi có người giới thiệu
-    mailSender: 'Phúc Sinh QuanTum <no-reply@phucsinh.vn>',
+    mailSender: 'Phúc Sinh QuanTum',
     leaderRanks: [                               // cấp bậc lãnh đạo (mẫu)
       { id: 'tv', name: 'Thành viên', minTeam: 0, minSales: 0, bonus: 0, color: '#9aa7ab' },
       { id: 'tn', name: 'Trưởng nhóm', minTeam: 3, minSales: 50000000, bonus: 1, color: '#4fe6df' },
@@ -35,121 +35,25 @@
 
   let n = 0; const uid = p => p + Date.now().toString(36) + (n++).toString(36);
   const daysAgo = k => { const d = new Date(); d.setDate(d.getDate() - k); return d.toISOString().slice(0, 10); };
-  const stamp = (k, h) => daysAgo(k) + ' ' + String(8 + (h % 11)).padStart(2, '0') + ':' + String((h * 17) % 60).padStart(2, '0');
 
-  /* ---------- nâng cấp dữ liệu cũ + dữ liệu mẫu (chạy 1 lần) ---------- */
-  function migrateV2(d) {
-    let r = 11; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
-    d.settings = Object.assign({}, DEFAULT_SETTINGS, d.settings || {});
-    d.roles = d.roles || DEFAULT_ROLES.map(x => ({ ...x }));
-
-    // tài khoản quản trị mẫu thêm (đăng nhập bằng mật khẩu 123456)
-    const adm = d.users.find(u => u.id === 'u-admin'); if (adm) { adm.adminRole = adm.adminRole || 'owner'; adm.code = adm.code || 'PS1000'; adm.placed = true; }
-    const h123 = (d.users.find(u => u.id === 'u1') || {}).pass;
-    if (h123 && !d.users.some(u => u.id === 'u-staff1')) {
-      d.users.push({ id: 'u-staff1', name: 'Nguyễn Thu Trang', email: 'kinhdoanh@psq.vn', phone: '0901000111', pass: h123, role: 'admin', adminRole: 'sale', created: daysAgo(120), status: 'active' });
-      d.users.push({ id: 'u-staff2', name: 'Lê Văn Khoa', email: 'kho@psq.vn', phone: '0901000222', pass: h123, role: 'admin', adminRole: 'kho', created: daysAgo(90), status: 'active' });
-      d.users.push({ id: 'u-staff3', name: 'Trần Minh Châu', email: 'ketoan@psq.vn', phone: '0901000333', pass: h123, role: 'admin', adminRole: 'ketoan', created: daysAgo(60), status: 'locked' });
-    }
-
-    // phả hệ: mỗi thành viên có người giới thiệu là một người tham gia trước
-    const mem = d.users.filter(u => u.role !== 'admin').sort((a, b) => (a.created || '').localeCompare(b.created || ''));
-    mem.forEach((u, i) => {
-      u.code = u.code || 'PS' + (1001 + i);
-      u.status = u.status || 'active';
-      if (u.sponsor === undefined) u.sponsor = i === 0 ? null : mem[Math.floor(rnd() * i)].id;
-      if (u.placed === undefined) u.placed = true;
-      if (u.sponsor === null) u.placed = true;
-      u.parent = u.parent || (u.placed ? u.sponsor : null);
-    });
-    // 2 người mới đăng ký qua mã giới thiệu, đang chờ xếp lên cây
-    if (h123 && !d.users.some(u => u.id === 'u-new1') && mem.length > 3) {
-      d.users.push({ id: 'u-new1', name: 'Phan Thị Hồng', email: 'hong.phan@email.com', phone: '0912345601', pass: h123, role: 'member', created: daysAgo(1), status: 'active', code: 'PS' + (1001 + mem.length), sponsor: mem[1].id, placed: false, parent: null, city: 'Huế' });
-      d.users.push({ id: 'u-new2', name: 'Vũ Đình Long', email: 'long.vu@email.com', phone: '0912345602', pass: h123, role: 'member', created: daysAgo(0), status: 'active', code: 'PS' + (1002 + mem.length), sponsor: mem[3].id, placed: false, parent: null, city: 'Hà Nội' });
-    }
-
-    const S = d.settings, byId = id => d.users.find(u => u.id === id);
-    const done = o => o.status === 'done' || o.status === 'paid' || o.status === 'ship';
-
-    d.commissions = [];   // dựng lại theo kế hoạch trả thưởng ở migrateV3
-
-    // nạp điểm
-    d.topups = [];
-    const methods = ['Chuyển khoản', 'Ví MoMo', 'Tiền mặt tại cửa hàng'];
-    mem.slice(0, 9).forEach((u, i) => {
-      const amount = [500000, 1000000, 2000000, 5000000][i % 4];
-      d.topups.push({ id: uid('nd'), user: u.id, amount, points: amount, method: methods[i % 3], status: i === 2 ? 'pending' : i === 6 ? 'rejected' : 'done', date: daysAgo(i * 4 + 1), note: '' });
-    });
-
-    // ví: sổ cái giao dịch (hoa hồng đã duyệt, nạp điểm, rút tiền, dùng điểm)
-    d.wallet = [];
-    d.commissions.filter(c => c.status === 'paid').forEach(c => d.wallet.push({ id: uid('gd'), user: c.user, type: 'commission', amount: c.amount, ref: c.order, date: c.date, note: `Hoa hồng F${c.level} từ đơn ${c.order}`, status: 'done' }));
-    d.topups.filter(t => t.status === 'done').forEach(t => d.wallet.push({ id: uid('gd'), user: t.user, type: 'topup', amount: t.amount, ref: t.id, date: t.date, note: 'Nạp điểm qua ' + t.method, status: 'done' }));
-    mem.slice(0, 4).forEach((u, i) => d.wallet.push({ id: uid('gd'), user: u.id, type: 'withdraw', amount: -[800000, 1200000, 600000, 2000000][i], ref: '', date: daysAgo(i * 6 + 3), note: 'Rút về tài khoản ngân hàng', status: i === 1 ? 'pending' : 'done' }));
-    mem.slice(4, 8).forEach((u, i) => d.wallet.push({ id: uid('gd'), user: u.id, type: 'spend', amount: -[300000, 450000, 900000, 250000][i], ref: '', date: daysAgo(i * 5 + 2), note: 'Dùng điểm thanh toán đơn hàng', status: 'done' }));
-
-    // quỹ tri ân
-    d.fund = [];
-    for (let m = 0; m < 4; m++) {
-      const rev = d.orders.filter(o => done(o)).reduce((s, o) => s + o.total, 0) / 4;
-      d.fund.push({ id: uid('qt'), type: 'in', amount: Math.round(rev * S.fundRate / 100), date: daysAgo(m * 30 + 1), note: `Trích ${S.fundRate}% doanh thu tháng`, who: '' });
-    }
-    d.fund.push({ id: uid('qt'), type: 'out', amount: 1500000, date: daysAgo(20), note: 'Quà tri ân khách hàng thân thiết', who: (mem[2] || {}).name || '' });
-    d.fund.push({ id: uid('qt'), type: 'out', amount: 3000000, date: daysAgo(45), note: 'Hỗ trợ hoàn cảnh khó khăn (thiện nguyện)', who: 'Mái ấm (mẫu)' });
-
-    // kho
-    d.stock = {}; PRODUCTS.forEach((p, i) => { d.stock[p.id] = Math.floor(rnd() * 28) + (i % 6 === 0 ? 0 : 2); });
-    d.stockMin = 3;
-    d.receipts = [];
-    const sup = ['Xưởng trầm Quảng Nam (mẫu)', 'Hợp tác xã trầm Khánh Hòa (mẫu)', 'Nhà cung cấp trà (mẫu)'];
-    for (let k = 0; k < 5; k++) {
-      const items = []; for (let j = 0; j < 3; j++) { const p = PRODUCTS[Math.floor(rnd() * PRODUCTS.length)]; if (!items.find(x => x.id === p.id)) items.push({ id: p.id, name: p.name, qty: 2 + Math.floor(rnd() * 8), cost: Math.round(p.price * .55 / 1000) * 1000 }); }
-      d.receipts.push({ id: 'PN' + (205 - k), date: daysAgo(k * 9 + 2), supplier: sup[k % 3], items, total: items.reduce((s, x) => s + x.qty * x.cost, 0), by: k % 2 ? 'Lê Văn Khoa' : 'Quản trị viên', note: '' });
-    }
-
-    // chi phí
-    d.expenses = [];
-    const ex = [['Mặt bằng', 'Thuê cửa hàng', 18000000], ['Nhân sự', 'Lương nhân viên', 42000000], ['Quảng cáo', 'Quảng cáo Facebook', 8500000], ['Vận chuyển', 'Phí giao hàng', 3200000], ['Bao bì', 'Hộp quà, túi vải', 4600000], ['Khác', 'Điện nước, internet', 2100000]];
-    for (let m = 0; m < 3; m++) ex.forEach(([cat, name, amt], i) => d.expenses.push({ id: uid('cp'), cat, name, amount: Math.round(amt * (0.85 + rnd() * .3) / 1000) * 1000, date: daysAgo(m * 30 + i * 2 + 1), note: '' }));
-
-    // sổ địa chỉ
-    d.addresses = [];
-    mem.forEach((u, i) => d.addresses.push({ id: uid('dc'), user: u.id, name: u.name, phone: u.phone, line: (12 + i * 7) + ' đường số ' + (i + 3) + ' (mẫu)', province: u.city || 'Hà Nội', isDefault: true }));
-    d.stores = [
-      { id: 'st1', name: 'Showroom Phúc Sinh QuanTum', line: SITE.address, phone: SITE.phone, type: 'Cửa hàng' },
-      { id: 'st2', name: 'Kho tổng', line: 'Khu công nghiệp (mẫu)', phone: SITE.phone, type: 'Kho' }
-    ];
-
-    // thư đã gửi
-    d.mails = [];
-    d.orders.slice(0, 14).forEach((o, i) => d.mails.push({ id: uid('ml'), date: stamp(Math.floor(i * 1.15), i), to: o.email, subject: `Xác nhận đơn hàng ${o.id}`, type: 'Đơn hàng', status: i === 5 ? 'failed' : 'sent' }));
-    mem.slice(-4).forEach((u, i) => d.mails.push({ id: uid('ml'), date: stamp(i * 9 + 2, i + 3), to: u.email, subject: 'Chào mừng anh chị đến với Phúc Sinh QuanTum', type: 'Đăng ký', status: 'sent' }));
-    d.mails.sort((a, b) => b.date.localeCompare(a.date));
-
-    // nhật ký thao tác
-    d.logs = [];
-    const acts = [['Quản trị viên', 'Đăng nhập', 'Đăng nhập trang quản trị'], ['Nguyễn Thu Trang', 'Cập nhật đơn hàng', 'PSQ1098: Đang giao → Hoàn thành'], ['Lê Văn Khoa', 'Nhập kho', 'Tạo phiếu nhập PN205'], ['Quản trị viên', 'Sửa sản phẩm', 'Cập nhật giá Vòng trầm 14 li'], ['Nguyễn Thu Trang', 'Duyệt nạp điểm', 'Duyệt 1.000.000đ cho khách'], ['Quản trị viên', 'Xếp lên cây', 'Xếp thành viên vào nhánh'], ['Lê Văn Khoa', 'Cập nhật tồn kho', 'Kiểm kê cuối tuần'], ['Quản trị viên', 'Thêm video', 'Thêm video trải nghiệm khách hàng']];
-    for (let k = 0; k < 18; k++) { const a = acts[k % acts.length]; d.logs.push({ id: uid('nk'), date: stamp(Math.floor(k * .8), k), actor: a[0], action: a[1], detail: a[2] }); }
-
-    d.v = 2;
-  }
+  /* ---------- dữ liệu trống ban đầu (máy chủ tạo một lần khi cài đặt) ---------- */
   function migrate(d) {
     if (d.v >= VERSION) return false;
-    if (!(d.v >= 2)) migrateV2(d);
-    if (d.v < 3) migrateV3(d);
-    if (d.v < 4) migrateV4(d);
-    if (d.v < 5) migrateV5(d);
-    if (d.v < 6) migrateV6(d);
-    if (d.v < 7) migrateV7(d);
+    d.settings = Object.assign({}, DEFAULT_SETTINGS, d.settings || {});
+    d.roles = d.roles || DEFAULT_ROLES.map(x => ({ ...x }));
+    ['users', 'orders', 'messages', 'commissions', 'topups', 'wallet', 'fund', 'receipts', 'expenses', 'addresses', 'mails', 'logs', 'fundbook'].forEach(k => { d[k] = d[k] || []; });
+    d.stock = d.stock || {}; d.stockMin = d.stockMin ?? 3;
+    d.stores = d.stores || [{ id: 'st1', name: 'Showroom ' + SITE.brand, line: SITE.address, phone: SITE.phone, type: 'Cửa hàng' }];
+    plan(d);
     d.v = VERSION; return true;
   }
 
   /* ---------- hàm dùng chung ---------- */
   const ADB = {
     PERMS, DEFAULT_SETTINGS, uid, daysAgo,
-    load() { const d = db.load(); let ch = migrate(d); if (ADB.releaseHeld && ADB.releaseHeld(d)) ch = true; if (ch) db.save(d); return d; },
-    save(d) { db.save(d); },
-    reset() { const d = db.reset(); migrate(d); db.save(d); return d; },
+    load() { const d = db.load(); migrate(d); return d; },
+    save(d) { return db.save(d); },
+    migrate,
     user(d, id) { return d.users.find(u => u.id === id) || null; },
     me() { const u = PSQ.auth.user(); return u ? ADB.user(ADB.load(), u.id) : null; },
     // ghi nhật ký thao tác (chưa lưu, gọi ADB.save sau)
@@ -306,74 +210,6 @@
     if (rate < P.agentRate) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: P.agentRate - rate, base, amount: pct(base, P.agentRate - rate), date, status: 'missed', note: rate ? 'Phần chênh lệch nếu là đại lý' : 'Chưa kích hoạt cộng tác viên' });
   }
 
-  function migrateV3(d) {
-    let r = 7; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
-    plan(d);
-    const mem = d.users.filter(u => u.role !== 'admin').sort((a, b) => (a.created || '').localeCompare(b.created || ''));
-    const taken = new Set(d.users.map(u => u.username).filter(Boolean));
-    d.users.forEach(u => {
-      if (!u.username) { let b = (u.email || u.code || 'tv').split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '') || 'tv', n = b, k = 1; while (taken.has(n)) n = b + (++k); u.username = n; taken.add(n); }
-      if (u.role !== 'admin') { u.tier = 'khach'; delete u.activated; delete u.agentSince; }
-    });
-    // tài khoản mẫu khach1 có đội nhóm riêng để xem trang thành viên
-    const demo = ADB.user(d, 'u1');
-    if (demo) ['u2', 'u4', 'u10'].forEach(id => { const x = ADB.user(d, id); if (x && x.sponsor !== 'u1' && demo.sponsor !== id) { if (x.parent === x.sponsor) x.parent = 'u1'; x.sponsor = 'u1'; } });
-    // dựng lại sổ hoa hồng và ví theo kế hoạch mới
-    d.commissions = []; d.wallet = [];
-    d.orders.forEach(o => { delete o.settled; });
-    // thành viên đã từng mua: tạo đơn gói kích hoạt CTV vào ngày đăng ký (dữ liệu mẫu)
-    const P = d.settings.plan;
-    mem.forEach((u, i) => {
-      if (!d.orders.some(o => o.userId === u.id) && i % 3) return;
-      d.orders.push({ id: 'KH' + (5001 + i), userId: u.id, name: u.name, phone: u.phone, email: u.email, address: '', pay: 'bank', items: [{ id: PKG_ID, name: 'Gói kích hoạt cộng tác viên', price: P.pkgPrice, qty: 1 }], total: P.pkgPrice, status: 'done', date: [u.created || daysAgo(200), ...d.orders.filter(o => o.userId === u.id).map(o => o.date)].sort()[0], sample: true });
-    });
-    // chạy lại theo thứ tự thời gian
-    d.orders.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id.startsWith('KH') ? -1 : 1)).forEach(o => settleOrder(d, o));
-    d.orders.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    // nạp điểm đã duyệt vào ví mua hàng
-    (d.topups || []).forEach(t => { if (t.status === 'done') credit(d, t.user, 'shop', 'topup', t.amount, 'Nạp điểm qua ' + t.method, t.id, { date: t.date }); });
-    // vài giao dịch mẫu: rút tiền, chuyển điểm
-    const rich = mem.map(u => ({ u, b: ADB.balances(d, u.id) })).sort((a, b) => b.b.sales - a.b.sales);
-    rich.slice(0, 3).forEach(({ u, b }, i) => { const a = Math.floor(b.sales * (i ? .4 : .3) / 100000) * 100000; if (a >= 500000) { ADB.toCash(d, u, a, { date: daysAgo(i * 5 + 3) }); ADB.withdraw(d, u, Math.floor(a * .9 / 100000) * 100000, { bank: 'Vietcombank (mẫu)', account: '0011' + (1000 + i) }, { status: i === 0 ? 'pending' : 'done', date: daysAgo(i * 5 + 2) }); } });
-    const bon = mem.map(u => ({ u, b: ADB.balances(d, u.id) })).filter(x => x.b.bonus > 100000);
-    bon.slice(0, 2).forEach(({ u, b }) => ADB.convert(d, u, Math.floor(b.bonus / 2 / 1000) * 1000, { date: daysAgo(3) }));
-    void rnd;
-  }
-
-  // v4: tiền nạp vào ví tiền mặt (trước đây vào ví mua hàng)
-  function migrateV4(d) {
-    (d.topups || []).forEach(t => { if (!t.wallet) t.wallet = 'cash'; });
-    const moved = {};
-    (d.wallet || []).forEach(w => { if (w.type === 'topup' && w.wallet === 'shop') { w.wallet = 'cash'; w.note = String(w.note || '').replace('Nạp điểm', 'Nạp tiền'); moved[w.user] = 1; } });
-    // nếu điểm mua hàng đã được tiêu vượt số còn lại thì trả khoản nạp về ví cũ để không âm
-    Object.keys(moved).forEach(id => { if (ADB.balances(d, id).shop < 0) d.wallet.forEach(w => { if (w.user === id && w.type === 'topup' && w.wallet === 'cash') w.wallet = 'shop'; }); });
-  }
-
-  // v5: lệnh rút thẳng từ ví hoa hồng (bản cũ, trước khi có ví tiền mặt) đang chờ duyệt: hủy, trả tiền về ví hoa hồng.
-  // Quy trình mới: rút hoa hồng sang ví tiền mặt (trừ thuế), rồi rút ví tiền mặt về ngân hàng.
-  function migrateV5(d) {
-    (d.wallet || []).forEach(w => { if (w.type === 'withdraw' && w.status === 'pending' && ADB.walletOf(w) === 'sales') { w.status = 'rejected'; w.note = (w.note || '') + ' · Đã hủy do đổi sang quy trình rút mới, tiền trả lại ví'; } });
-  }
-
-  // v6: mở sổ quỹ điểm. Số dư đầu kỳ: phát hành đủ cho mọi khoản đã trả trước đó + dự phòng, kế toán còn 100 triệu
-  function migrateV6(d) {
-    if ((d.fundbook || []).length) return;
-    const r = ADB.fund(d), paid = -r.kt, first = (d.wallet || []).map(w => w.date || '').filter(Boolean).sort()[0] || now();
-    const ktOpen = paid + 100000000, phOpen = 400000000;
-    d.fundbook = [
-      { id: uid('qd'), date: first, from: null, to: 'ph', amount: ktOpen + phOpen, note: 'Số dư đầu kỳ khi mở sổ quỹ điểm', actor: 'Hệ thống', opening: true },
-      { id: uid('qd'), date: first, from: 'ph', to: 'kt', amount: ktOpen, note: 'Cấp đầu kỳ cho quỹ kế toán (gồm các khoản đã trả trước khi mở sổ)', actor: 'Hệ thống', opening: true }
-    ];
-  }
-
-  // v7: gói kích hoạt không tính vào doanh số lên đại lý, rút tối thiểu 200.000đ, bỏ cờ miễn hoa hồng đơn đầu của CTV
-  function migrateV7(d) {
-    const P = plan(d); P.pkgCountsAs = 0;
-    if (!d.settings.minWithdraw || d.settings.minWithdraw === 500000) d.settings.minWithdraw = 200000;
-    d.users.forEach(u => { delete u.firstOrderDone; });
-    delete d.settings.pointRate; delete d.settings.commission;
-  }
-
   /* =====================================================================
      QUỸ ĐIỂM (1 PS = 1đ). Luồng: Chủ sở hữu tạo điểm vào Quỹ phát hành, chuyển cho Quỹ kế toán.
      Mọi khoản cộng vào ví thành viên (hoa hồng, thưởng, điểm gói, nạp tiền, quà vòng quay, điều chỉnh)
@@ -383,7 +219,6 @@
   const FUND_IN = ['commission', 'referral', 'override', 'package', 'topup', 'bonus', 'adjust', 'prize'];   // trừ quỹ kế toán
   const FUND_PAIR = ['tocash', 'convert', 'toshop', 'transfer', 'topoints'];                                // chuyển nội bộ, chỉ phần thuế rời ví
   const FUND_ACC = { ph: 'Quỹ phát hành', kt: 'Quỹ kế toán' };
-  const djb = s => { let h = 5381; for (const c of String(s)) h = (h * 33 + c.charCodeAt(0)) >>> 0; return 'h' + h.toString(36); };
   const isOwner = u => !!u && u.role === 'admin' && (u.adminRole || 'owner') === 'owner' && u.status !== 'locked';
 
   Object.assign(ADB, {
@@ -429,11 +264,11 @@
       void P;
       return { issued, ph, kt, members, thue, dtv, paid, held, diff, rows, book, checks, warnAt, ok: !checks.some(c => c.lv === 'red') };
     },
-    // chủ sở hữu tạo điểm vào quỹ phát hành, hoặc chuyển giữa các quỹ. Cần nhập lại mật khẩu.
-    fundAction(d, actor, kind, amount, note, pass) {
+    // chủ sở hữu tạo điểm vào quỹ phát hành, hoặc chuyển giữa các quỹ. Máy chủ kiểm tra lại mật khẩu trước (verified).
+    fundAction(d, actor, kind, amount, note, verified) {
       const u = actor && ADB.user(d, actor.id); amount = Math.round(+amount);
       if (!isOwner(u)) return { error: 'Chỉ chủ sở hữu mới được tạo điểm và chuyển quỹ.' };
-      if (!u.pass || u.pass !== djb(pass || '')) return { error: 'Mật khẩu xác nhận chưa đúng.' };
+      if (verified !== true) return { error: 'Mật khẩu xác nhận chưa đúng.' };
       if (!(amount > 0)) return { error: 'Anh nhập số điểm lớn hơn 0.' };
       if (!String(note || '').trim()) return { error: 'Anh nhập lý do để lưu vào sổ.' };
       const r = ADB.fund(d), M = { mint: [null, 'ph'], give: ['ph', 'kt'], back: ['kt', 'ph'], burn: ['ph', null] }[kind];
@@ -717,15 +552,6 @@
     const W = d.wheel = { prizes: WHEEL_PRIZES.map(([name, color, weight, stock], i) => ({ id: 'qz' + (i + 1), name, color, weight, stock, active: true })), codes: [], forced: {}, spins: [], events: [], settings: Object.assign({}, WHEEL_SET), rv: 3 };
     W.prizes.forEach(p => { const m = /([\d.]+)\s*PS/i.exec(p.name); if (m) { p.points = +m[1].replace(/\./g, ''); p.wallet = 'shop'; } });
     syncCodes(d, W);
-    // vài lượt quay mẫu của thành viên khác để trang có danh sách người trúng
-    const sample = W.codes.filter(c => c.user !== 'u1').slice(0, 5);
-    sample.forEach((c, i) => {
-      const p = W.prizes[[1, 3, 4, 2, 5][i] % W.prizes.length], at = daysAgo(i * 3 + 1) + ' ' + String(9 + i * 2).padStart(2, '0') + ':' + String(i * 13 % 60).padStart(2, '0');
-      c.status = 'used'; c.prize = p.id; c.usedAt = at;
-      W.spins.push({ id: uid('vq'), code: c.code, user: c.user, prize: p.id, prizeName: p.name, date: at, sample: true });
-    });
-    W.events.push({ id: 'sk1', name: 'Giao lưu Zoom tri ân khách hàng', kind: 'online', date: daysAgo(-7), participants: ['Nguyễn Minh Anh', 'Trần Quốc Huy', 'Lê Thu Hà', 'Phạm Gia Bảo', 'Võ Ngọc Lan', 'Đặng Hải Nam', 'Bùi Khánh Linh', 'Hoàng Đức Tín', 'Đỗ Mai Phương', 'Ngô Thành Đạt', 'Lý Bảo Châu', 'Dương Tuấn Kiệt'], prizes: [{ name: 'Nụ trầm', qty: 3 }, { name: 'Vòng tay trầm hương', qty: 1 }], mode: 'random', fixedWinners: [], winners: [], removeWinners: true });
-    W.events.push({ id: 'sk2', name: 'Khai trương showroom', kind: 'offline', date: daysAgo(-20), participants: Array.from({ length: 60 }, (_, i) => String(i + 1)), prizes: [{ name: 'Trà trầm', qty: 5 }, { name: 'Voucher 200.000đ', qty: 2 }], mode: 'random', fixedWinners: [], winners: [], removeWinners: true });
     return W;
   }
   // mỗi người đăng ký qua giới thiệu = perRef mã quay cho người giới thiệu, nếu người giới thiệu thuộc cấp bậc được nhận
@@ -829,8 +655,6 @@
   });
   {
     const baseLoad = ADB.load;
-    ADB.load = function () { const d = baseLoad(); const had = !!d.wheel; wheelData(d); if (syncCodes(d, d.wheel) || !had) db.save(d); return d; };
+    ADB.load = function () { const d = baseLoad(); wheelData(d); return d; };
   }
-
-  ADB.load(); // nâng cấp dữ liệu ngay khi nạp trang (để tài khoản nhân viên mẫu đăng nhập được)
 })();

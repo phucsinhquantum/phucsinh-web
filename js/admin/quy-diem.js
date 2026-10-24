@@ -88,10 +88,11 @@
     const A = $('#qaA', md.el);
     A.addEventListener('input', () => { const a = Math.round(+A.value || 0); $('#qaS', md.el).textContent = a ? 'Bằng chữ số: ' + money(a) + (a >= 1e9 ? ' (khoản rất lớn, anh kiểm tra lại)' : '') : ''; });
     $('#qaF', md.el).addEventListener('submit', e => {
-      e.preventDefault(); const dd = ADB.load(), a = Math.round(+A.value || 0), note = $('#qaN', md.el).value;
-      const res = ADB.fundAction(dd, PSQ.auth.user(), kind, a, note, $('#qaP', md.el).value);
+      e.preventDefault(); const a = Math.round(+A.value || 0), note = $('#qaN', md.el).value;
+      // máy chủ kiểm tra lại mật khẩu rồi mới ghi sổ quỹ
+      const res = API.act('fund', { kind, amount: a, note, pass: $('#qaP', md.el).value });
       if (res.error) return $('#qaE', md.el).textContent = res.error;
-      ADB.log(dd, t, `${money(a)}: ${note.trim()}`); ADB.save(dd); toast(t + ': ' + money(a)); md.close(); render(el);
+      toast(t + ': ' + money(a)); md.close(); render(el);
     });
     setTimeout(() => A.focus(), 60);
   }

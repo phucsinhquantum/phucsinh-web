@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024b">
-<script src="js/lang.js?v=20261024b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024c">
+<script src="js/lang.js?v=20261024c"></script>
 </head>
 <body data-page="wheel">
 <div id="page" data-title="Vòng quay may mắn" data-crumb="Vòng quay may mắn">
@@ -99,9 +99,11 @@
 
 </div>
 
-<script src="js/data.js?v=20261024b"></script>
-<script src="js/app.js?v=20261024b"></script>
-<script src="js/psq-data.js?v=20261024b"></script>
+<script src="js/patch.js?v=20261024c"></script>
+<script src="js/api.js?v=20261024c"></script>
+<script src="js/data.js?v=20261024c"></script>
+<script src="js/app.js?v=20261024c"></script>
+<script src="js/psq-data.js?v=20261024c"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, toast, modal, fdate, auth } = PSQ;
@@ -357,9 +359,8 @@
   });
   function cusSpin() {
     if (!armed) { toast('Anh chị nhập mã quay trước khi quay.'); $('#whCode').focus({ preventScroll: innerWidth < 1100 ? false : true }); return; }
-    const d = ADB.load(), u = auth.user(), r = ADB.wheelSpin(d, armed, u);
-    if (r.error) { toast(r.error); armed = null; cusRender(); return; }
-    ADB.log(d, 'Quay thưởng', `${u.name} dùng mã ${armed}: ${r.prize.name}`); ADB.save(d);
+    const r = API.act('spin', { code: armed });
+    if (r.error) { toast(r.error, 'err'); armed = null; cusRender(); return; }
     const code = armed; armed = null;
     const same = cus.segments.length === r.segments.length && cus.segments.every((s, i) => s.id === r.segments[i].id);
     if (!same) cus.draw(r.segments.map(p => ({ id: p.id, label: p.name, color: p.color })));

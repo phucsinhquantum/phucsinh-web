@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024b">
-<script src="js/lang.js?v=20261024b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024c">
+<script src="js/lang.js?v=20261024c"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -133,9 +133,11 @@
   </section>
 </div>
 
-<script src="js/data.js?v=20261024b"></script>
-<script src="js/app.js?v=20261024b"></script>
-<script src="js/psq-data.js?v=20261024b"></script>
+<script src="js/patch.js?v=20261024c"></script>
+<script src="js/api.js?v=20261024c"></script>
+<script src="js/data.js?v=20261024c"></script>
+<script src="js/app.js?v=20261024c"></script>
+<script src="js/psq-data.js?v=20261024c"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -343,24 +345,11 @@
     if (e.target.closest('#placeBtn')) {
       const b = $('#placeBtn'); b.disabled = true;
       const want = payUsed(), wantCash = cashUsed(); // tính trước khi giỏ hàng được xóa
-      const res = PSQ.placeOrder({ name: form.name, phone: normPhone(form.phone), email: form.email, address: `${form.address}, ${form.province}`, note: form.note, pay: form.pay });
-      if (res.error) { b.disabled = false; toast(res.error); return; }
+      const saveAddr = u && !form.addrId && form.saveAddr ? { line: form.address.trim(), province: form.province } : null;
+      const res = PSQ.placeOrder({ name: form.name, phone: normPhone(form.phone), email: form.email, address: `${form.address}, ${form.province}`, note: form.note, pay: form.pay },
+        { useShop: u ? want : 0, useCash: u ? wantCash : 0, saveAddr });
+      if (res.error) { b.disabled = false; toast(res.error, 'err'); return; }
       placed = res.order;
-      if (u && window.ADB && !form.addrId && form.saveAddr) {
-        const d = ADB.load(); d.addresses = d.addresses || [];
-        const mine = d.addresses.filter(a => a.user === u.id), line = form.address.trim();
-        if (!mine.some(a => a.line === line && a.province === form.province)) { d.addresses.push({ id: ADB.uid('dc'), user: u.id, name: form.name, phone: normPhone(form.phone), line, province: form.province, isDefault: !mine.length }); ADB.save(d); }
-      }
-      if ((want || wantCash) && u && window.ADB) {
-        const d = ADB.load(), o = d.orders.find(x => x.id === placed.id), me = ADB.user(d, u.id);
-        const used = o && me && want ? ADB.spendShop(d, me, o, want) : 0, usedC = o && me && wantCash ? ADB.spendCash(d, me, o, wantCash) : 0;
-        if (used || usedC) {
-          const full = used + usedC >= o.total;
-          if (full) ADB.setStatus(d, o, 'paid');
-          ADB.log(d, 'Thanh toán bằng ví', `${o.id}: ${me.name}${used ? ` dùng ${PS(used)} ví mua hàng` : ''}${usedC ? ` trả ${money(usedC)} ví tiền mặt` : ''}${full ? ', đã thanh toán đủ' : ''}`);
-          ADB.save(d); placed = o;
-        }
-      }
       render(true); toast('Đặt hàng thành công: ' + placed.id);
     }
   });
@@ -386,7 +375,7 @@
     e.preventDefault();
     const f = e.target, id = f.oid.value.trim().toUpperCase().replace(/\s/g, ''), ph = normPhone(f.phone.value), out = $('#lookupRes');
     if (!id || !ph) { out.innerHTML = `<p class="red" style="font-size:13px">Anh chị nhập đủ mã đơn và số điện thoại.</p>`; return; }
-    const o = PSQ.db.load().orders.find(x => x.id.toUpperCase() === id && normPhone(x.phone) === ph);
+    const o = API.act('trackOrder', { id, phone: ph }).order;
     out.innerHTML = o ? `<div class="box"><div class="row"><b class="gold">${esc(o.id)}</b>${statusBadge(o.status)}</div>
         <div class="row"><span class="dim">Ngày đặt</span><span>${fdate(o.date)}</span></div>
         <div class="row"><span class="dim">Sản phẩm</span><span>${o.items.reduce((s, x) => s + x.qty, 0)} món</span></div>

@@ -2,10 +2,8 @@
    PHÚC SINH QUANTUM — khung web app dùng chung cho mọi trang
    - Dựng thanh bên, thanh trên, thanh dưới (điện thoại), chân trang
    - Nền khói trầm + đốm sáng
-   - Giỏ hàng, tài khoản, đơn hàng (lưu trên trình duyệt: localStorage)
+   - Giỏ hàng (trên trình duyệt), tài khoản, đơn hàng (trên máy chủ, qua js/api.js)
    - Biểu đồ SVG, hình vẽ sản phẩm khi chưa có ảnh
-   LƯU Ý: dữ liệu tài khoản / đơn hàng hiện chỉ nằm trên máy khách để
-   chạy thử. Trước khi bán thật cần nối với máy chủ (backend).
    ========================================================= */
 (function () {
   const S = window.SITE || {};
@@ -80,30 +78,11 @@
   const icon = (n, cls = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="i ${cls}" aria-hidden="true">${P[n] || P.sparkle}</svg>`;
 
   /* ---------- dữ liệu trên trình duyệt ---------- */
-  const DB_KEY = 'psq_db_v1', CART_KEY = 'psq_cart_v1', SES_KEY = 'psq_session_v1';
+  const CART_KEY = 'psq_cart_v1';
   const store = {
     get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
-  // mã hoá mật khẩu đơn giản (chỉ để chạy thử, KHÔNG an toàn cho bản chính thức)
-  const hash = s => { let h = 5381; for (const c of String(s)) h = (h * 33 + c.charCodeAt(0)) >>> 0; return 'h' + h.toString(36); };
-
-  function seed() {
-    const names = ['Nguyễn Minh Anh', 'Trần Quốc Huy', 'Lê Thu Hà', 'Phạm Gia Bảo', 'Võ Ngọc Lan', 'Đặng Hải Nam', 'Bùi Khánh Linh', 'Hoàng Đức Tín', 'Đỗ Mai Phương', 'Ngô Thành Đạt', 'Lý Bảo Châu', 'Dương Tuấn Kiệt'];
-    const cities = ['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'Huế', 'Nha Trang', 'Quảng Nam'];
-    let r = 7; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
-    const users = [{ id: 'u-admin', name: 'Quản trị viên', email: S.demoAdmin.email, phone: S.phone, pass: hash(S.demoAdmin.pass), role: 'admin', created: '2026-01-01' }];
-    names.forEach((n, i) => users.push({ id: 'u' + (i + 1), name: n, email: 'khach' + (i + 1) + '@email.com', phone: '09' + String(10000000 + Math.floor(rnd() * 8e7)).slice(0, 8), pass: hash('123456'), role: i % 5 === 0 ? 'agent' : 'member', city: cities[i % cities.length], created: (() => { const d = new Date(); d.setDate(d.getDate() - (i * 23 % 200) - 2); return d.toISOString().slice(0, 10); })() }));
-    const orders = []; const st = ['paid', 'paid', 'done', 'ship', 'pending', 'paid', 'failed', 'done'];
-    for (let i = 0; i < 26; i++) {
-      const u = users[1 + Math.floor(rnd() * names.length)];
-      const items = []; const n = 1 + Math.floor(rnd() * 2);
-      for (let k = 0; k < n; k++) { const p = PRODUCTS[Math.floor(rnd() * PRODUCTS.length)]; if (!items.find(x => x.id === p.id)) items.push({ id: p.id, name: p.name, price: p.price, qty: 1 + Math.floor(rnd() * 1.4) }); }
-      const d = new Date(); d.setDate(d.getDate() - Math.floor(i * 1.15));
-      orders.push({ id: 'PSQ' + (1100 - i), userId: u.id, name: u.name, email: u.email, phone: u.phone, address: u.city, items, total: items.reduce((s, x) => s + x.price * x.qty, 0), pay: rnd() > .5 ? 'bank' : 'cod', status: st[i % st.length], date: d.toISOString().slice(0, 10) });
-    }
-    return { users, orders, messages: [], seeded: today() };
-  }
   // sản phẩm do quản trị thêm / sửa trên trình duyệt (ghi đè lên data.js)
   /* ---------- video khách hàng (YouTube) ---------- */
   const VID_KEY = 'psq_videos_v1';
@@ -154,48 +133,28 @@
     hide(id) { const ed = store.get(PROD_KEY, { edits: [], hidden: [] }); ed.hidden = [...new Set([...(ed.hidden || []), id])]; store.set(PROD_KEY, ed); },
     reset() { store.set(PROD_KEY, null); }
   };
+  // dữ liệu nằm trên máy chủ (js/api.js); trang nhận bản theo quyền người đang đăng nhập
   const db = {
-    load() { let d = store.get(DB_KEY); if (!d || !d.users) { d = seed(); store.set(DB_KEY, d); } return d; },
-    save(d) { store.set(DB_KEY, d); },
-    reset() { const d = seed(); store.set(DB_KEY, d); return d; }
+    load() { return API.load(); },
+    save(d) { return API.save(d); }
   };
 
   /* ---------- tài khoản ---------- */
   const auth = {
-    user() { const id = store.get(SES_KEY); return id ? db.load().users.find(u => u.id === id) || null : null; },
-    login(email, pass) {
-      const u = db.load().users.find(x => x.email.toLowerCase() === String(email).trim().toLowerCase());
-      if (!u || u.pass !== hash(pass)) return { error: 'Email hoặc mật khẩu chưa đúng.' };
-      store.set(SES_KEY, u.id); return { user: u };
-    },
-    register({ name, email, phone, pass, ref }) {
-      const d = db.load();
-      if (!name || !email || !pass) return { error: 'Anh chị điền đủ họ tên, email và mật khẩu.' };
-      if (d.users.some(x => x.email.toLowerCase() === email.trim().toLowerCase())) return { error: 'Email này đã có tài khoản.' };
-      const u = { id: 'u' + Date.now(), name: name.trim(), email: email.trim(), phone: (phone || '').trim(), pass: hash(pass), role: 'member', created: today(), status: 'active' };
-      // mã giới thiệu: người giới thiệu là tuyến trên (F1), tài khoản mới vào danh sách "chờ lên cây"
-      let k = 1000 + d.users.length; while (d.users.some(x => x.code === 'PS' + k)) k++; u.code = 'PS' + k;
-      const sp = ref && d.users.find(x => (x.code || '').toUpperCase() === String(ref).trim().toUpperCase());
-      if (sp) { u.sponsor = sp.id; const auto = d.settings && d.settings.autoPlace; u.placed = !!auto; u.parent = auto ? sp.id : null; }
-      d.users.push(u); db.save(d); store.set(SES_KEY, u.id); return { user: u };
-    },
-    update(patch) { const d = db.load(), u = d.users.find(x => x.id === store.get(SES_KEY)); if (!u) return; Object.assign(u, patch); db.save(d); return u; },
-    logout() { store.set(SES_KEY, null); },
-    // đổi mật khẩu: kiểm tra mật khẩu hiện tại
-    changePass(oldPass, newPass) {
-      const d = db.load(), u = d.users.find(x => x.id === store.get(SES_KEY)); if (!u) return { error: 'Anh chị chưa đăng nhập.' };
-      if (u.pass !== hash(oldPass)) return { error: 'Mật khẩu hiện tại chưa đúng.' };
-      if (String(newPass || '').length < 6) return { error: 'Mật khẩu mới cần ít nhất 6 ký tự.' };
-      if (hash(newPass) === u.pass) return { error: 'Mật khẩu mới cần khác mật khẩu cũ.' };
-      u.pass = hash(newPass); u.passChanged = today(); db.save(d); return { ok: true };
-    }
+    user() { const m = API.me; if (!m) return null; return (API.db.users || []).find(u => u.id === m.id) || m; },
+    // đăng nhập bằng email, tên truy cập, mã thành viên hoặc số điện thoại
+    login(login, pass) { const r = API.act('login', { login, pass }); return r.error ? r : { user: r.user }; },
+    register(f) { const r = API.act('register', f); return r.error ? r : { user: r.user }; },
+    update(patch) { const r = API.act('profile', patch); return r.error ? null : auth.user(); },
+    logout() { API.logout(); },
+    changePass(oldPass, newPass) { return API.act('changePass', { old: oldPass, pass: newPass }); }
   };
 
   /* ---------- giỏ hàng ---------- */
   const product = id => PRODUCTS.find(p => p.id === id);
   // tồn kho do quản trị cập nhật (Kho): null là chưa quản lý tồn kho, coi như còn hàng
   let stockC = null;
-  const stockMap = () => stockC || (setTimeout(() => { stockC = null; }), stockC = (store.get(DB_KEY, {}) || {}).stock || {});
+  const stockMap = () => stockC || (setTimeout(() => { stockC = null; }), stockC = (API.db || {}).stock || {});
   const stockOf = id => { const m = stockMap(); return id in m ? Math.max(0, +m[id] || 0) : null; };
   const soldOut = id => stockOf(id) === 0;
   const cart = {
@@ -212,15 +171,13 @@
     clear() { store.set(CART_KEY, []); cart.changed(); },
     changed() { $$('[data-cart-count]').forEach(n => { const c = cart.count(); n.textContent = c; n.hidden = !c; }); renderDrawer(); document.dispatchEvent(new CustomEvent('cart:change')); }
   };
-  function placeOrder(info) {
-    const items = cart.items().map(x => { const p = product(x.id); return { id: p.id, name: p.name, price: p.price, qty: x.qty }; });
+  // đặt hàng: máy chủ tính lại giá, tồn kho, trừ ví. extra: { useShop, useCash, saveAddr }
+  function placeOrder(info, extra = {}) {
+    const items = cart.items().map(x => ({ id: x.id, qty: x.qty }));
     if (!items.length) return { error: 'Giỏ hàng đang trống.' };
-    const out = items.find(x => { const st = stockOf(x.id); return st !== null && x.qty > st; });
-    if (out) { const st = stockOf(out.id); return { error: st ? `${out.name} chỉ còn ${st} trong kho, anh chị giảm số lượng giúp em.` : `${out.name} đã hết hàng, anh chị bỏ sản phẩm này khỏi giỏ.` }; }
-    const d = db.load(), u = auth.user();
-    const num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
-    const o = { id: 'PSQ' + num, userId: u ? u.id : null, ...info, items, total: items.reduce((s, x) => s + x.price * x.qty, 0) + (S.shipFee || 0), status: 'pending', date: today() };
-    d.orders.unshift(o); db.save(d); cart.clear(); return { order: o };
+    const r = API.act('placeOrder', Object.assign({ items, info }, extra));
+    if (r.error) return r;
+    cart.clear(); return { order: r.order };
   }
 
   /* ---------- hình vẽ sản phẩm (khi chưa có ảnh thật) ---------- */
@@ -281,7 +238,7 @@
   // biểu đồ vùng nhiều đường, có điểm sáng và chú thích khi di chuột
   function area(el, { labels, series, fmt = short, height = 260, mark = -1 }) {
     const W = Math.max(320, el.clientWidth || 600), H = height, pl = 40, pr = 12, pt = 16, pb = 28;
-    const all = series.flatMap(s => s.values), mx = Math.max(...all) * 1.15;
+    const all = series.flatMap(s => s.values), mx = (Math.max(...all, 0) || 1) * 1.15;
     const X = i => pl + i / (labels.length - 1) * (W - pl - pr), Y = v => pt + (1 - v / mx) * (H - pt - pb);
     const smooth = vals => vals.map((v, i) => { const x = X(i), y = Y(v); if (!i) return `M${x} ${y}`; const px = X(i - 1), py = Y(vals[i - 1]), cx = (px + x) / 2; return `C${cx} ${py} ${cx} ${y} ${x} ${y}`; }).join('');
     let g = '', defs = '';
@@ -309,7 +266,7 @@
   }
   // biểu đồ vòng
   function donut(el, { segments, center, sub, size = 150 }) {
-    const total = segments.reduce((s, x) => s + x.value, 0), R = 58, C = 2 * Math.PI * R;
+    const total = segments.reduce((s, x) => s + x.value, 0) || 1, R = 58, C = 2 * Math.PI * R;
     let off = 0, arcs = '';
     segments.forEach(s => { const len = s.value / total * C; arcs += `<circle cx="80" cy="80" r="${R}" fill="none" stroke="${s.color}" stroke-width="16" stroke-dasharray="${Math.max(0, len - 3)} ${C}" stroke-dashoffset="${-off}" stroke-linecap="round" style="filter:drop-shadow(0 0 6px ${s.color})"/>`; off += len; });
     el.innerHTML = `<svg viewBox="0 0 160 160" width="${size}" height="${size}" style="display:block;margin:0 auto"><g transform="rotate(-90 80 80)"><circle cx="80" cy="80" r="${R}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="16"/>${arcs}</g><text x="80" y="80" text-anchor="middle" fill="#eef2f1" font-size="24" font-weight="700" font-family="Be Vietnam Pro, sans-serif">${esc(center)}</text><text x="80" y="100" text-anchor="middle" fill="#6f7c80" font-size="11" font-family="Be Vietnam Pro, sans-serif">${esc(sub || '')}</text></svg>`;
@@ -514,7 +471,7 @@
     return L.length ? `<div class="foot-social">${L.map(([i, n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener" aria-label="${n}" title="${n}">${icon(i)}</a>`).join('')}</div>` : '';
   }
   // nút "Đăng ký CTV" nổi bật trên thanh trên cùng (ẩn khi đã là CTV, đại lý hoặc quản trị)
-  const ctvRate = () => ((((store.get(DB_KEY, {}) || {}).settings || {}).plan || {}).ctvRate) || 10;
+  const ctvRate = () => ((((API.db || {}).settings || {}).plan || {}).ctvRate) || 10;
   const ctvHref = () => auth.user() ? 'thanh-vien.html#kich-hoat' : 'thanh-vien.html?dang-ky=1';
   function ctvCta() {
     const u = auth.user(); if (u && (u.role === 'admin' || u.tier === 'ctv' || u.tier === 'daily')) return '';

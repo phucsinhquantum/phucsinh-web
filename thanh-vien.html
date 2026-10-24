@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024b">
-<script src="js/lang.js?v=20261024b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261024c">
+<script src="js/lang.js?v=20261024c"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,9 +216,11 @@
   <div id="view"></div>
 </div>
 
-<script src="js/data.js?v=20261024b"></script>
-<script src="js/app.js?v=20261024b"></script>
-<script src="js/psq-data.js?v=20261024b"></script>
+<script src="js/patch.js?v=20261024c"></script>
+<script src="js/api.js?v=20261024c"></script>
+<script src="js/data.js?v=20261024c"></script>
+<script src="js/app.js?v=20261024c"></script>
+<script src="js/psq-data.js?v=20261024c"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -247,10 +249,11 @@
     try { await navigator.clipboard.writeText(inp.value); } catch (e) { inp.select(); try { document.execCommand('copy'); } catch (er) {} }
     toast('Đã sao chép đường dẫn giới thiệu');
   }
-  const save = (d, action, detail, msg) => { ADB.log(d, action, detail); ADB.save(d); toast(msg); };
+  // gửi thao tác lên máy chủ: lỗi thì hiện ở el (hoặc thông báo đỏ), xong thì hiện msg
+  const act = (name, args, msg, el) => { const r = API.act(name, args); if (r.error) { if (el) el.textContent = r.error; else toast(r.error, 'err'); return null; } if (msg) toast(typeof msg === 'function' ? msg(r) : msg); return r; };
   const head = (t, sub, right = '') => `<div class="card-head" style="flex-wrap:wrap"><div><h3>${t}</h3>${sub ? `<div class="sub">${sub}</div>` : ''}</div>${right ? `<div style="margin-left:auto">${right}</div>` : ''}</div>`;
   const ph = (t, sub) => `<div class="tv-ph"><h2>${t}</h2>${sub ? `<p class="dim">${sub}</p>` : ''}</div>`;
-  const note = `<p class="biz-note">${icon('info')}Bản chạy thử: nạp tiền được xác nhận ngay, rút tiền do kế toán lập lệnh và công ty duyệt, chưa chuyển tiền thật.</p>`;
+  const note = `<p class="biz-note">${icon('info')}Nạp tiền vào ví khi công ty xác nhận đã nhận tiền. Rút tiền về ngân hàng do công ty duyệt và chuyển khoản.</p>`;
   const pctOf = (v, t) => t > 0 ? Math.round(v / t * 100) : 0;
   const isPkg = o => (o.items || []).some(x => x.id === ADB.PKG_ID);
   const anyPkg = o => ADB.isPkgOrder(o);
@@ -263,19 +266,6 @@
 
   /* ---------- tên truy cập ---------- */
   const UNAME = /^[a-z0-9._]{3,30}$/;
-  const unameTaken = (d, n, self) => d.users.some(u => u.id !== self && ((u.username || '').toLowerCase() === n || (u.code || '').toLowerCase() === n));
-  const autoUname = (d, u) => { let b = String(u.email || u.code || 'tv').split('@')[0].toLowerCase().replace(/[^a-z0-9._]/g, '') || 'tv', n = b, k = 1; while (unameTaken(d, n, u.id)) n = b + (++k); return n; };
-  // tài khoản mới đăng ký chưa có tên truy cập / cấp bậc: bổ sung
-  function ensureMember(id, wanted) {
-    const d = ADB.load(), u = ADB.user(d, id); if (!u) return;
-    let ch = false;
-    if (wanted && UNAME.test(wanted) && !unameTaken(d, wanted, u.id)) { u.username = wanted; ch = true; }
-    if (!u.username) { u.username = autoUname(d, u); ch = true; }
-    if (!u.tier && u.role !== 'admin') { u.tier = 'khach'; ch = true; }
-    if (wanted !== undefined) { ADB.log(d, 'Đăng ký thành viên', `${u.name} (@${u.username})${u.sponsor ? ', giới thiệu bởi ' + ((ADB.user(d, u.sponsor) || {}).name || '') : ''}`); ch = true; }
-    if (ch) ADB.save(d);
-  }
-
   /* ---------- menu ---------- */
   let ME = null;
   const MENU = (d, me) => [
@@ -421,9 +411,7 @@
         <p class="dim mt-2" style="font-size:12.5px">Gói đại lý không tính hoa hồng cho người giới thiệu. Hoa hồng được tính khi anh chị dùng điểm để đặt đơn hàng.</p></div>`;
     box.innerHTML = ph('Đăng ký đại lý', 'Lên Đại lý ngay bằng gói đại lý') + `<div class="grid g-2">${intro}${status}</div>`;
     const btn = $('#agBuy', box); if (btn) btn.addEventListener('click', () => {
-      const dd = ADB.load(), u = ADB.user(dd, me.id); if (agentOrder(dd, u.id)) return redo();
-      const ord = ADB.buyAgentPackage(dd, u, 'bank');
-      save(dd, 'Đặt gói đại lý', `${u.name}: đơn ${ord.id}, ${money(ord.total)}`, 'Đã tạo đơn ' + ord.id + ', anh chị chuyển khoản để lên đại lý'); redo();
+      btn.disabled = true; if (act('buyAgentPackage', {}, r => 'Đã tạo đơn ' + r.order.id + ', anh chị chuyển khoản để lên đại lý')) redo(); else btn.disabled = false;
     });
   }
 
@@ -449,9 +437,7 @@
         <p class="dim mt-2" style="font-size:12.5px">Tài khoản được kích hoạt sau khi công ty xác nhận thanh toán.</p></div>`;
     box.innerHTML = ph('Kích hoạt cộng tác viên', 'Mở gian hàng online và bắt đầu nhận hoa hồng') + `<div class="grid g-2">${intro}${status}</div>`;
     const btn = $('#pkBuy', box); if (btn) btn.addEventListener('click', () => {
-      const dd = ADB.load(), u = ADB.user(dd, me.id); if (pkgOrder(dd, u.id)) return redo();
-      const ord = ADB.buyPackage(dd, u, 'bank');
-      save(dd, 'Đặt gói kích hoạt CTV', `${u.name}: đơn ${ord.id}, ${money(ord.total)}`, 'Đã tạo đơn ' + ord.id + ', anh chị chuyển khoản để kích hoạt'); redo();
+      btn.disabled = true; if (act('buyPackage', {}, r => 'Đã tạo đơn ' + r.order.id + ', anh chị chuyển khoản để kích hoạt')) redo(); else btn.disabled = false;
     });
   }
 
@@ -596,7 +582,7 @@
     const A = $('#tpA', box), M = $('#tpM', box);
     const info = () => {
       const bank = M.value === 'Chuyển khoản', a = Math.round(+A.value || 0);
-      $('#tpInfo', box).innerHTML = bank ? `<div class="box" style="padding:14px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)">${bankBox(me, a)}</div><p class="dim mt-1" style="font-size:12px">Ghi đúng nội dung để tiền tự vào ví. Bản chạy thử: bấm nút bên dưới để giả lập ngân hàng báo có.</p>`
+      $('#tpInfo', box).innerHTML = bank ? `<div class="box" style="padding:14px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)">${bankBox(me, a)}</div><p class="dim mt-1" style="font-size:12px">Ghi đúng nội dung chuyển khoản. Tiền vào ví ngay khi công ty xác nhận đã nhận.</p>`
         : `<p class="dim" style="font-size:12.5px">Nộp tiền tại cửa hàng, kế toán xác nhận rồi tiền mới vào ví.</p>`;
       $('#tpS', box).textContent = bank ? 'Tôi đã chuyển khoản' : 'Gửi yêu cầu nạp';
     };
@@ -606,9 +592,7 @@
     $('#tpF', box).addEventListener('submit', e => {
       e.preventDefault(); const a = Math.round(+A.value || 0);
       if (!a || a < 10000) return $('#tpE', box).textContent = 'Số tiền nạp tối thiểu 10.000đ.';
-      if (M.value === 'Chuyển khoản') { const r = depositNow(a); if (r.error) return $('#tpE', box).textContent = r.error; return redo(); }
-      const dd = ADB.load(), u = ADB.user(dd, me.id), r = ADB.deposit(dd, u, a, M.value, { status: 'pending' }); if (r.error) return $('#tpE', box).textContent = r.error;
-      save(dd, 'Yêu cầu nạp tiền', `${me.name}: ${money(a)} qua ${M.value}`, 'Đã gửi yêu cầu nạp ' + money(a) + ', chờ kế toán xác nhận'); redo();
+      if (act('deposit', { amount: a, method: M.value }, 'Đã gửi yêu cầu nạp ' + money(a) + ', tiền vào ví khi công ty xác nhận', $('#tpE', box))) redo();
     });
   }
 
@@ -632,7 +616,7 @@
         <p class="red" id="pfAvE" style="font-size:13px;min-height:18px;margin:0"></p></div>
       <div class="card glow-cyan">${head('Tài khoản')}<dl class="kv"><dt>Cấp bậc</dt><dd>${tierB(me)}</dd><dt>Tham gia</dt><dd>${fdate(me.created)}</dd><dt>Người giới thiệu</dt><dd>${sp ? esc(sp.name) : '<span class="dim">Không có</span>'}</dd><dt>Trên cây</dt><dd>${me.placed === false ? '<span class="badge pending">Chờ lên cây</span>' : '<span class="badge ok">Đã xếp</span>'}</dd></dl>
         ${me.role === 'admin' ? `<a class="btn btn-sm btn-outline-gold mt-2" href="quan-tri.html">${icon('shield')} Trang quản trị</a>` : ''}</div></div></div>`;
-    const setAv = (url, msg) => { const dd = ADB.load(), u = ADB.user(dd, me.id); if (url) u.avatar = url; else delete u.avatar; save(dd, url ? 'Cập nhật ảnh đại diện' : 'Xóa ảnh đại diện', '@' + u.username, msg); redo(); };
+    const setAv = (url, msg) => { if (act('avatar', { url }, msg, $('#pfAvE', box))) redo(); };
     $('#pfAv', box).addEventListener('change', async e => {
       const f = e.target.files && e.target.files[0], er = $('#pfAvE', box); er.textContent = ''; e.target.value = '';
       if (!f) return;
@@ -645,8 +629,7 @@
       e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), name = f.name.trim(), phone = f.phone.trim();
       if (name.length < 2) return $('#pfE', box).textContent = 'Anh chị nhập họ và tên.';
       if (phone && !/^[0-9 +.]{9,15}$/.test(phone)) return $('#pfE', box).textContent = 'Số điện thoại chưa đúng.';
-      const dd = ADB.load(), u = ADB.user(dd, me.id); Object.assign(u, { name, phone, birthday: f.birthday });
-      save(dd, 'Cập nhật hồ sơ', `@${u.username}: ${name}`, 'Đã lưu hồ sơ'); redo();
+      if (act('profile', { name, phone, birthday: f.birthday }, 'Đã lưu hồ sơ', $('#pfE', box))) redo();
     });
   }
 
@@ -686,11 +669,8 @@
       $('#adF', md.el).addEventListener('submit', e => {
         e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), v = { name: f.name.trim(), phone: f.phone.trim(), line: f.line.trim(), province: f.province.trim(), isDefault: !!f.isDefault };
         if (!v.name || !v.phone || v.line.length < 5 || !v.province) return $('#adE', md.el).textContent = 'Anh chị điền đủ người nhận, số điện thoại, địa chỉ và tỉnh thành.';
-        const dd = ADB.load(); dd.addresses = dd.addresses || [];
-        if (v.isDefault) dd.addresses.filter(x => x.user === me.id).forEach(x => x.isDefault = false);
-        if (isNew) dd.addresses.push({ id: ADB.uid('dc'), user: me.id, ...v }); else Object.assign(dd.addresses.find(x => x.id === a.id), v);
-        if (!dd.addresses.some(x => x.user === me.id && x.isDefault)) dd.addresses.find(x => x.user === me.id).isDefault = true;
-        save(dd, isNew ? 'Thêm địa chỉ' : 'Sửa địa chỉ', me.name, 'Đã lưu địa chỉ'); md.close(); redo();
+        if (!act('addrSave', Object.assign({ id: isNew ? null : a.id }, v), 'Đã lưu địa chỉ', $('#adE', md.el))) return;
+        md.close(); redo();
       });
     };
     $('#adAdd', box).addEventListener('click', () => edit(null));
@@ -699,9 +679,8 @@
       if (ed) return edit(A.find(a => a.id === ed.dataset.ae));
       if (!df && !dl) return;
       if (dl && !confirm('Xóa địa chỉ này?')) return;
-      const dd = ADB.load(), mineD = dd.addresses.filter(x => x.user === me.id);
-      if (df) { mineD.forEach(x => x.isDefault = x.id === df.dataset.ad); save(dd, 'Đặt địa chỉ mặc định', me.name, 'Đã đặt địa chỉ mặc định'); }
-      if (dl) { const wasDef = (mineD.find(x => x.id === dl.dataset.ax) || {}).isDefault; dd.addresses = dd.addresses.filter(x => x.id !== dl.dataset.ax); const rest = dd.addresses.filter(x => x.user === me.id); if (wasDef && rest.length) rest[0].isDefault = true; save(dd, 'Xóa địa chỉ', me.name, 'Đã xóa địa chỉ'); }
+      if (df) act('addrDefault', { id: df.dataset.ad }, 'Đã đặt địa chỉ mặc định');
+      if (dl) act('addrDelete', { id: dl.dataset.ax }, 'Đã xóa địa chỉ');
       redo();
     });
   }
@@ -710,20 +689,18 @@
   // nội dung chuyển khoản để hệ thống nhận diện người nạp
   const depCode = u => 'NAP ' + String(u.username || u.code || '').toUpperCase();
   const bankBox = (u, a) => `<dl class="kv dep-bank"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd>${a ? `<dt>Số tiền</dt><dd><b>${money(a)}</b></dd>` : ''}<dt>Nội dung</dt><dd><b class="cyan">${esc(depCode(u))}</b> <button class="link-btn" type="button" data-copy-dep="${esc(depCode(u))}">Sao chép</button></dd></dl>`;
-  // bản chạy thử: ghi nhận ngay như khi ngân hàng báo có
-  function depositNow(amount) {
-    const dd = ADB.load(), u = ADB.user(dd, ME), r = ADB.deposit(dd, u, amount, 'Chuyển khoản', { status: 'done', auto: true, code: depCode(u) });
-    if (r.error) return r;
-    save(dd, 'Nạp tiền tự động', `@${u.username}: ${money(amount)} vào ví tiền mặt (nội dung ${depCode(u)})`, 'Đã nhận ' + money(amount) + ' vào ví tiền mặt'); return r;
+  // chuyển khoản nạp tiền: ghi nhận yêu cầu, công ty xác nhận khi tiền vào tài khoản thì cộng ví
+  function depositNow(amount, el) {
+    return act('deposit', { amount, method: 'Chuyển khoản' }, 'Đã gửi yêu cầu nạp ' + money(amount) + ', tiền vào ví khi công ty xác nhận', el) || { error: true };
   }
   function depositAct() {
     const d = ADB.load(), me = ADB.user(d, ME);
     const md = modal(`<form id="dpF" novalidate>
-      <div class="card-head"><div><h3>Nạp tiền vào ví tiền mặt</h3><div class="sub">Chuyển khoản đúng nội dung, tiền tự vào ví, mua hàng được ngay</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      <div class="card-head"><div><h3>Nạp tiền vào ví tiền mặt</h3><div class="sub">Chuyển khoản đúng nội dung, công ty xác nhận là tiền vào ví</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
       <div class="field"><label for="dpA">Số tiền nạp (đồng)</label><input class="input" id="dpA" type="number" min="10000" step="10000" inputmode="numeric"></div>
       <div class="chips mt-1" id="dpQ">${[500000, 1000000, 2000000, 5000000].map(v => `<button class="chip" type="button" data-v="${v}">${short(v)}</button>`).join('')}</div>
       <div class="box mt-2" id="dpB" style="padding:14px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)">${bankBox(me)}</div>
-      <p class="dim mt-1" style="font-size:12px">Hệ thống thật đối soát sao kê ngân hàng và tự cộng tiền trong vài giây, không cần nhân viên duyệt. Bản chạy thử: bấm nút bên dưới để giả lập ngân hàng báo có.</p>
+      <p class="dim mt-1" style="font-size:12px">Chuyển khoản xong anh chị bấm nút bên dưới. Tiền vào ví ngay khi công ty xác nhận đã nhận.</p>
       <p class="red mt-1" id="dpE" style="font-size:13px;min-height:18px"></p>
       <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">${icon('check')} Tôi đã chuyển khoản</button></div></form>`);
     const el = md.el, A = $('#dpA', el), redraw = () => { $('#dpB', el).innerHTML = bankBox(me, Math.round(+A.value || 0)); };
@@ -733,7 +710,7 @@
     $('#dpF', el).addEventListener('submit', e => {
       e.preventDefault(); const a = Math.round(+A.value || 0);
       if (!a || a < 10000) return $('#dpE', el).textContent = 'Số tiền nạp tối thiểu 10.000đ.';
-      const r = depositNow(a); if (r.error) return $('#dpE', el).textContent = r.error;
+      const r = depositNow(a, $('#dpE', el)); if (r.error) return;
       md.close(); render();
     });
     setTimeout(() => A.focus(), 60);
@@ -764,7 +741,9 @@
       ${kind === 'withdraw' && max < min ? `<p class="dim" style="font-size:12.5px">Số dư chưa đủ mức rút tối thiểu ${money(min)}.</p>` : ''}
       <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit" id="waS"${kind === 'withdraw' && max < min ? ' disabled' : ''}>${kind === 'transfer' ? 'Tiếp tục' : 'Xác nhận'}</button></div></form>`);
     const el = md.el, F = $('#waF', el), A = $('#waA', el), E = $('#waE', el), C = $('#waC', el), S = $('#waS', el);
-    const rcpt = () => { const v = ($('#waU', el) || {}).value || '', to = v.trim() && ADB.byUsername(d, v); return to && to.role !== 'admin' && to.id !== me.id ? to : null; };
+    // người nhận: tra trên máy chủ (trang chỉ có dữ liệu của mình và tuyến dưới)
+    let rcptU = null;
+    const rcpt = () => rcptU && rcptU.id !== me.id ? rcptU : null;
     const calc = () => {
       const a = Math.max(0, Math.round(+A.value || 0)), kv = r => r.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
       F.dataset.ok = ''; C.classList.remove('ok'); if (kind === 'transfer') S.textContent = 'Tiếp tục';
@@ -779,42 +758,34 @@
     A.addEventListener('input', calc);
     $('#waMax', el).addEventListener('click', () => { A.value = max; calc(); });
     const U = $('#waU', el);
-    if (U) U.addEventListener('input', () => {
-      const v = U.value.trim(), to = v && ADB.byUsername(d, v);
+    let rt;
+    if (U) U.addEventListener('input', () => { clearTimeout(rt); rt = setTimeout(look, 350); });
+    const look = () => {
+      const v = U.value.trim(), to = v ? (API.act('lookupUser', { username: v }).user || null) : null; rcptU = to;
       $('#waP', el).innerHTML = !v ? '' : !to || to.role === 'admin' ? '<span class="red">Không tìm thấy thành viên có tên truy cập này.</span>' : to.id === me.id ? '<span class="red">Đây là tài khoản của anh chị.</span>'
         : `<div class="who">${av(to, 'v')}<div><b>${esc(to.name)}</b><small>@${esc(to.username)} · ${esc(ADB.tierOf(to).name)}</small></div></div>`;
       calc();
-    });
+    };
     F.addEventListener('submit', e => {
       e.preventDefault(); E.textContent = '';
-      const a = Math.round(+A.value || 0), dd = ADB.load(), u = ADB.user(dd, me.id); let r;
+      const a = Math.round(+A.value || 0); let r;
       if (kind === 'withdraw') {
         const bank = $('#waB', el).value.trim(), account = $('#waN', el).value.trim();
         if (!bank || !account) return E.textContent = 'Anh chị điền tên ngân hàng và số tài khoản.';
-        r = ADB.withdraw(dd, u, a, { bank, account }); if (r.error) return E.textContent = r.error;
-        save(dd, 'Yêu cầu rút tiền', `@${u.username}: ${money(a)} từ ví tiền mặt về ${bank} ${account}`, 'Đã gửi yêu cầu rút ' + money(a) + ' về ngân hàng, chờ công ty duyệt');
-      } else if (kind === 'tocash') {
-        r = ADB.toCash(dd, u, a); if (r.error) return E.textContent = r.error;
-        save(dd, 'Rút sang ví tiền mặt', `@${u.username}: ${money(a)}, thuế ${money(r.tax)}, thực nhận ${money(r.net)}`, 'Đã rút, ví tiền mặt nhận ' + money(r.net));
-      } else if (kind === 'topoints') {
-        r = ADB.cashToPoints(dd, u, a); if (r.error) return E.textContent = r.error;
-        save(dd, 'Đổi tiền mặt sang điểm PS', `@${u.username}: ${money(a)} thành ${ps(a)}`, 'Đã đổi, nhận ' + ps(a) + ' vào ví điểm khả dụng');
-      } else if (kind === 'convert') {
-        r = ADB.convert(dd, u, a); if (r.error) return E.textContent = r.error;
-        save(dd, 'Chuyển điểm thưởng', `@${u.username}: ${ps(a)}, thuế ${ps(r.tax)}`, 'Đã chuyển, nhận ' + ps(r.net) + ' vào ví điểm khả dụng');
-      } else if (kind === 'toshop') {
-        r = ADB.toShop(dd, u, a); if (r.error) return E.textContent = r.error;
-        save(dd, 'Chuyển sang ví mua hàng', `@${u.username}: ${ps(a)}`, 'Đã chuyển ' + ps(a) + ' sang ví điểm mua hàng');
-      } else {
+        if (!act('wallet', { kind, amount: a, bank, account }, 'Đã gửi yêu cầu rút ' + money(a) + ' về ngân hàng, chờ công ty duyệt', E)) return;
+      } else if (kind === 'tocash') { if (!act('wallet', { kind, amount: a }, r => 'Đã rút, ví tiền mặt nhận ' + money(r.net), E)) return; }
+      else if (kind === 'topoints') { if (!act('wallet', { kind, amount: a }, 'Đã đổi, nhận ' + ps(a) + ' vào ví điểm khả dụng', E)) return; }
+      else if (kind === 'convert') { if (!act('wallet', { kind, amount: a }, r => 'Đã chuyển, nhận ' + ps(r.net) + ' vào ví điểm khả dụng', E)) return; }
+      else if (kind === 'toshop') { if (!act('wallet', { kind, amount: a }, 'Đã chuyển ' + ps(a) + ' sang ví điểm mua hàng', E)) return; }
+      else {
         const name = U.value.trim(), msg = $('#waT', el).value.trim();
         if (F.dataset.ok !== '1') {
-          const test = ADB.transfer(JSON.parse(JSON.stringify(dd)), u, name, a, msg); // thử trên bản sao, chưa lưu
+          const test = API.act('wallet', { kind, amount: a, user: name, note: msg, check: true }); // chỉ kiểm tra, chưa chuyển
           if (test.error) return E.textContent = test.error;
           F.dataset.ok = '1'; C.classList.add('ok'); S.textContent = 'Xác nhận chuyển';
           E.innerHTML = `<span class="gold">Chuyển ${ps(a)} cho ${esc(test.to.name)} (@${esc(test.to.username)})? Bấm Xác nhận chuyển để hoàn tất.</span>`; return;
         }
-        r = ADB.transfer(dd, u, name, a, msg); if (r.error) return E.textContent = r.error;
-        save(dd, 'Chuyển điểm', `@${u.username} chuyển ${ps(a)} cho @${r.to.username}`, 'Đã chuyển ' + ps(a) + ' cho ' + r.to.name);
+        r = act('wallet', { kind, amount: a, user: name, note: msg }, r => 'Đã chuyển ' + ps(a) + ' cho ' + r.to.name, E); if (!r) return;
       }
       md.close(); render();
     });
@@ -848,55 +819,72 @@
         </div>
       </div>
       <div class="card glow-gold">
-        <div class="tabs" id="atabs" style="width:max-content;max-width:100%"><button type="button" data-m="login" class="${mode === 'login' ? 'on' : ''}">Đăng nhập</button><button type="button" data-m="register" class="${mode === 'register' ? 'on' : ''}">Đăng ký</button></div>
+        ${mode === 'login' || mode === 'register' ? `<div class="tabs" id="atabs" style="width:max-content;max-width:100%"><button type="button" data-m="login" class="${mode === 'login' ? 'on' : ''}">Đăng nhập</button><button type="button" data-m="register" class="${mode === 'register' ? 'on' : ''}">Đăng ký</button></div>`
+          : `<h3 style="font-size:19px">${mode === 'forgot' ? 'Quên mật khẩu' : 'Đặt mật khẩu mới'}</h3><p class="dim" style="font-size:13.5px;margin-top:6px">${mode === 'forgot' ? 'Nhập email đã đăng ký, hệ thống gửi đường dẫn đặt lại mật khẩu vào email.' : 'Nhập mật khẩu mới cho tài khoản.'}</p>`}
         <form id="af" class="mt-3" novalidate>
           ${mode === 'register' ? `<div class="field"><label for="fn">Họ và tên</label><input class="input" id="fn" name="name" autocomplete="name" required></div>
           <div class="field mt-2"><label for="fu">Tên truy cập</label><input class="input" id="fu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="Ví dụ minhanh2026"><small class="dim" id="fuHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px">Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.</small></div>
           <div class="field mt-2"><label for="fp">Số điện thoại</label><input class="input" id="fp" name="phone" type="tel" autocomplete="tel" inputmode="tel"></div>` : ''}
-          <div class="field mt-2"><label for="fe">Email</label><input class="input" id="fe" name="email" type="email" autocomplete="email" required></div>
-          <div class="field mt-2"><label for="fw">Mật khẩu</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>
+          ${mode === 'reset' ? '' : `<div class="field mt-2"><label for="fe">${mode === 'login' ? 'Email hoặc tên truy cập' : 'Email'}</label><input class="input" id="fe" name="email" type="${mode === 'login' ? 'text' : 'email'}" autocomplete="${mode === 'login' ? 'username' : 'email'}" autocapitalize="off" spellcheck="false" required></div>`}
+          ${mode === 'forgot' ? '' : `<div class="field mt-2"><label for="fw">${mode === 'reset' ? 'Mật khẩu mới' : 'Mật khẩu'}</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>`}
+          ${mode === 'reset' ? `<div class="field mt-2"><label for="fw2">Nhập lại mật khẩu mới</label><input class="input" id="fw2" name="pass2" type="password" autocomplete="new-password" minlength="6" required></div>` : ''}
           ${mode === 'register' ? `<div class="field mt-2"><label for="fr">Mã giới thiệu (nếu có)</label><input class="input" id="fr" name="ref" autocomplete="off" placeholder="Ví dụ PS1001" value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>
           <div class="terms-h mt-2"><b>${icon('shield')} Điều khoản sử dụng</b><small id="termsHint">Cuộn đọc hết để đồng ý</small></div>
           <div class="terms-box" id="termsBox"><div class="terms" id="terms" tabindex="0" role="document" aria-label="Điều khoản sử dụng">${termsHtml(P)}</div></div>
           <label class="check mt-2 terms-ok"><input type="checkbox" name="agree" id="agree" required disabled> Tôi đã đọc và đồng ý với điều khoản sử dụng và chính sách bảo mật</label>` : ''}
           <p class="red mt-1" id="err" style="font-size:13px;min-height:20px"></p>
-          <button class="btn btn-gold btn-block btn-lg" type="submit">${mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</button>
-          <p class="dim mt-2" style="font-size:12px">${mode === 'login' ? 'Tài khoản dùng thử: khach1@email.com / 123456' : 'Mật khẩu tối thiểu 6 ký tự.'}</p>
+          <button class="btn btn-gold btn-block btn-lg" type="submit">${{ login: 'Đăng nhập', register: 'Tạo tài khoản', forgot: 'Gửi đường dẫn đặt lại', reset: 'Lưu mật khẩu mới' }[mode]}</button>
+          <p class="dim mt-2" style="font-size:12.5px">${mode === 'login' ? '<button type="button" class="link gold" data-m="forgot" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">Quên mật khẩu?</button>' : mode === 'register' ? 'Mật khẩu tối thiểu 6 ký tự.' : '<button type="button" class="link gold" data-m="login" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">Quay lại đăng nhập</button>'}</p>
         </form>
         <div class="divider"></div>
         <h3 style="font-size:15px">Cấp bậc thành viên</h3>
         <div class="mt-1">${tiers.map(([k, ic, t, perks]) => `<div class="rank-line"><span class="rank-gem" style="color:${T[k].color}">${icon(ic)}</span><b style="color:${T[k].color}">${esc(T[k].name)} <small class="dim" style="font-weight:500;font-size:12.5px">· ${esc(t)}</small></b><ul class="tier-perks" style="--c:${T[k].color}">${perks.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>
       </div>
     </div>`;
-    $('#atabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) guest(b.dataset.m); });
+    if (!view.dataset.gm) { view.dataset.gm = 1; view.addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (b && !ME) guest(b.dataset.m); }); }
+    // mã giới thiệu, tên truy cập: kiểm tra trên máy chủ (chờ ngừng gõ một chút)
+    const later = (fn, ms = 350) => { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
     const fr = $('#fr');
-    if (fr) { const hint = () => { const c = fr.value.trim().toUpperCase(), sp = c && ADB.load().users.find(x => (x.code || '').toUpperCase() === c);
-      $('#frHint').innerHTML = !c ? '' : sp ? `Người giới thiệu: <b class="gold">${esc(sp.name)}</b>` : '<span class="red">Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.</span>'; };
-      fr.addEventListener('input', hint); hint(); }
-    const fu = $('#fu'), unameErr = v => !v ? '' : !UNAME.test(v) ? 'Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.' : unameTaken(ADB.load(), v, null) ? 'Tên truy cập này đã có người dùng.' : '';
-    if (fu) fu.addEventListener('input', () => { const v = fu.value.trim().toLowerCase(), er = unameErr(v);
-      $('#fuHint').innerHTML = !v ? 'Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.' : er ? `<span class="red">${er}</span>` : `<span class="green">Dùng được: @${esc(v)}</span>`; });
+    if (fr) { const hint = () => { const c = fr.value.trim().toUpperCase(), r = c ? API.act('checkRef', { code: c }) : {};
+      $('#frHint').innerHTML = !c ? '' : r.name ? `Người giới thiệu: <b class="gold">${esc(r.name)}</b>` : `<span class="red">${esc(r.error || 'Mã giới thiệu chưa đúng.')}</span>`; };
+      fr.addEventListener('input', later(hint)); if (fr.value) hint(); }
+    const fu = $('#fu'), unameErr = v => { if (!v) return ''; if (!UNAME.test(v)) return 'Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.'; const r = API.act('checkUsername', { username: v }); return r.error || ''; };
+    if (fu) fu.addEventListener('input', later(() => { const v = fu.value.trim().toLowerCase(), er = unameErr(v);
+      $('#fuHint').innerHTML = !v ? 'Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.' : er ? `<span class="red">${er}</span>` : `<span class="green">Dùng được: @${esc(v)}</span>`; }));
     // điều khoản: phải kéo đọc tới cuối thì ô đồng ý mới bấm được
     const tm = $('#terms'); if (tm) { const ag = $('#agree'), seen = () => { if (tm.scrollTop + tm.clientHeight >= tm.scrollHeight - 12) { ag.disabled = false; $('#termsBox').classList.add('end'); $('#termsHint').textContent = 'Đã đọc hết ✓'; $('#termsHint').classList.add('green'); tm.removeEventListener('scroll', seen); } }; tm.addEventListener('scroll', seen, { passive: true }); seen(); }
     $('#af').addEventListener('submit', e => {
-      e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), err = $('#err');
+      e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), err = $('#err'), btn = e.target.querySelector('[type=submit]');
       let wanted;
+      if (mode === 'forgot') {
+        btn.disabled = true; const r = API.act('forgot', { email: (f.email || '').trim() }); btn.disabled = false;
+        if (r.error) return err.textContent = r.error;
+        err.innerHTML = `<span class="green">Nếu email này đã đăng ký, đường dẫn đặt lại mật khẩu đã được gửi. Anh chị mở hộp thư (cả mục Thư rác) để đặt mật khẩu mới.</span>`; return;
+      }
+      if (mode === 'reset') {
+        if ((f.pass || '').length < 6) return err.textContent = 'Mật khẩu mới cần ít nhất 6 ký tự.';
+        if (f.pass !== f.pass2) return err.textContent = 'Hai lần nhập mật khẩu chưa khớp.';
+        const r = API.act('resetPass', { token: PSQ.qs('dat-lai'), pass: f.pass }); if (r.error) return err.textContent = r.error;
+        toast('Đã đặt mật khẩu mới'); location.href = r.user && r.user.role === 'admin' ? 'quan-tri.html' : 'thanh-vien.html'; return;
+      }
       if (mode === 'register') {
         if (!f.name || !f.email || !f.pass) return err.textContent = 'Anh chị điền đủ họ tên, email và mật khẩu.';
         wanted = (f.username || '').trim().toLowerCase(); const ue = unameErr(wanted); if (ue) return err.textContent = ue;
         if (f.pass.length < 6) return err.textContent = 'Mật khẩu tối thiểu 6 ký tự.';
         if (!f.agree) return err.textContent = 'Anh chị cần đồng ý với điều khoản.';
       }
-      const r = mode === 'login' ? auth.login(f.email, f.pass) : auth.register(f);
+      btn.disabled = true;
+      const r = mode === 'login' ? auth.login(f.email, f.pass) : auth.register({ name: f.name, username: wanted || '', phone: f.phone, email: f.email, pass: f.pass, ref: f.ref, agree: !!f.agree });
+      btn.disabled = false;
       if (r.error) return err.textContent = r.error;
-      if (mode === 'register') ensureMember(r.user.id, wanted || '');
       location.href = 'thanh-vien.html' + (mode === 'register' ? '#tong-quan' : location.hash);
     });
   }
 
-  ADB.load(); // bổ sung dữ liệu kế hoạch trả thưởng (chạy thử)
   const u = auth.user();
-  if (u) { ME = u.id; ensureMember(u.id); member(); }
+  if (PSQ.qs('dat-lai')) guest('reset');
+  else if (!u && location.hash === '#quen-mat-khau') guest('forgot');
+  else if (u) { ME = u.id; member(); }
   else guest(PSQ.qs('dang-ky') || refCode ? 'register' : 'login');
 })();
 </script>

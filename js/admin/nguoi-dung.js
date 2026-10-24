@@ -1,10 +1,8 @@
 /* Quản trị: tài khoản quản trị viên, vai trò và phân quyền */
 (function () {
-  const { $, $$, esc, initials, fdate, today, icon, toast, modal } = PSQ;
+  const { $, $$, esc, initials, fdate, icon, toast, modal } = PSQ;
   window.ADMIN_MODULES = window.ADMIN_MODULES || {};
 
-  // cùng thuật toán băm mật khẩu với js/app.js (hàm hash nội bộ, không xuất ra ngoài)
-  const hash = s => { let h = 5381; for (const c of String(s)) h = (h * 33 + c.charCodeAt(0)) >>> 0; return 'h' + h.toString(36); };
 
   if (!document.getElementById('adm-css-nguoi-dung')) {
     const st = document.createElement('style'); st.id = 'adm-css-nguoi-dung';
@@ -95,14 +93,10 @@
       <p class="red mt-1" id="adErr" style="font-size:13px"></p>
       <div class="row mt-2" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Tạo tài khoản</button></div></form>`);
     $('#adF', m.el).addEventListener('submit', e => {
-      e.preventDefault(); const f = new FormData(e.target), x = ADB.load();
-      const email = f.get('email').trim(), pass = f.get('pass').trim();
-      if (x.users.some(u => (u.email || '').toLowerCase() === email.toLowerCase())) { $('#adErr', m.el).textContent = 'Email này đã có tài khoản.'; return; }
-      if (pass.length < 6) { $('#adErr', m.el).textContent = 'Mật khẩu tạm cần ít nhất 6 ký tự.'; return; }
-      const u = { id: ADB.uid('u-adm'), name: f.get('name').trim(), email, phone: f.get('phone').trim(), pass: hash(pass), role: 'admin', adminRole: f.get('role'), created: today(), status: 'active' };
-      x.users.push(u);
-      ADB.log(x, 'Thêm quản trị viên', `${u.name} (${u.email}), vai trò ${roleName(x, u.adminRole)}`); ADB.save(x);
-      m.close(); toast('Đã tạo tài khoản quản trị cho ' + u.name); done();
+      e.preventDefault(); const f = new FormData(e.target);
+      const r = API.act('adminCreate', { name: f.get('name').trim(), email: f.get('email').trim(), phone: f.get('phone').trim(), role: f.get('role'), pass: f.get('pass').trim() });
+      if (r.error) { $('#adErr', m.el).textContent = r.error; return; }
+      m.close(); toast('Đã tạo tài khoản quản trị cho ' + r.user.name); done();
     });
   }
 

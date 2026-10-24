@@ -1,0 +1,346 @@
+/* Các thao tác người dùng gửi lên máy chủ. Mỗi thao tác chạy trên dữ liệu gốc bằng chính bộ tính
+   ADB của web, kiểm tra quyền và số liệu, rồi máy chủ lưu lại.
+   auth: guest (ai cũng gọi được), member (đã đăng nhập), admin (tài khoản quản trị), owner (chủ sở hữu) */
+'use strict';
+const crypto = require('crypto');
+
+const UNAME = /^[a-z0-9._]{3,30}$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE = /^[0-9 +.]{9,15}$/;
+const money = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ';
+const ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
+const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
+const int = v => Math.round(+v || 0);
+const normPhone = p => String(p || '').replace(/[^\d]/g, '').replace(/^84/, '0');
+const err = e => ({ error: e });
+
+/* ---------- mật khẩu (scrypt) ---------- */
+function hashPass(p) {
+  const salt = crypto.randomBytes(16);
+  return 'scrypt$' + salt.toString('base64') + '$' + crypto.scryptSync(String(p), salt, 64).toString('base64');
+}
+function verifyPass(p, h) {
+  if (!h || !String(h).startsWith('scrypt$')) return false;
+  const [, s, k] = String(h).split('$'), a = Buffer.from(k, 'base64'), b = crypto.scryptSync(String(p), Buffer.from(s, 'base64'), 64);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/* ---------- dữ liệu gửi về trình duyệt ---------- */
+const PUBLIC_USER = ['id', 'name', 'username', 'code', 'tier', 'role', 'created', 'activated', 'agentSince', 'avatar', 'status'];
+const pick = (o, keys) => { const r = {}; keys.forEach(k => { if (o[k] !== undefined) r[k] = o[k]; }); return r; };
+const clean = u => { const r = Object.assign({}, u); delete r.pass; delete r.resetAt; return r; };
+
+// quản trị: toàn bộ dữ liệu, bỏ mật khẩu. Thành viên: phần của mình và tuyến dưới. Khách: phần công khai.
+function scopeFor(d, me, A) {
+  if (me && me.role === 'admin' && me.status !== 'locked') { const o = Object.assign({}, d); o.users = d.users.map(clean); return o; }
+  const out = { v: d.v, settings: Object.assign({}, d.settings), stock: d.stock || {}, stockMin: d.stockMin, users: [], orders: [], commissions: [], wallet: [], topups: [], addresses: [], messages: [], logs: [], mails: [], fundbook: [], receipts: [], expenses: [], stores: d.stores || [], roles: [] };
+  delete out.settings.fundWarn;
+  const users = new Map();
+  const addU = (u, keys) => { if (!u) return; const prev = users.get(u.id) || {}; users.set(u.id, Object.assign(prev, keys ? pick(u, keys) : clean(u))); };
+  // danh sách thành viên mới ở trang chủ
+  d.users.filter(x => x.role !== 'admin' && x.status !== 'locked' && (x.tier === 'ctv' || x.tier === 'daily'))
+    .map(x => ({ x, at: x.tier === 'daily' ? (x.agentSince || x.activated || '') : (x.activated || '') }))
+    .sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8).forEach(({ x }) => addU(x, PUBLIC_USER));
+  // vòng quay: quà, cài đặt, người trúng gần đây (tên che bớt ở giao diện)
+  const W = A.wheel(d);
+  out.wheel = { prizes: W.prizes, settings: W.settings, rv: W.rv, events: (W.events || []).map(e => Object.assign({}, e, { fixedWinners: [] })), forced: {}, seen: {}, codes: [], spins: W.spins.slice(0, 12).map(s => pick(s, ['id', 'user', 'prize', 'prizeName', 'date'])) };
+  out.wheel.spins.forEach(s => addU(A.user(d, s.user), ['id', 'name']));
+  if (me) {
+    addU(me);
+    // tuyến dưới (người mình giới thiệu và cây), đơn hàng của họ để tính doanh số nhóm
+    const team = new Set(), q = [me.id];
+    while (q.length) { const id = q.shift(); d.users.forEach(u => { if ((u.sponsor === id || u.parent === id) && !team.has(u.id) && u.id !== me.id) { team.add(u.id); q.push(u.id); } }); }
+    team.forEach(id => addU(A.user(d, id), PUBLIC_USER.concat(['sponsor', 'parent', 'placed', 'phone', 'city'])));
+    const sp = me.sponsor && A.user(d, me.sponsor); if (sp) addU(sp, PUBLIC_USER.concat(['phone']));
+    if (me.parent && me.parent !== me.sponsor) addU(A.user(d, me.parent), PUBLIC_USER);
+    out.orders = d.orders.filter(o => o.userId === me.id).concat(d.orders.filter(o => team.has(o.userId)).map(o => pick(o, ['id', 'userId', 'name', 'items', 'total', 'status', 'date', 'settled', 'pay'])));
+    out.commissions = (d.commissions || []).filter(c => c.user === me.id);
+    (out.commissions).forEach(c => { if (c.from) addU(A.user(d, c.from), ['id', 'name', 'username', 'code', 'tier']); });
+    out.wallet = (d.wallet || []).filter(w => w.user === me.id);
+    out.topups = (d.topups || []).filter(t => t.user === me.id);
+    out.addresses = (d.addresses || []).filter(a => a.user === me.id);
+    out.wheel.codes = W.codes.filter(c => c.user === me.id);
+    out.wheel.codes.forEach(c => { if (c.from) addU(A.user(d, c.from), ['id', 'name']); });
+  }
+  out.users = [...users.values()];
+  return out;
+}
+
+/* ---------- thư mẫu ---------- */
+const wrapMail = (site, title, body) => `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#222;line-height:1.55">
+  <h2 style="color:#9a6b1f;margin:0 0 12px">${title}</h2>${body}
+  <p style="color:#777;font-size:13px;margin-top:24px">${site.brand} · Hotline ${site.phone} · ${site.email}<br>${site.address}</p></div>`;
+
+/* ---------- các thao tác ---------- */
+const ACTIONS = {
+  /* ===== khách chưa đăng nhập ===== */
+  checkRef: { auth: 'guest', run(c) {
+    const k = str(c.args.code, 40).toUpperCase(); if (!k) return { ok: true };
+    const u = c.d.users.find(x => x.role !== 'admin' && ((x.code || '').toUpperCase() === k || (x.username || '').toUpperCase() === k));
+    return u ? { name: u.name } : err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.');
+  } },
+  checkUsername: { auth: 'guest', run(c) {
+    const v = str(c.args.username, 40).toLowerCase();
+    if (!UNAME.test(v)) return err('Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.');
+    if (c.d.users.some(u => u.id !== (c.me && c.me.id) && ((u.username || '').toLowerCase() === v || (u.code || '').toLowerCase() === v))) return err('Tên truy cập này đã có người dùng.');
+    return { ok: true };
+  } },
+  register: { auth: 'guest', run(c) {
+    const { d, A, args } = c, name = str(args.name, 80), email = str(args.email, 120).toLowerCase(), phone = str(args.phone, 20), pass = String(args.pass || '');
+    let username = str(args.username, 40).toLowerCase();
+    if (name.length < 2 || !email || !pass) return err('Anh chị điền đủ họ tên, email và mật khẩu.');
+    if (!EMAIL.test(email)) return err('Email chưa đúng định dạng.');
+    if (phone && !PHONE.test(phone)) return err('Số điện thoại chưa đúng.');
+    if (pass.length < 6 || pass.length > 100) return err('Mật khẩu tối thiểu 6 ký tự.');
+    if (!args.agree) return err('Anh chị cần đồng ý với điều khoản.');
+    if (d.users.some(x => (x.email || '').toLowerCase() === email)) return err('Email này đã có tài khoản.');
+    const taken = n => d.users.some(u => (u.username || '').toLowerCase() === n || (u.code || '').toLowerCase() === n);
+    if (username) { if (!UNAME.test(username)) return err('Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.'); if (taken(username)) return err('Tên truy cập này đã có người dùng.'); }
+    else { const b = email.split('@')[0].replace(/[^a-z0-9._]/g, '').slice(0, 24) || 'tv'; username = b.length < 3 ? b + 'psq' : b; let k = 1; const base = username; while (taken(username)) username = base + (++k); }
+    let k = 1001 + d.users.filter(u => u.role !== 'admin').length; while (d.users.some(x => x.code === 'PS' + k)) k++;
+    const u = { id: 'u' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'), name, email, phone, pass: hashPass(pass), role: 'member', created: c.today(), status: 'active', code: 'PS' + k, username, tier: 'khach', placed: false, parent: null };
+    const ref = str(args.ref, 40).toUpperCase();
+    const sp = ref && d.users.find(x => x.role !== 'admin' && ((x.code || '').toUpperCase() === ref || (x.username || '').toUpperCase() === ref));
+    if (ref && !sp) return err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.');
+    if (sp) { u.sponsor = sp.id; const auto = d.settings && d.settings.autoPlace; u.placed = !!auto; u.parent = auto ? sp.id : null; }
+    else { u.sponsor = null; u.placed = true; }
+    d.users.push(u);
+    c.log('Đăng ký thành viên', `${u.name} (@${u.username})${sp ? ', giới thiệu bởi ' + sp.name : ''}`, u);
+    A.wheelSync(d);
+    c.mail(u.email, 'Chào mừng anh chị đến với ' + c.site.brand, 'Đăng ký', wrapMail(c.site, 'Chào mừng ' + c.e(u.name) + '!',
+      `<p>Tài khoản thành viên của anh chị đã được tạo.</p><p>Tên truy cập: <b>@${c.e(u.username)}</b><br>Mã giới thiệu: <b>${c.e(u.code)}</b></p><p><a href="${c.base}/thanh-vien.html">Vào trang thành viên</a></p>`));
+    c.notify(`Thành viên mới: ${u.name} (@${u.username}, ${u.code})${sp ? '\nGiới thiệu bởi: ' + sp.name : ''}`);
+    return { user: clean(u), login: u.id };
+  } },
+  login: { auth: 'guest', run(c) {
+    const k = str(c.args.login, 120).toLowerCase().replace(/^@/, ''), p = String(c.args.pass || '');
+    if (!k || !p) return err('Anh chị nhập email hoặc tên truy cập và mật khẩu.');
+    const ph = normPhone(k);
+    const u = c.d.users.find(x => (x.email || '').toLowerCase() === k || (x.username || '').toLowerCase() === k || (x.code || '').toLowerCase() === k || (ph.length >= 9 && normPhone(x.phone) === ph));
+    if (!u || !verifyPass(p, u.pass)) return err(u && !u.pass ? 'Tài khoản chưa đặt mật khẩu. Anh chị bấm Quên mật khẩu để đặt.' : 'Email, tên truy cập hoặc mật khẩu chưa đúng.');
+    if (u.status === 'locked') return err('Tài khoản này đang bị khóa. Anh chị liên hệ ' + c.site.phone + '.');
+    u.lastLogin = c.stamp();
+    if (u.role === 'admin') c.log('Đăng nhập', 'Đăng nhập trang quản trị', u);
+    return { user: clean(u), login: u.id };
+  } },
+  forgot: { auth: 'guest', run(c) {
+    const email = str(c.args.email, 120).toLowerCase(), u = email && c.d.users.find(x => (x.email || '').toLowerCase() === email);
+    if (!EMAIL.test(email)) return err('Anh chị nhập email đã đăng ký.');
+    if (u && u.status !== 'locked') {
+      const t = c.store.newToken('reset', u.id, 2), link = `${c.base}/thanh-vien.html?dat-lai=${t}`;
+      c.mail(u.email, 'Đặt lại mật khẩu ' + c.site.brand, 'Quên mật khẩu', wrapMail(c.site, 'Đặt lại mật khẩu',
+        `<p>Chào ${c.e(u.name)}, có yêu cầu đặt lại mật khẩu cho tài khoản @${c.e(u.username || '')}.</p><p><a href="${link}" style="display:inline-block;background:#c9932f;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">Đặt mật khẩu mới</a></p><p style="font-size:13px;color:#666">Đường dẫn dùng được 1 lần trong 2 giờ. Nếu anh chị không yêu cầu, hãy bỏ qua thư này.</p>`), { secret: true });
+    }
+    return { ok: true, sent: !!c.mailReady() };
+  } },
+  resetPass: { auth: 'guest', run(c) {
+    const id = c.store.token('reset', c.args.token), u = id && c.A.user(c.d, id), p = String(c.args.pass || '');
+    if (!u) return err('Đường dẫn đặt lại mật khẩu đã hết hạn hoặc đã dùng. Anh chị yêu cầu lại.');
+    if (p.length < 6 || p.length > 100) return err('Mật khẩu mới cần ít nhất 6 ký tự.');
+    u.pass = hashPass(p); u.passChanged = c.today(); c.store.useToken(c.args.token); c.store.endSessionsOf(u.id);
+    c.log('Đặt lại mật khẩu', '@' + (u.username || u.email), u);
+    return { user: clean(u), login: u.id };
+  } },
+  trackOrder: { auth: 'guest', run(c) {
+    const id = str(c.args.id, 30).toUpperCase().replace(/\s/g, ''), ph = normPhone(c.args.phone);
+    const o = id && ph && c.d.orders.find(x => x.id.toUpperCase() === id && normPhone(x.phone) === ph);
+    return o ? { order: pick(o, ['id', 'status', 'date', 'items', 'total']) } : { order: null };
+  } },
+  contact: { auth: 'guest', run(c) {
+    const a = c.args, m = { id: 'm' + Date.now().toString(36) + crypto.randomBytes(2).toString('hex'), name: str(a.name, 80), phone: str(a.phone, 20), email: str(a.email, 120), topic: str(a.topic, 80), text: str(a.text, 3000), date: new Date().toISOString(), status: 'new' };
+    if (m.name.length < 2 || !/^(\+?84|0)\d{8,10}$/.test(m.phone.replace(/[\s.-]/g, '')) || m.text.length < 5) return err('Anh chị kiểm tra lại họ tên, số điện thoại và nội dung.');
+    (c.d.messages = c.d.messages || []).unshift(m);
+    c.notify(`Lời nhắn mới: ${m.name} (${m.phone})\nChủ đề: ${m.topic}\n${m.text.slice(0, 500)}`);
+    return { message: m };
+  } },
+  placeOrder: { auth: 'guest', run(c) {
+    const { d, A, args, me } = c, info = args.info || {};
+    const items = [];
+    for (const x of (Array.isArray(args.items) ? args.items : []).slice(0, 50)) {
+      const p = c.products.find(q => q.id === x.id), qty = int(x.qty);
+      if (!p || p.id === A.PKG_ID || p.id === A.AGENT_PKG_ID || p.active === false) return err('Có sản phẩm không còn bán, anh chị tải lại trang giúp em.');
+      if (qty < 1 || qty > 999) return err('Số lượng chưa đúng.');
+      const st = A.stockOf(d, p.id); if (st !== null && qty > st) return err(st ? `${p.name} chỉ còn ${st} trong kho, anh chị giảm số lượng giúp em.` : `${p.name} đã hết hàng, anh chị bỏ sản phẩm này khỏi giỏ.`);
+      const f = items.find(i => i.id === p.id); if (f) f.qty += qty; else items.push({ id: p.id, name: p.name, price: p.price, qty });
+    }
+    if (!items.length) return err('Giỏ hàng đang trống.');
+    const name = str(info.name, 80), phone = normPhone(info.phone), email = str(info.email, 120), address = str(info.address, 300), pay = info.pay === 'wallet' ? 'wallet' : 'bank';
+    if (name.length < 2 || !/^0\d{9}$/.test(phone) || address.length < 5) return err('Anh chị kiểm tra lại họ tên, số điện thoại và địa chỉ nhận hàng.');
+    if (email && !EMAIL.test(email)) return err('Email chưa đúng định dạng.');
+    const num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
+    const o = { id: 'PSQ' + num, userId: me ? me.id : null, name, phone, email, address, note: str(info.note, 500), pay, items, total: items.reduce((s, x) => s + x.price * x.qty, 0) + (+c.site.shipFee || 0), status: 'pending', date: c.today() };
+    d.orders.unshift(o);
+    let used = 0, usedC = 0;
+    if (me) {
+      if (int(args.useShop) > 0) used = A.spendShop(d, me, o, int(args.useShop));
+      if (int(args.useCash) > 0) usedC = A.spendCash(d, me, o, int(args.useCash));
+      if (used || usedC) {
+        const full = used + usedC >= o.total;
+        if (full) A.setStatus(d, o, 'paid');
+        c.log('Thanh toán bằng ví', `${o.id}: ${me.name}${used ? ` dùng ${ps(used)} ví mua hàng` : ''}${usedC ? ` trả ${money(usedC)} ví tiền mặt` : ''}${full ? ', đã thanh toán đủ' : ''}`);
+      }
+      const sa = args.saveAddr;
+      if (sa && str(sa.line).length >= 5) {
+        const mine = d.addresses.filter(a => a.user === me.id), line = str(sa.line, 300), province = str(sa.province, 80);
+        if (!mine.some(a => a.line === line && a.province === province)) d.addresses.push({ id: A.uid('dc'), user: me.id, name, phone, line, province, isDefault: !mine.length });
+      }
+    }
+    c.log('Đặt hàng', `${o.id}: ${name}, ${money(o.total)}`);
+    const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
+    c.notify(`Đơn hàng mới ${o.id}\n${name} · ${phone}\n${items.map(x => `${x.qty} x ${x.name}`).join('\n')}\nTổng ${money(o.total)}${due < o.total ? `, đã trả bằng ví ${money(o.total - due)}` : ''}\n${due ? `Chờ chuyển khoản ${money(due)} (nội dung ${o.id})` : 'Đã thanh toán đủ bằng ví'}\nĐịa chỉ: ${address}`,
+      due ? { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' } : null);
+    if (email) c.mail(email, `Xác nhận đơn hàng ${o.id}`, 'Đơn hàng', wrapMail(c.site, 'Cảm ơn ' + c.e(name) + ' đã đặt hàng',
+      `<p>Mã đơn: <b>${o.id}</b></p><table style="width:100%;border-collapse:collapse">${items.map(x => `<tr><td style="padding:4px 0">${x.qty} x ${c.e(x.name)}</td><td style="text-align:right">${money(x.price * x.qty)}</td></tr>`).join('')}<tr><td style="padding-top:8px"><b>Tổng</b></td><td style="text-align:right"><b>${money(o.total)}</b></td></tr></table>
+       ${due ? `<p>Anh chị chuyển khoản <b>${money(due)}</b> tới ${c.e(c.site.bank.name)} ${c.e(c.site.bank.account)} (${c.e(c.site.bank.owner)}), nội dung <b>${o.id}</b>.</p>` : '<p>Đơn đã thanh toán đủ bằng ví.</p>'}
+       <p>Giao tới: ${c.e(address)}</p>`));
+    return { order: o };
+  } },
+
+  /* ===== thành viên ===== */
+  profile: { auth: 'member', run(c) {
+    const name = str(c.args.name, 80), phone = str(c.args.phone, 20), birthday = str(c.args.birthday, 10);
+    if (name.length < 2) return err('Anh chị nhập họ và tên.');
+    if (phone && !PHONE.test(phone)) return err('Số điện thoại chưa đúng.');
+    Object.assign(c.me, { name, phone, birthday }); c.log('Cập nhật hồ sơ', `@${c.me.username}: ${name}`); return { ok: true };
+  } },
+  avatar: { auth: 'member', run(c) {
+    const url = c.args.url;
+    if (url == null) { delete c.me.avatar; c.log('Xóa ảnh đại diện', '@' + c.me.username); return { ok: true }; }
+    if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(String(url)) || String(url).length > 400000) return err('Ảnh chưa hợp lệ, anh chị chọn ảnh khác.');
+    c.me.avatar = url; c.log('Cập nhật ảnh đại diện', '@' + c.me.username); return { ok: true };
+  } },
+  changePass: { auth: 'member', run(c) {
+    const o = String(c.args.old || ''), n = String(c.args.pass || '');
+    if (!verifyPass(o, c.me.pass)) return err('Mật khẩu hiện tại chưa đúng.');
+    if (n.length < 6 || n.length > 100) return err('Mật khẩu mới cần ít nhất 6 ký tự.');
+    if (verifyPass(n, c.me.pass)) return err('Mật khẩu mới cần khác mật khẩu cũ.');
+    c.me.pass = hashPass(n); c.me.passChanged = c.today(); c.store.endSessionsOf(c.me.id, c.sid);
+    c.log('Đổi mật khẩu', '@' + (c.me.username || c.me.email)); return { ok: true };
+  } },
+  addrSave: { auth: 'member', run(c) {
+    const { d, me } = c, a = c.args, v = { name: str(a.name, 80), phone: str(a.phone, 20), line: str(a.line, 300), province: str(a.province, 80), isDefault: !!a.isDefault };
+    if (!v.name || !v.phone || v.line.length < 5 || !v.province) return err('Anh chị điền đủ người nhận, số điện thoại, địa chỉ và tỉnh thành.');
+    d.addresses = d.addresses || [];
+    const mine = () => d.addresses.filter(x => x.user === me.id), cur = a.id && mine().find(x => x.id === a.id);
+    if (a.id && !cur) return err('Không tìm thấy địa chỉ.');
+    if (v.isDefault) mine().forEach(x => x.isDefault = false);
+    if (cur) Object.assign(cur, v); else d.addresses.push({ id: c.A.uid('dc'), user: me.id, ...v });
+    if (!mine().some(x => x.isDefault)) mine()[0].isDefault = true;
+    c.log(cur ? 'Sửa địa chỉ' : 'Thêm địa chỉ', me.name); return { ok: true };
+  } },
+  addrDefault: { auth: 'member', run(c) {
+    const mine = c.d.addresses.filter(x => x.user === c.me.id); if (!mine.some(x => x.id === c.args.id)) return err('Không tìm thấy địa chỉ.');
+    mine.forEach(x => x.isDefault = x.id === c.args.id); c.log('Đặt địa chỉ mặc định', c.me.name); return { ok: true };
+  } },
+  addrDelete: { auth: 'member', run(c) {
+    const { d, me } = c, a = d.addresses.find(x => x.user === me.id && x.id === c.args.id); if (!a) return err('Không tìm thấy địa chỉ.');
+    d.addresses = d.addresses.filter(x => x !== a); const rest = d.addresses.filter(x => x.user === me.id); if (a.isDefault && rest.length) rest[0].isDefault = true;
+    c.log('Xóa địa chỉ', me.name); return { ok: true };
+  } },
+  buyPackage: { auth: 'member', run(c) {
+    const { d, A, me } = c;
+    if ((me.tier || 'khach') !== 'khach') return err('Tài khoản đã kích hoạt.');
+    const has = d.orders.find(o => o.userId === me.id && o.status !== 'failed' && (o.items || []).some(x => x.id === A.PKG_ID)); if (has) return { order: has };
+    const o = A.buyPackage(d, me, 'bank');
+    c.log('Đặt gói kích hoạt CTV', `${me.name}: đơn ${o.id}, ${money(o.total)}`);
+    c.notify(`Đơn gói kích hoạt CTV ${o.id}\n${me.name} (@${me.username}) · ${me.phone || ''}\nSố tiền ${money(o.total)}, nội dung chuyển khoản ${o.id}`, { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' });
+    return { order: o };
+  } },
+  buyAgentPackage: { auth: 'member', run(c) {
+    const { d, A, me } = c;
+    if (!A.plan(d).agentPkgOn) return err('Hiện công ty chưa mở đăng ký gói đại lý.');
+    if (me.tier === 'daily') return err('Tài khoản đã là Đại lý.');
+    const has = d.orders.find(o => o.userId === me.id && o.status !== 'failed' && A.isAgentPkgOrder(o)); if (has) return { order: has };
+    const o = A.buyAgentPackage(d, me, 'bank');
+    c.log('Đặt gói đại lý', `${me.name}: đơn ${o.id}, ${money(o.total)}`);
+    c.notify(`Đơn gói đại lý ${o.id}\n${me.name} (@${me.username}) · ${me.phone || ''}\nSố tiền ${money(o.total)}, nội dung chuyển khoản ${o.id}`, { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' });
+    return { order: o };
+  } },
+  deposit: { auth: 'member', run(c) {
+    const { d, A, me } = c, a = int(c.args.amount), method = c.args.method === 'Tiền mặt tại cửa hàng' ? 'Tiền mặt tại cửa hàng' : 'Chuyển khoản';
+    if (a < 10000) return err('Số tiền nạp tối thiểu 10.000đ.');
+    if (a > 2e9) return err('Số tiền nạp quá lớn, anh chị liên hệ công ty.');
+    const code = 'NAP ' + String(me.username || me.code || '').toUpperCase();
+    const r = A.deposit(d, me, a, method, { status: 'pending', code }); if (r.error) return r;
+    c.log('Yêu cầu nạp tiền', `${me.name}: ${money(a)} qua ${method}`);
+    c.notify(`Yêu cầu nạp tiền ví\n${me.name} (@${me.username})\nSố tiền ${money(a)} qua ${method}${method === 'Chuyển khoản' ? `, nội dung ${code}` : ''}`, { kind: 'topup', ref: r.topup.id, button: '✅ Xác nhận đã nhận tiền' });
+    return { topup: r.topup };
+  } },
+  wallet: { auth: 'member', run(c) {
+    const { d, A, me, args } = c, a = int(args.amount), k = args.kind; let r;
+    if (k === 'withdraw') {
+      const bank = str(args.bank, 80), account = str(args.account, 120);
+      if (!bank || !account) return err('Anh chị điền tên ngân hàng và số tài khoản.');
+      r = A.withdraw(d, me, a, { bank, account }); if (r.error) return r;
+      c.log('Yêu cầu rút tiền', `@${me.username}: ${money(a)} từ ví tiền mặt về ${bank} ${account}`);
+      c.notify(`Yêu cầu rút tiền\n${me.name} (@${me.username})\n${money(a)} về ${bank} ${account}\nDuyệt trong Quản trị > Tài chính.`);
+    } else if (k === 'tocash') { r = A.toCash(d, me, a); if (r.error) return r; c.log('Rút sang ví tiền mặt', `@${me.username}: ${money(a)}, thuế ${money(r.tax)}, thực nhận ${money(r.net)}`); }
+    else if (k === 'topoints') { r = A.cashToPoints(d, me, a); if (r.error) return r; c.log('Đổi tiền mặt sang điểm PS', `@${me.username}: ${money(a)} thành ${ps(a)}`); }
+    else if (k === 'convert') { r = A.convert(d, me, a); if (r.error) return r; c.log('Chuyển điểm thưởng', `@${me.username}: ${ps(a)}, thuế ${ps(r.tax)}`); }
+    else if (k === 'toshop') { r = A.toShop(d, me, a); if (r.error) return r; c.log('Chuyển sang ví mua hàng', `@${me.username}: ${ps(a)}`); }
+    else if (k === 'transfer') {
+      const to = A.byUsername(d, args.user);
+      if (args.check) { if (!to || to.role === 'admin') return err('Không tìm thấy thành viên có tên truy cập này.'); if (to.id === me.id) return err('Không thể chuyển cho chính mình.'); if (!(a > 0)) return err('Anh chị nhập số điểm cần chuyển.'); if (a > A.balances(d, me.id).avail) return err('Ví điểm khả dụng không đủ.'); return { to: pick(to, ['id', 'name', 'username']), check: true }; }
+      r = A.transfer(d, me, args.user, a, str(args.note, 80)); if (r.error) return r;
+      c.log('Chuyển điểm', `@${me.username} chuyển ${ps(a)} cho @${r.to.username}`);
+      r = { to: pick(r.to, ['id', 'name', 'username']) };
+    } else return err('Thao tác không hợp lệ.');
+    return Object.assign({ ok: true }, r);
+  } },
+  lookupUser: { auth: 'member', run(c) {
+    const to = c.A.byUsername(c.d, c.args.username);
+    return to && to.role !== 'admin' ? { user: pick(to, ['id', 'name', 'username', 'tier', 'avatar']) } : { user: null };
+  } },
+  spin: { auth: 'member', run(c) {
+    const r = c.A.wheelSpin(c.d, c.args.code, c.me); if (r.error) return r;
+    c.log('Quay thưởng', `${c.me.name} dùng mã ${r.spin.code}: ${r.prize.name}`);
+    return { prize: r.prize, index: r.index, spin: r.spin, segments: r.segments };
+  } },
+
+  /* ===== quản trị ===== */
+  adminCreate: { auth: 'admin', perm: 'admins', run(c) {
+    const a = c.args, email = str(a.email, 120).toLowerCase(), pass = String(a.pass || '');
+    if (!EMAIL.test(email)) return err('Email chưa đúng định dạng.');
+    if (c.d.users.some(u => (u.email || '').toLowerCase() === email)) return err('Email này đã có tài khoản.');
+    if (pass.length < 6) return err('Mật khẩu tạm cần ít nhất 6 ký tự.');
+    const role = (c.d.roles || []).some(r => r.id === a.role) ? a.role : 'sale';
+    if (role === 'owner' && !c.A.isOwner(c.me)) return err('Chỉ chủ sở hữu mới tạo được tài khoản chủ sở hữu.');
+    const u = { id: c.A.uid('u-adm'), name: str(a.name, 80), email, phone: str(a.phone, 20), pass: hashPass(pass), role: 'admin', adminRole: role, created: c.today(), status: 'active', mustChange: true };
+    c.d.users.push(u); c.log('Tạo tài khoản quản trị', `${u.name} (${u.email})`); return { user: clean(u) };
+  } },
+  adminSetPass: { auth: 'admin', perm: 'members', run(c) {
+    const u = c.A.user(c.d, c.args.id), p = String(c.args.pass || '');
+    if (!u) return err('Không tìm thấy tài khoản.');
+    if (u.role === 'admin' && !c.A.isOwner(c.me)) return err('Chỉ chủ sở hữu mới đặt lại mật khẩu tài khoản quản trị.');
+    if (p.length < 6) return err('Mật khẩu cần ít nhất 6 ký tự.');
+    u.pass = hashPass(p); u.passChanged = c.today(); c.store.endSessionsOf(u.id);
+    c.log('Đặt lại mật khẩu', `${u.name} (@${u.username || u.email})`); return { ok: true };
+  } },
+  fund: { auth: 'owner', run(c) {
+    if (!verifyPass(c.args.pass || '', c.me.pass)) return err('Mật khẩu xác nhận chưa đúng.');
+    const r = c.A.fundAction(c.d, c.me, c.args.kind, c.args.amount, c.args.note, true); if (r.error) return r;
+    c.log({ mint: 'Tạo điểm', give: 'Cấp quỹ kế toán', back: 'Thu hồi về quỹ phát hành', burn: 'Hủy điểm' }[c.args.kind] || 'Quỹ điểm', `${money(r.entry.amount).replace('đ', ' PS')}: ${r.entry.note}`);
+    return r;
+  } },
+  mailGet: { auth: 'owner', run(c) { const m = c.store.getJSON('secret:mail') || {}; return { user: m.user || '', fromName: m.fromName || '', host: m.host || 'smtp.gmail.com', configured: !!(m.user && m.pass) }; } },
+  mailSet: { auth: 'owner', run(c) {
+    const cur = c.store.getJSON('secret:mail') || {}, user = str(c.args.user, 120).toLowerCase(), pass = String(c.args.pass || '').replace(/\s+/g, '');
+    if (!EMAIL.test(user)) return err('Anh nhập địa chỉ Gmail gửi thư.');
+    const next = { user, pass: pass || cur.pass || '', fromName: str(c.args.fromName, 80) || c.site.brand, host: str(c.args.host, 80) || 'smtp.gmail.com', port: int(c.args.port) || 465 };
+    if (!next.pass) return err('Anh dán mật khẩu ứng dụng 16 ký tự của Gmail.');
+    c.store.setJSON('secret:mail', next); c.log('Cấu hình email gửi thư', user); return { ok: true };
+  } },
+  mailTest: { auth: 'owner', async: true, async run(c) {
+    const to = str(c.args.to, 120) || c.me.email;
+    try { await c.sendNow(to, 'Thư thử từ ' + c.site.brand, 'Thử', wrapMail(c.site, 'Gửi thư thành công', '<p>Email gửi thư tự động của web đã hoạt động.</p>')); return { ok: true, to }; }
+    catch (e) { return err(e.message); }
+  } },
+  mailResend: { auth: 'admin', run(c) {
+    const m = (c.d.mails || []).find(x => x.id === c.args.id); if (!m) return err('Không tìm thấy thư.');
+    if (m.secret) return err('Thư đặt lại mật khẩu không gửi lại được, người dùng yêu cầu lại.');
+    if (!m.html) return err('Thư này không còn nội dung để gửi lại.');
+    c.mail(m.to, m.subject, m.type, m.html, { resendOf: m.id }); return { ok: true };
+  } }
+};
+
+module.exports = { ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };

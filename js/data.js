@@ -16,13 +16,11 @@ window.SITE = {
   email: 'phucsinhquantum@gmail.com',
   address: '41 Nguyễn Đình Chiểu, Phường Sài Gòn, TP. Hồ Chí Minh',
   hours: 'Thứ 2 đến Chủ nhật, 8:00 đến 20:00',
-  website: 'tenmien.vn',
+  website: 'phucsinhquantum.com',
   social: { facebook: '', youtube: '', tiktok: '', zalo: '' },   // link mạng xã hội thật (để trống = "sắp ra mắt")
   mapEmbed: '',                    // dán link nhúng Google Maps (https://www.google.com/maps/embed?...)
-  bank: { name: 'Ngân hàng (mẫu)', account: '0000 0000 0000', owner: 'CONG TY PHUC SINH QUANTUM' },
-  shipFee: 0,                      // phí giao hàng (0 = miễn phí)
-  // tài khoản quản trị dùng thử (chỉ lưu trên trình duyệt, cần máy chủ thật trước khi chạy chính thức)
-  demoAdmin: { email: 'admin@psq.vn', pass: 'psq2026' }
+  bank: { name: 'BIDV', account: '8686141319', owner: 'Công Ty Cổ Phần Phúc Sinh QuanTum' },
+  shipFee: 0                       // phí giao hàng (0 = miễn phí)
 };
 
 window.CATEGORIES = [

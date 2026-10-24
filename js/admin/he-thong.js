@@ -57,8 +57,9 @@
 
   /* ---------- lịch sử gửi mail ---------- */
   const ms = { q: '', type: '', status: '' };
-  const mailStatus = { sent: ['Đã gửi', 'ok'], failed: ['Lỗi gửi', 'failed'], queued: ['Đang chờ', 'pending'] };
+  const mailStatus = { sent: ['Đã gửi', 'ok'], failed: ['Lỗi gửi', 'failed'], queued: ['Đang chờ', 'pending'], sending: ['Đang gửi', 'pending'] };
   function mailBody(d, m) {
+    if (m.html) return `<div class="ht-mail" style="background:#fff;color:#222;padding:16px;border-radius:10px">${m.html}</div>`;
     const S = d.settings || {}, u = d.users.find(x => x.email === m.to), name = u ? u.name : 'anh chị';
     const oid = (m.subject.match(/PSQ\d+/) || [])[0], o = oid && d.orders.find(x => x.id === oid);
     let main;
@@ -74,10 +75,9 @@
       <div class="ht-mail-f">Hotline ${esc(S.hotline || SITE.phone)} · ${esc(S.email || SITE.email)}<br>${esc(S.address || SITE.address)}</div></div>`;
   }
   function resend(id, done) {
-    const d = ADB.load(), m = (d.mails || []).find(x => x.id === id); if (!m) return;
-    const now = new Date(); m.status = 'sent'; m.resent = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
-    ADB.log(d, 'Gửi lại thư', `${m.subject} → ${m.to}`); ADB.save(d);
-    toast('Đã đánh dấu gửi lại. Gửi thư thật cần nối máy chủ thư (SMTP).'); done();
+    const r = API.act('mailResend', { id });
+    if (r.error) return toast(r.error, 'err');
+    toast('Đã gửi lại thư'); done();
   }
   ADMIN_MODULES.mails = {
     render(el) {
@@ -278,9 +278,8 @@
         <p class="red mt-2" data-err style="font-size:13px;min-height:1em"></p>
         ${edit ? `<div class="row" style="justify-content:flex-end"><button class="btn btn-gold" type="submit">${icon('check')} Lưu thiết lập</button></div>` : '<p class="dim" style="font-size:13px">Vai trò của anh chị chỉ được xem thiết lập.</p>'}
       </form>
-      ${edit ? `<div class="card ht-danger mt-2"><div class="card-head"><div><h3 class="red">Vùng nguy hiểm</h3><div class="sub">Khôi phục dữ liệu mẫu sẽ xóa đơn hàng, thành viên, ví, kho, nhật ký đang lưu trên trình duyệt này và tạo lại dữ liệu mẫu ban đầu.</div></div></div>
-        <label class="check"><input type="checkbox" data-alsocontent> Khôi phục cả danh mục và bài viết kiến thức về mặc định</label>
-        <div class="row mt-2"><button class="btn btn-outline-gold" type="button" data-reset style="border-color:rgba(255,107,107,.5);color:var(--red)">${icon('trash')} Khôi phục dữ liệu mẫu</button></div></div>` : ''}`;
+      ${ADB.isOwner(PSQ.auth.user()) ? `<div class="card glow-cyan mt-2" id="mailCfg"><div class="card-head"><div><h3>Email gửi thư tự động</h3><div class="sub">thư chào mừng, quên mật khẩu, xác nhận đơn hàng</div></div></div>
+        <div id="mcBody"></div></div>` : ''}`;
       const form = $('[data-set]', el);
       form.addEventListener('submit', e => {
         e.preventDefault(); if (!edit) return;
@@ -321,13 +320,27 @@
         ADB.log(d2, 'Thiết lập hệ thống', `Gói ${money(plan.pkgPrice)} (${money(plan.pkgPoints)} PS); giới thiệu ${money(plan.refBonus)}; CTV ${plan.ctvRate}%, đại lý ${plan.agentRate}%, thu nhập đại lý ${plan.overrideRate}% (${plan.overrideShop}% vào ví mua hàng); thuế ${plan.taxRate}%; lên đại lý ${money(plan.agentThreshold)}; gói tính vào doanh số ${money(plan.pkgCountsAs)}; rút tối thiểu ${money(mw)}`); ADB.save(d2);
         toast('Đã lưu thiết lập hệ thống');
       });
-      const rb = $('[data-reset]', el);
-      if (rb) rb.addEventListener('click', () => {
-        const also = $('[data-alsocontent]', el).checked;
-        if (!confirm('Khôi phục toàn bộ dữ liệu mẫu? Đơn hàng, thành viên, ví, kho và nhật ký hiện tại trên trình duyệt này sẽ bị xóa.')) return;
-        if (also) ['psq_cats_v1', 'psq_postcats_v1', 'psq_posts_v1'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
-        ADB.reset(); toast('Đã khôi phục dữ liệu mẫu'); setTimeout(() => location.reload(), 500);
-      });
+      // email gửi thư: mật khẩu ứng dụng chỉ lưu trên máy chủ, không hiện lại
+      const mc = $('#mcBody', el);
+      if (mc) {
+        const draw = () => {
+          const g = API.act('mailGet');
+          mc.innerHTML = `<p class="${g.configured ? 'green' : 'gold'}" style="font-size:13.5px">${g.configured ? 'Đang gửi bằng ' + esc(g.user) : 'Chưa kết nối email. Thư chưa được gửi đi.'}</p>
+            <ol class="dim" style="font-size:13px;padding-left:18px;line-height:1.6;margin:8px 0">
+              <li>Đăng nhập Gmail dùng để gửi thư, bật <b>Xác minh 2 bước</b> (myaccount.google.com, mục Bảo mật).</li>
+              <li>Mở <b>myaccount.google.com/apppasswords</b>, đặt tên "Web PSQ", bấm Tạo. Google hiện mật khẩu ứng dụng 16 ký tự.</li>
+              <li>Dán vào ô bên dưới, bấm Lưu, rồi bấm Gửi thư thử.</li></ol>
+            <form class="form-grid" id="mcF" autocomplete="off">
+              <div class="field"><label>Gmail gửi thư</label><input class="input" name="user" type="email" value="${esc(g.user || SITE.email)}"></div>
+              <div class="field"><label>Tên người gửi</label><input class="input" name="fromName" value="${esc(g.fromName || SITE.brand)}"></div>
+              <div class="field full"><label>Mật khẩu ứng dụng 16 ký tự${g.configured ? ' (để trống nếu không đổi)' : ''}</label><input class="input" name="pass" type="password" autocomplete="new-password" spellcheck="false"></div>
+              <p class="red full" id="mcE" style="font-size:13px;min-height:18px;margin:0"></p>
+              <div class="row full" style="gap:8px"><button class="btn btn-gold btn-sm" type="submit">${icon('check')} Lưu</button>${g.configured ? `<button class="btn btn-sm" type="button" id="mcT">${icon('mail')} Gửi thư thử tới ${esc(PSQ.auth.user().email)}</button>` : ''}</div></form>`;
+          $('#mcF', mc).addEventListener('submit', e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), r = API.act('mailSet', f); if (r.error) return $('#mcE', mc).textContent = r.error; toast('Đã lưu email gửi thư'); draw(); });
+          const t = $('#mcT', mc); if (t) t.addEventListener('click', () => { t.disabled = true; t.textContent = 'Đang gửi...'; const r = API.act('mailTest'); if (r.error) { $('#mcE', mc).textContent = r.error; t.disabled = false; t.textContent = 'Gửi lại thư thử'; } else { toast('Đã gửi thư thử tới ' + r.to + ', anh mở hộp thư kiểm tra'); draw(); } });
+        };
+        draw();
+      }
     }
   };
 })();

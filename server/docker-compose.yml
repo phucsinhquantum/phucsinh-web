@@ -1,0 +1,24 @@
+# Máy chủ dữ liệu PSQ chạy cạnh Caddy. Chạy: docker compose -f server/docker-compose.yml up -d
+# WEB_DIR: thư mục code web (clone từ GitHub), DATA_DIR_HOST: thư mục dữ liệu (ngoài thư mục web), PROXY_NET: mạng docker của Caddy
+services:
+  psq-api:
+    image: node:22-alpine
+    container_name: ${NAME:-psq-api}
+    restart: unless-stopped
+    working_dir: /web
+    command: ["node", "--no-warnings", "server/server.js"]
+    env_file: ${DATA_DIR_HOST:-/opt/psq-data}/.env
+    environment:
+      WEB_ROOT: /web
+      DATA_DIR: /data
+      PORT: "8080"
+      SERVE_STATIC: "0"
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - ${WEB_DIR:-/opt/web/phucsinhquantum}:/web:ro
+      - ${DATA_DIR_HOST:-/opt/psq-data}:/data
+    networks: [proxy]
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NET:-proxy_default}
