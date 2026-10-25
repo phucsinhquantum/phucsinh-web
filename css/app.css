@@ -273,6 +273,11 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 select.input option { background: var(--panel-solid); }
 .input:focus { border-color: rgba(243, 199, 107, .6); box-shadow: 0 0 0 3px rgba(243, 199, 107, .12); }
 .input::placeholder { color: var(--text-3); }
+.pw-eye-wrap { position: relative; display: block; }
+.pw-eye-wrap .input { padding-right: 46px; }
+.pw-eye { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--text-3); cursor: pointer; }
+.pw-eye:hover, .pw-eye[aria-pressed="true"] { color: var(--gold, #f3c76b); }
+.pw-eye .i { width: 20px; height: 20px; }
 .form-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-grid .full { grid-column: 1 / -1; }
 .check { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-2); cursor: pointer; }

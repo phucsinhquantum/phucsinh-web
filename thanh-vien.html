@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261024r">
-<script src="js/lang.js?v=20261024r"></script>
+<link rel="stylesheet" href="css/app.css?v=20261025a">
+<script src="js/lang.js?v=20261025a"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,11 +216,11 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261024r"></script>
-<script src="js/api.js?v=20261024r"></script>
-<script src="js/data.js?v=20261024r"></script>
-<script src="js/app.js?v=20261024r"></script>
-<script src="js/psq-data.js?v=20261024r"></script>
+<script src="js/patch.js?v=20261025a"></script>
+<script src="js/api.js?v=20261025a"></script>
+<script src="js/data.js?v=20261025a"></script>
+<script src="js/app.js?v=20261025a"></script>
+<script src="js/psq-data.js?v=20261025a"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -857,7 +857,7 @@
           <div class="field mt-2"><label for="fp">Số điện thoại</label><input class="input" id="fp" name="phone" type="tel" autocomplete="tel" inputmode="tel"></div>` : ''}
           ${mode === 'reset' ? '' : `<div class="field mt-2"><label for="fe">${mode === 'login' ? 'Email hoặc tên truy cập' : 'Email'}</label><input class="input" id="fe" name="email" type="${mode === 'login' ? 'text' : 'email'}" autocomplete="${mode === 'login' ? 'username' : 'email'}" autocapitalize="off" spellcheck="false" required></div>`}
           ${mode === 'forgot' ? '' : `<div class="field mt-2"><label for="fw">${mode === 'reset' ? 'Mật khẩu mới' : 'Mật khẩu'}</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>`}
-          ${mode === 'reset' ? `<div class="field mt-2"><label for="fw2">Nhập lại mật khẩu mới</label><input class="input" id="fw2" name="pass2" type="password" autocomplete="new-password" minlength="6" required></div>` : ''}
+          ${mode === 'reset' || mode === 'register' ? `<div class="field mt-2"><label for="fw2">${mode === 'reset' ? 'Nhập lại mật khẩu mới' : 'Nhập lại mật khẩu'}</label><input class="input" id="fw2" name="pass2" type="password" autocomplete="new-password" minlength="6" required><small class="dim" id="fw2Hint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>` : ''}
           ${mode === 'register' ? `<div class="field mt-2"><label for="fr">Mã giới thiệu (nếu có)</label><input class="input" id="fr" name="ref" autocomplete="off" placeholder="Ví dụ PS1001" value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>
           <div class="terms-h mt-2"><b>${icon('shield')} Điều khoản sử dụng</b><small id="termsHint">Cuộn đọc hết để đồng ý</small></div>
           <div class="terms-box" id="termsBox"><div class="terms" id="terms" tabindex="0" role="document" aria-label="Điều khoản sử dụng">${termsHtml(P)}</div></div>
@@ -878,6 +878,9 @@
     if (fr) { const hint = () => { const c = fr.value.trim().toUpperCase(), r = c ? API.act('checkRef', { code: c }) : {};
       if (!$('#frHint')) return; $('#frHint').innerHTML = !c ? '' : r.name ? `Người giới thiệu: <b class="gold">${esc(r.name)}</b>` : `<span class="red">${esc(r.error || 'Mã giới thiệu chưa đúng.')}</span>`; };
       fr.addEventListener('input', later(hint)); if (fr.value) hint(); }
+    // nhập lại mật khẩu: báo ngay khi chưa khớp
+    const fw = $('#fw'), fw2 = $('#fw2');
+    if (fw && fw2) { const same = () => { const h = $('#fw2Hint'); if (!h) return; h.innerHTML = !fw2.value ? '' : fw.value === fw2.value ? '<span class="green">Mật khẩu khớp ✓</span>' : '<span class="red">Chưa khớp với mật khẩu ở trên.</span>'; }; fw.addEventListener('input', same); fw2.addEventListener('input', same); }
     const fu = $('#fu'), unameErr = v => { if (!v) return ''; if (!UNAME.test(v)) return 'Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.'; const r = API.act('checkUsername', { username: v }); return r.error || ''; };
     if (fu) fu.addEventListener('input', later(() => { const v = fu.value.trim().toLowerCase(), er = unameErr(v);
       if (!$('#fuHint')) return; $('#fuHint').innerHTML = !v ? 'Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.' : er ? `<span class="red">${er}</span>` : `<span class="green">Dùng được: @${esc(v)}</span>`; }));
@@ -901,6 +904,7 @@
         if (!f.name || !f.email || !f.pass) return err.textContent = 'Anh chị điền đủ họ tên, email và mật khẩu.';
         wanted = (f.username || '').trim().toLowerCase(); const ue = unameErr(wanted); if (ue) return err.textContent = ue;
         if (f.pass.length < 6) return err.textContent = 'Mật khẩu tối thiểu 6 ký tự.';
+        if (f.pass !== f.pass2) { $('#fw2').focus(); return err.textContent = 'Hai lần nhập mật khẩu chưa khớp, anh chị nhập lại giúp em.'; }
         if (!f.agree) return err.textContent = 'Anh chị cần đồng ý với điều khoản.';
       }
       btn.disabled = true;
