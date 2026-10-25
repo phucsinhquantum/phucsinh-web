@@ -57,6 +57,12 @@ git -C /opt/web/phucsinhquantum-thu pull
 docker restart psq-api-thu
 ```
 
+## Tên gọi trên mạng docker (sửa 25/10)
+
+Trước 25/10 dịch vụ trong docker-compose.yml tên là `psq-api`, nên container bản thử cũng mang tên gọi `psq-api` trên mạng của Caddy. Caddy bản chính gọi `psq-api:8080` bị chia ngẫu nhiên sang bản thử (đăng ký rơi vào dữ liệu bản thử, lưu quản trị báo chưa đăng nhập). Nay dịch vụ tên là `app`, Caddy luôn gọi theo tên container: `psq-api` (chính), `psq-api-thu` (thử).
+
+Lần đầu chạy `docker compose ... up -d` sau khi pull bản sửa này, container cũ còn thuộc dịch vụ tên cũ nên báo trùng tên. Xóa container cũ trước (dữ liệu nằm ở thư mục dữ liệu, không mất): `docker rm -f psq-api-thu` (hoặc `psq-api`), rồi chạy lệnh ở bước 5. Kiểm tra: `docker network inspect <mạng Caddy>` chỉ một container có tên gọi `psq-api`.
+
 ## Sửa tệp .env
 
 `docker restart` không đọc lại `.env`. Sửa `.env` xong phải tạo lại container bằng lệnh ở bước 5 (`docker compose ... up -d`, cùng các biến NAME, WEB_DIR, DATA_DIR_HOST, PROXY_NET). Dữ liệu nằm ở thư mục dữ liệu nên không mất.

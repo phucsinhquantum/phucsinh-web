@@ -1,7 +1,10 @@
 # Máy chủ dữ liệu PSQ chạy cạnh Caddy. Chạy: docker compose -f server/docker-compose.yml up -d
 # WEB_DIR: thư mục code web (clone từ GitHub), DATA_DIR_HOST: thư mục dữ liệu (ngoài thư mục web), PROXY_NET: mạng docker của Caddy
+# Tên dịch vụ là "app" (không phải psq-api): docker tự đặt tên dịch vụ làm tên gọi trên mạng, nếu bản chính và bản thử
+# cùng tên dịch vụ psq-api thì Caddy gọi psq-api sẽ bị chia ngẫu nhiên sang cả bản thử (lỗi 25/10).
+# Caddy luôn gọi theo tên container (NAME): psq-api cho bản chính, psq-api-thu cho bản thử.
 services:
-  psq-api:
+  app:
     image: node:22-alpine
     container_name: ${NAME:-psq-api}
     restart: unless-stopped
