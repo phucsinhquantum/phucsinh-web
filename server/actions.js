@@ -106,12 +106,20 @@ function welcomeMail(c, u) {
     `<p>Tài khoản thành viên của anh chị đã được tạo.</p><p>Tên truy cập: <b>@${c.e(u.username)}</b><br>Mã giới thiệu: <b>${c.e(u.code)}</b></p><p><a href="${c.base}/thanh-vien.html">Vào trang thành viên</a></p>`));
 }
 
+// tìm người giới thiệu theo mã PS.../tên truy cập. Mã của quản trị (PS1000 của chủ sở hữu) là công ty giới thiệu:
+// hợp lệ nhưng không gắn tuyến trên, nên không phát sinh hoa hồng hay thưởng.
+const findRef = (d, ref) => {
+  const k = String(ref || '').trim().toUpperCase(); if (!k) return null;
+  const u = d.users.find(x => x.status !== 'locked' && ((x.code || '').toUpperCase() === k || (x.username || '').toUpperCase() === k));
+  return u ? { user: u, company: u.role === 'admin' } : null;
+};
+
 const ACTIONS = {
   /* ===== khách chưa đăng nhập ===== */
   checkRef: { auth: 'guest', run(c) {
     const k = str(c.args.code, 40).toUpperCase(); if (!k) return { ok: true };
-    const u = c.d.users.find(x => x.role !== 'admin' && ((x.code || '').toUpperCase() === k || (x.username || '').toUpperCase() === k));
-    return u ? { name: u.name } : err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.');
+    const r = findRef(c.d, k);
+    return r ? { name: r.company ? c.site.brand || 'Công ty' : r.user.name } : err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.');
   } },
   checkUsername: { auth: 'guest', run(c) {
     const v = str(c.args.username, 40).toLowerCase();
@@ -134,8 +142,9 @@ const ACTIONS = {
     let k = 1001 + d.users.filter(u => u.role !== 'admin').length; while (d.users.some(x => x.code === 'PS' + k)) k++;
     const u = { id: 'u' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'), name, email, phone, pass: hashPass(pass), role: 'member', created: c.today(), status: 'active', code: 'PS' + k, username, tier: 'khach', placed: false, parent: null };
     const ref = str(args.ref, 40).toUpperCase();
-    const sp = ref && d.users.find(x => x.role !== 'admin' && ((x.code || '').toUpperCase() === ref || (x.username || '').toUpperCase() === ref));
-    if (ref && !sp) return err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.');
+    const found = findRef(d, ref), sp = found && !found.company ? found.user : null;
+    if (ref && !found) return err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.');
+    if (found && found.company) u.refCode = found.user.code;
     if (sp) { u.sponsor = sp.id; const auto = d.settings && d.settings.autoPlace; u.placed = !!auto; u.parent = auto ? sp.id : null; }
     else { u.sponsor = null; u.placed = true; }
     // email gửi thư đã cài: tài khoản chờ kích hoạt qua thư; chưa cài thì dùng được ngay
