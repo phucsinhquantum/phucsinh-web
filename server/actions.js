@@ -144,7 +144,8 @@ const ACTIONS = {
     const u = { id: 'u' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'), name, email, phone, pass: hashPass(pass), role: 'member', created: c.today(), status: 'active', code: 'PS' + k, username, tier: 'khach', placed: false, parent: null };
     const ref = str(args.ref, 40).toUpperCase();
     const found = findRef(d, ref), sp = found && !found.company ? found.user : null;
-    if (ref && !found) return err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại hoặc để trống.');
+    if (!ref) return err('Anh chị cần nhập mã giới thiệu. Hãy liên hệ người giới thiệu mình để lấy mã, hoặc chọn một đại lý uy tín trong danh sách.');
+    if (!found) return err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại với người giới thiệu.');
     if (found && found.company) u.refCode = found.user.code;
     if (sp) { u.sponsor = sp.id; const auto = d.settings && d.settings.autoPlace; u.placed = !!auto; u.parent = auto ? sp.id : null; }
     else { u.sponsor = null; u.placed = true; }

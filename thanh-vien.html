@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028a">
-<script src="js/lang.js?v=20261028a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028b">
+<script src="js/lang.js?v=20261028b"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -226,11 +226,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261028a"></script>
-<script src="js/api.js?v=20261028a"></script>
-<script src="js/data.js?v=20261028a"></script>
-<script src="js/app.js?v=20261028a"></script>
-<script src="js/psq-data.js?v=20261028a"></script>
+<script src="js/patch.js?v=20261028b"></script>
+<script src="js/api.js?v=20261028b"></script>
+<script src="js/data.js?v=20261028b"></script>
+<script src="js/app.js?v=20261028b"></script>
+<script src="js/psq-data.js?v=20261028b"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -915,7 +915,9 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
           ${mode === 'reset' ? '' : `<div class="field mt-2"><label for="fe">${mode === 'login' ? 'Email hoặc tên truy cập' : 'Email'}</label><input class="input" id="fe" name="email" type="${mode === 'login' ? 'text' : 'email'}" autocomplete="${mode === 'login' ? 'username' : 'email'}" autocapitalize="off" spellcheck="false" required></div>`}
           ${mode === 'forgot' ? '' : `<div class="field mt-2"><label for="fw">${mode === 'reset' ? 'Mật khẩu mới' : 'Mật khẩu'}</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>`}
           ${mode === 'reset' || mode === 'register' ? `<div class="field mt-2"><label for="fw2">${mode === 'reset' ? 'Nhập lại mật khẩu mới' : 'Nhập lại mật khẩu'}</label><input class="input" id="fw2" name="pass2" type="password" autocomplete="new-password" minlength="6" required><small class="dim" id="fw2Hint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>` : ''}
-          ${mode === 'register' ? `<div class="field mt-2"><label for="fr">Mã giới thiệu (nếu có)</label><input class="input" id="fr" name="ref" autocomplete="off" placeholder="Ví dụ PS1001" value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>
+          ${mode === 'register' ? `<div class="field mt-2"><label for="fr">Mã giới thiệu <span class="red">*</span></label><input class="input" id="fr" name="ref" autocomplete="off" required placeholder="Ví dụ PS1001" value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small>
+            <small class="dim" style="font-size:12.5px;display:block">Hãy liên hệ người giới thiệu bạn để lấy mã số, hoặc chọn một trong những đại lý uy tín.</small>
+            <a class="btn btn-sm btn-outline-gold mt-1" href="dai-ly.html" target="_blank" rel="noopener">${icon('users')} Xem danh sách đại lý uy tín</a></div>
           <div class="terms-h mt-2"><b>${icon('shield')} Điều khoản sử dụng</b><small id="termsHint">Cuộn đọc hết để đồng ý</small></div>
           <div class="terms-box" id="termsBox"><div class="terms" id="terms" tabindex="0" role="document" aria-label="Điều khoản sử dụng">${termsHtml(P)}</div></div>
           <label class="check mt-2 terms-ok"><input type="checkbox" name="agree" id="agree" required disabled> Tôi đã đọc và đồng ý với điều khoản sử dụng và chính sách bảo mật</label>` : ''}
