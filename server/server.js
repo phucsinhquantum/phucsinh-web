@@ -19,7 +19,7 @@ const { openStore } = require('./store');
 const { createEngine, esc, today } = require('./engine');
 const { ACTIONS, scopeFor, hashPass, clean } = require('./actions');
 const { sendMail } = require('./mail');
-const { notify, sendTo, chatName, chatsOf } = require('./notify');
+const N = require('./notify'), { chatName, chatsOf } = N;
 const P = require('../js/patch.js');
 
 const env = process.env;
@@ -30,6 +30,12 @@ const BASE = (env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 const SECURE = env.COOKIE_SECURE ? env.COOKIE_SECURE === '1' : BASE.startsWith('https://');
 const CONTENT_KEYS = ['psq_about_v1', 'psq_cats_v1', 'psq_dealers_v1', 'psq_perks_v1', 'psq_postcats_v1', 'psq_posts_v1', 'psq_products_v1', 'psq_reviews_v1', 'psq_site_v1', 'psq_terms_v1', 'psq_videos_v1'];
 const PRODUCT_KEYS = ['psq_products_v1', 'psq_site_v1'];
+// bản thử (thu.phucsinhquantum.com hoặc SITE_MODE=thu): tin Telegram có nhãn [THỬ], không gửi thư cho khách
+// (chỉ gửi về TEST_MAIL_TO nếu có), trang hiện dải BẢN THỬ. Tránh nhầm đơn, thư thử với hệ thống thật.
+const TEST = env.SITE_MODE ? env.SITE_MODE === 'thu' : /^https?:\/\/thu\./i.test(env.BASE_URL || '');
+const tag = t => TEST ? '[THỬ] ' + t : t;
+const notify = (e, o) => N.notify(e, Object.assign({}, o, { text: tag(o.text || '') }));
+const sendTo = (e, chat, o) => N.sendTo(e, chat, Object.assign({}, o, { text: tag(o.text || '') }));
 
 const store = openStore(DATA_DIR);
 const content = new Map(CONTENT_KEYS.map(k => [k, store.getJSON(k)]));
@@ -71,14 +77,16 @@ const stamp = () => { const t = new Date(Date.now() + 7 * 36e5); return t.toISOS
 function after() { try { A().wheelSync(D); A().releaseHeld(D); A().settleSync(D); A().agentSync(D); } catch (e) { console.error(e); } save(); }
 
 /* ---------- thư và báo tin ---------- */
-const mailCfg = () => store.getJSON('secret:mail');
+const mailCfg = () => TEST && !env.TEST_MAIL_TO ? null : store.getJSON('secret:mail');
+// bản thử: mọi thư chuyển về TEST_MAIL_TO, tiêu đề ghi người nhận gốc
+const mailTo = (to, subject) => TEST ? { to: env.TEST_MAIL_TO, subject: `[THỬ, gửi ${to}] ${subject}` } : { to, subject };
 function mail(to, subject, type, html, opt = {}) {
   if (!to) return;
   const m = { id: A().uid('ml'), date: stamp(), to, subject, type, status: mailCfg() ? 'sending' : 'failed', html: opt.secret ? '' : html, secret: !!opt.secret };
   if (opt.resendOf) { const o = D.mails.find(x => x.id === opt.resendOf); if (o) o.resent = stamp(); }
   (D.mails = D.mails || []).unshift(m); if (D.mails.length > 2000) D.mails.length = 2000;
-  if (!mailCfg()) { m.error = 'Chưa cấu hình email gửi thư'; return; }
-  sendMail(mailCfg(), { to, subject, html }).then(() => { m.status = 'sent'; }, e => { m.status = 'failed'; m.error = e.message; console.error('[thư lỗi]', to, e.message); }).finally(save);
+  if (!mailCfg()) { m.error = TEST ? 'Bản thử không gửi thư cho khách' : 'Chưa cấu hình email gửi thư'; return; }
+  sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { m.status = 'sent'; }, e => { m.status = 'failed'; m.error = e.message; console.error('[thư lỗi]', to, e.message); }).finally(save);
 }
 function tell(text, confirm, photo) {
   let url = null;
@@ -139,7 +147,7 @@ const failed = ip => { const f = fails.get(ip); if (!f || Date.now() - f.at > 15
 
 function bootPayload(me) {
   const c = {}; content.forEach((v, k) => { if (v != null) c[k] = v; });
-  return { me: me ? clean(me) : null, db: scopeFor(D, me, A()), content: c, at: Date.now() };
+  return { me: me ? clean(me) : null, db: scopeFor(D, me, A()), content: c, at: Date.now(), ...(TEST ? { mode: 'thu' } : {}) };
 }
 
 async function api(req, res, url) {
@@ -169,7 +177,7 @@ async function api(req, res, url) {
       d: D, me, args: body.args || {}, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc,
       log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
       mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
-      sendNow: (to, subject, type, html) => sendMail(mailCfg(), { to, subject, html }).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
+      sendNow: (to, subject, type, html) => sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
     };
     let r;
     try { r = def.async ? await def.run(ctx) : def.run(ctx); }
@@ -343,7 +351,7 @@ const server = http.createServer((req, res) => {
   if (env.SERVE_STATIC === '0') return send(res, 404, 'Không tìm thấy');
   serveStatic(req, res, url);
 });
-server.listen(PORT, () => console.log(`Máy chủ PSQ chạy cổng ${PORT}, dữ liệu ${DATA_DIR}, web ${WEB_ROOT}, địa chỉ ${BASE}`));
+server.listen(PORT, () => console.log(`Máy chủ PSQ${TEST ? ' (BẢN THỬ)' : ''} chạy cổng ${PORT}, dữ liệu ${DATA_DIR}, web ${WEB_ROOT}, địa chỉ ${BASE}`));
 
 // sao lưu mỗi ngày, dọn phiên hết hạn, nhả hoa hồng đang giữ
 const daily = () => { try { const f = store.backup(); if (f) console.log('Đã sao lưu', f); store.cleanup(); A().releaseHeld(D) && save(); } catch (e) { console.error('[sao lưu lỗi]', e); } };

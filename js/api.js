@@ -28,7 +28,20 @@
   }
   function put(p) {
     API.me = p.me || null; API.db = p.db || API.db; API.at = Date.now(); API.online = true;
+    if (p.mode === 'thu' && !API.test) { API.test = true; testBanner(); }
     if (p.content) CONTENT.forEach(k => { try { if (k in p.content) rawSet.call(localStorage, k, JSON.stringify(p.content[k])); else rawRemove.call(localStorage, k); } catch (e) {} });
+  }
+  // bản thử: dải đỏ cố định trên cùng để không nhầm với trang bán hàng thật
+  function testBanner() {
+    try { if (!/^\[THỬ\]/.test(document.title)) document.title = '[THỬ] ' + document.title; } catch (e) {}
+    const add = () => {
+      if (document.getElementById('psqTest')) return;
+      const b = document.createElement('div'); b.id = 'psqTest'; b.setAttribute('role', 'note');
+      b.style.cssText = 'position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:10000;padding:1px 12px;border-radius:0 0 8px 8px;background:#c62828;color:#fff;font:600 11px/1.5 system-ui,sans-serif;letter-spacing:.04em;pointer-events:none;white-space:nowrap';
+      b.textContent = 'BẢN THỬ · không phải trang thật';
+      document.body.appendChild(b);
+    };
+    document.body ? add() : document.addEventListener('DOMContentLoaded', add);
   }
   const isAdmin = () => !!API.me && API.me.role === 'admin';
 
