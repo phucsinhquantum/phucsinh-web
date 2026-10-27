@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261025a">
-<script src="js/lang.js?v=20261025a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028a">
+<script src="js/lang.js?v=20261028a"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -133,11 +133,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261025a"></script>
-<script src="js/api.js?v=20261025a"></script>
-<script src="js/data.js?v=20261025a"></script>
-<script src="js/app.js?v=20261025a"></script>
-<script src="js/psq-data.js?v=20261025a"></script>
+<script src="js/patch.js?v=20261028a"></script>
+<script src="js/api.js?v=20261028a"></script>
+<script src="js/data.js?v=20261028a"></script>
+<script src="js/app.js?v=20261028a"></script>
+<script src="js/psq-data.js?v=20261028a"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -157,7 +157,18 @@
   const shopBal = () => { if (!u || !window.ADB) return 0; try { return ADB.balances(ADB.load(), u.id).shop || 0; } catch (e) { return 0; } };
   // thanh toán bằng ví: trừ ví điểm mua hàng trước, thiếu thì trừ ví tiền mặt
   const cashBal = () => { if (!u || !window.ADB) return 0; try { return ADB.balances(ADB.load(), u.id).cash || 0; } catch (e) { return 0; } };
-  const due = () => cart.total() + ship;
+  // mã giảm giá (thành viên, từ vòng quay chào mừng): giảm trên tiền hàng, máy chủ tính lại khi đặt
+  let coupon = null;
+  const off = () => coupon ? coupon.discount : 0;
+  const myCoupons = () => { if (!u || !window.ADB) return []; try { return ADB.couponsOf(ADB.load(), u.id).filter(c => c.status === 'new' && (!c.expires || c.expires >= PSQ.today())); } catch (e) { return []; } };
+  function applyCoupon(code) {
+    const r = API.act('couponCheck', { code, items: cart.items().map(x => ({ id: x.id, qty: x.qty })) });
+    if (r.error) { coupon = null; return r.error; }
+    coupon = { code: r.code, label: r.label, discount: r.discount, sub: cart.total() }; return '';
+  }
+  // giỏ hàng đổi thì tính lại số tiền giảm
+  const couponFresh = () => { if (coupon && coupon.sub !== cart.total()) { const er = applyCoupon(coupon.code); if (er) toast(er, 'err'); } };
+  const due = () => Math.max(0, cart.total() + ship - off());
   const walletBal = () => shopBal() + cashBal();
   const walletOk = () => !!u && walletBal() >= due();
   const payUsed = () => form.pay === 'wallet' ? Math.min(shopBal(), due()) : 0;
@@ -184,7 +195,8 @@
         <div class="totals">
           <div class="row"><span class="muted">Tạm tính</span><span>${money(sub)}</span></div>
           <div class="row"><span class="muted">Phí giao hàng</span><span class="${ship ? '' : 'green'}">${ship ? money(ship) : 'Miễn phí'}</span></div>
-          <div class="row grand"><span>Tổng thanh toán</span><b>${money(sub + ship)}</b></div>
+          ${(placed ? placed.discount : off()) ? `<div class="row"><span class="muted">Mã giảm giá ${esc(placed ? placed.coupon : coupon.code)}</span><span class="green">-${money(placed ? placed.discount : off())}</span></div>` : ''}
+          <div class="row grand"><span>Tổng thanh toán</span><b>${money(placed ? placed.total : sub + ship - off())}</b></div>
           ${tierNote(sub)}
         </div>` : `<div class="empty" style="padding:24px 10px">${icon('cart')}Chưa có sản phẩm nào.</div>`);
   }
@@ -270,7 +282,8 @@
 
   /* ---------- bước 3: xác nhận ---------- */
   function viewReview() {
-    const it = cart.items(), sub = cart.total();
+    couponFresh();
+    const it = cart.items(), sub = cart.total(), mine = myCoupons();
     return `<div class="card glow-gold">
       <div class="card-head"><div><span class="eyebrow">Bước 3</span><h2 class="display mt-1">Xác nhận đơn hàng</h2></div></div>
       <div class="review">
@@ -283,11 +296,17 @@
       <div class="box mt-2" style="padding:0">
         <div class="lines">${it.map(x => { const p = product(x.id); return `<div class="sum-item" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="cart-thumb">${art(p)}<i>${x.qty}</i></span><b>${esc(p.name)} <span class="dim">x ${x.qty}</span></b><span class="nowrap gold">${money(p.price * x.qty)}</span></div>`; }).join('')}</div>
       </div>
+      ${u ? `<div class="box mt-2"><h4>${icon('gift')} Mã giảm giá</h4>
+        ${coupon ? `<p class="green mt-1" style="font-size:14px">Đã áp dụng <b>${esc(coupon.code)}</b> (${esc(coupon.label)}): giảm ${money(coupon.discount)} <button class="link-btn" type="button" id="cpOff">Bỏ mã</button></p>`
+          : `<form class="row mt-1" id="cpForm" style="gap:8px;flex-wrap:nowrap"><input class="input" id="cpCode" placeholder="Nhập mã, ví dụ GG-ABC123" autocomplete="off" style="text-transform:uppercase"><button class="btn btn-outline-gold" type="submit">Áp dụng</button></form>
+          ${mine.length ? `<div class="row mt-1" style="gap:6px;flex-wrap:wrap">${mine.map(c => `<button class="badge gold" type="button" data-cp="${esc(c.code)}" style="cursor:pointer">${esc(c.label)} · ${esc(c.code)}</button>`).join('')}</div>` : ''}
+          <p class="red mt-1" id="cpErr" style="font-size:13px"></p>`}</div>` : ''}
       <div class="totals mt-2">
         <div class="row"><span class="muted">Tạm tính</span><span>${money(sub)}</span></div>
         <div class="row"><span class="muted">Phí giao hàng</span><span class="${ship ? '' : 'green'}">${ship ? money(ship) : 'Miễn phí'}</span></div>
-        <div class="row grand"><span>Tổng thanh toán</span><b>${money(sub + ship)}</b></div>
-        ${payUsed() ? `<div class="row" data-pt-line><span class="muted">Trừ ví điểm mua hàng</span><span class="green">-${PS(payUsed())}</span></div>` : ''}${cashUsed() ? `<div class="row"><span class="muted">Trừ ví tiền mặt</span><span class="cyan">-${money(cashUsed())}</span></div>` : ''}${payUsed() || cashUsed() ? `<div class="row"><span class="muted">Còn phải thanh toán</span><b class="gold">${money(sub + ship - payUsed() - cashUsed())}</b></div>` : ''}
+        ${off() ? `<div class="row"><span class="muted">Mã giảm giá ${esc(coupon.code)}</span><span class="green">-${money(off())}</span></div>` : ''}
+        <div class="row grand"><span>Tổng thanh toán</span><b>${money(sub + ship - off())}</b></div>
+        ${payUsed() ? `<div class="row" data-pt-line><span class="muted">Trừ ví điểm mua hàng</span><span class="green">-${PS(payUsed())}</span></div>` : ''}${cashUsed() ? `<div class="row"><span class="muted">Trừ ví tiền mặt</span><span class="cyan">-${money(cashUsed())}</span></div>` : ''}${payUsed() || cashUsed() ? `<div class="row"><span class="muted">Còn phải thanh toán</span><b class="gold">${money(sub + ship - off() - payUsed() - cashUsed())}</b></div>` : ''}
       </div>
       <p class="dim mt-2" style="font-size:12px">Bấm xác nhận nghĩa là anh chị đồng ý với chính sách đổi trả và bảo hành của Phúc Sinh QuanTum. Nhân viên sẽ gọi xác nhận trước khi giao.</p>
       <div class="nav-btns"><button class="btn btn-ghost" type="button" data-go="1">${icon('back')} Quay lại</button><button class="btn btn-gold btn-lg" type="button" id="placeBtn">${icon('check')} Xác nhận đặt hàng</button></div>
@@ -353,19 +372,23 @@
     const g = e.target.closest('[data-go]'); if (g && !g.hasAttribute('data-add')) { e.preventDefault(); go(+g.dataset.go); return; }
     const s = e.target.closest('.step.done'); if (s && !placed) { go(+s.dataset.step); return; }
     if (e.target.closest('#clearCart')) { cart.clear(); toast('Đã xóa giỏ hàng'); return; }
+    const cp = e.target.closest('[data-cp]'); if (cp) { const er = applyCoupon(cp.dataset.cp); if (er) toast(er, 'err'); else toast('Đã áp dụng mã ' + cp.dataset.cp); render(); return; }
+    if (e.target.closest('#cpOff')) { coupon = null; render(); return; }
     if (e.target.closest('#placeBtn')) {
       const b = $('#placeBtn'); b.disabled = true;
       const want = payUsed(), wantCash = cashUsed(); // tính trước khi giỏ hàng được xóa
       const saveAddr = u && !form.addrId && form.saveAddr ? { line: form.address.trim(), province: form.province } : null;
       const res = PSQ.placeOrder({ name: form.name, phone: normPhone(form.phone), email: form.email, address: `${form.address}, ${form.province}`, note: form.note, pay: form.pay },
-        { useShop: u ? want : 0, useCash: u ? wantCash : 0, saveAddr });
+        { useShop: u ? want : 0, useCash: u ? wantCash : 0, saveAddr, coupon: coupon ? coupon.code : '' });
       if (res.error) { b.disabled = false; toast(res.error, 'err'); return; }
-      placed = res.order;
+      placed = res.order; coupon = null;
       render(true); toast('Đặt hàng thành công: ' + placed.id);
       if ($('#payWait')) watchPay(placed);
     }
   });
-  $('#main').addEventListener('submit', e => { if (e.target.id === 'infoForm') { e.preventDefault(); readForm(); if (validate()) { step = 2; render(true); } } });
+  $('#main').addEventListener('submit', e => {
+    if (e.target.id === 'cpForm') { e.preventDefault(); const er = applyCoupon($('#cpCode').value); if (er) { $('#cpErr').textContent = er; return; } toast('Đã áp dụng mã ' + coupon.code); render(); return; }
+    if (e.target.id === 'infoForm') { e.preventDefault(); readForm(); if (validate()) { step = 2; render(true); } } });
   $('#main').addEventListener('change', e => {
     if (e.target.name === 'saved') {
       readForm(); const a = myAddr().find(x => x.id === e.target.value);

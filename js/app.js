@@ -15,6 +15,11 @@
   const short = n => n >= 1e9 ? dec(n / 1e9, ' tỷ') : n >= 1e6 ? dec(n / 1e6, ' tr') : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n));
   const initials = name => (name || '?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
   const qs = k => new URLSearchParams(location.search).get(k);
+  // link giới thiệu (?ref=PS1001): nhớ mã của người gửi link ĐẦU TIÊN khách bấm trong 90 ngày, link người khác gửi sau không ghi đè.
+  // Khách mua không đăng ký: đơn tính cho mã này. Khách đăng ký: theo mã ở link lúc đăng ký (không có thì lấy mã này).
+  const REF_KEY = 'psq_ref_v1', REF_DAYS = 90;
+  const refCode = () => { try { const v = JSON.parse(localStorage.getItem(REF_KEY)); return v && v.code && Date.now() - v.at < REF_DAYS * 864e5 ? v.code : ''; } catch (e) { return ''; } };
+  { const c = String(qs('ref') || '').trim().toUpperCase().slice(0, 30); if (/^[A-Z0-9._]{3,30}$/.test(c) && !refCode()) try { localStorage.setItem(REF_KEY, JSON.stringify({ code: c, at: Date.now() })); } catch (e) {} }
   const today = () => new Date().toISOString().slice(0, 10);
   const fdate = iso => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
 
@@ -148,7 +153,7 @@
     login(login, pass) { const r = API.act('login', { login, pass }); return r.error ? r : { user: r.user }; },
     register(f) { const r = API.act('register', f); return r.error ? r : { user: r.user }; },
     update(patch) { const r = API.act('profile', patch); return r.error ? null : auth.user(); },
-    logout() { API.logout(); },
+    logout() { return API.logout(); },
     changePass(oldPass, newPass) { return API.act('changePass', { old: oldPass, pass: newPass }); }
   };
 
@@ -177,7 +182,7 @@
   function placeOrder(info, extra = {}) {
     const items = cart.items().map(x => ({ id: x.id, qty: x.qty }));
     if (!items.length) return { error: 'Giỏ hàng đang trống.' };
-    const r = API.act('placeOrder', Object.assign({ items, info }, extra));
+    const r = API.act('placeOrder', Object.assign({ items, info }, API.me ? {} : { ref: refCode() }, extra));
     if (r.error) return r;
     cart.clear(); return { order: r.order };
   }
@@ -475,7 +480,7 @@
       const ub = e.target.closest('[data-user-open]');
       if (ub) { e.stopPropagation(); if (document.querySelector('.user-pop')) return closeUser(); userMenu(ub); return; }
       const ua = e.target.closest('[data-user-act]');
-      if (ua) { e.preventDefault(); const a = ua.dataset.userAct; closeUser(); if (a === 'logout') { auth.logout(); toast('Đã đăng xuất'); setTimeout(() => location.href = cur === 'admin' ? 'index.html' : location.href.split('#')[0], 300); } if (a === 'pass') passModal(); if (a === 'install') pwa.install(); return; }
+      if (ua) { e.preventDefault(); const a = ua.dataset.userAct; closeUser(); if (a === 'logout') { const r = auth.logout(); if (r && r.back) { location.href = r.back; return; } toast('Đã đăng xuất'); setTimeout(() => location.href = cur === 'admin' ? 'index.html' : location.href.split('#')[0], 300); } if (a === 'pass') passModal(); if (a === 'install') pwa.install(); return; }
       if (!e.target.closest('.user-pop')) closeUser();
       const lb = e.target.closest('[data-lang-open]');
       if (lb) { e.stopPropagation(); if (document.querySelector('.lang-pop')) return PSQLang.close(); PSQLang.menu(lb); return; }
@@ -602,7 +607,7 @@
     };
   })();
 
-  window.PSQ = { pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {

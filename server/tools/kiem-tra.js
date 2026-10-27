@@ -2,7 +2,8 @@
    Chạy: node --no-warnings server/tools/kiem-tra.js [đường dẫn bản sao psq.db]
    1. Chạy máy chủ trên thư mục tạm, dữ liệu trống, đi hết luồng thật qua API:
       đăng ký (mã công ty PS1000, mã thành viên), mua gói CTV, xác nhận đã nhận tiền, thưởng giới thiệu,
-      lên đại lý khi đủ mốc, hoa hồng CTV, đại lý hưởng 40% thu nhập CTV mình tuyển.
+      lên đại lý khi đủ mốc, hoa hồng CTV, đại lý hưởng 40% thu nhập CTV mình tuyển,
+      khách lẻ tính cho người gửi link đầu tiên, vòng quay chào mừng và mã giảm giá, quản trị xem thay và khóa tài khoản.
    2. Có bản sao dữ liệu thật: chạy máy chủ trên bản sao đó (đã bỏ cài đặt thư), xem có khởi động và đọc đủ dữ liệu không.
    Thoát mã 0 khi mọi bước đúng, mã 1 khi có bước sai (lệnh cập nhật sẽ dừng, không đưa lên). */
 'use strict';
@@ -30,14 +31,14 @@ async function startServer(dataDir, fresh) {
 }
 
 function client(port) {
-  let cookie = '';
+  const jar = new Map(), cookie = () => [...jar].map(([k, v]) => k + '=' + v).join('; ');
   const req = async (method, url, body, form) => {
     const r = await fetch('http://127.0.0.1:' + port + url, { method, redirect: 'manual',
-      headers: Object.assign({ 'x-psq': '1', cookie }, form ? { 'content-type': 'application/x-www-form-urlencoded' } : body ? { 'content-type': 'application/json' } : {}),
+      headers: Object.assign({ 'x-psq': '1', cookie: cookie() }, form ? { 'content-type': 'application/x-www-form-urlencoded' } : body ? { 'content-type': 'application/json' } : {}),
       body: form ? new URLSearchParams(form).toString() : body ? JSON.stringify(body) : undefined });
-    const sc = r.headers.get('set-cookie'); if (sc) cookie = sc.split(';')[0];
+    for (const sc of r.headers.getSetCookie()) { const [kv] = sc.split(';'), i = kv.indexOf('='), k = kv.slice(0, i), v = kv.slice(i + 1); if (v && !/Max-Age=0\b/i.test(sc)) jar.set(k, v); else jar.delete(k); }
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
-    return { status: r.status, json: j, text: t };
+    return { status: r.status, json: j, text: t, location: r.headers.get('location') };
   };
   return {
     req,
@@ -112,6 +113,53 @@ async function flow() {
     const aOv = com(A.r.me.id, 'override').find(c => c.order === ocId);
     const wantOv = Math.round(want * plan.overrideRate / 100);
     ok(aOv && aOv.amount === wantOv && aOv.status === 'paid', `A (đại lý) nhận ${plan.overrideRate}% thu nhập của B = ${wantOv}đ` + (aOv ? ` (thực tế ${aOv.amount}, ${aOv.status})` : ''));
+
+    // khách lẻ bấm link của B rồi đặt hàng không tài khoản: tính cho B; lần sau vào link của A vẫn tính cho B
+    const guestInfo = { name: 'Khách lẻ thử', phone: '0909111222', address: '2 Đường Thử, Quận 3', pay: 'bank' };
+    n0 = s.log().length;
+    const og = await client(s.port).act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: guestInfo, ref: B.r.me.code });
+    ok(!og.error, 'khách lẻ đặt đơn qua link của B' + (og.error ? ': ' + og.error : ''));
+    await confirm(s, owner, n0, 'đơn khách lẻ');
+    n0 = s.log().length;
+    const og2 = await client(s.port).act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: guestInfo, ref: A.r.me.code });
+    ok(!og2.error, 'khách lẻ đó đặt lần 2 qua link của A');
+    await confirm(s, owner, n0, 'đơn khách lẻ lần 2');
+    db = (await owner.req('GET', '/api/admin/db')).json.db;
+    const gOrders = db.orders.filter(o => !o.userId && o.phone === guestInfo.phone);
+    ok(gOrders.length === 2 && gOrders.every(o => o.refBy === B.r.me.id), 'cả 2 đơn khách lẻ ghi cho B (người gửi link đầu tiên)');
+    ok(gOrders.every(o => com(B.r.me.id, 'direct').some(c => c.order === o.id && c.amount === want)), `B nhận ${plan.ctvRate}% trên đơn khách lẻ`);
+
+    // vòng quay chào mừng: C quay 1 lần, nhận mã, dùng mã khi đặt hàng
+    const sp = await C.c.act('welcomeSpin', {});
+    ok(!sp.error && sp.result && sp.result.prize, 'C quay vòng quay chào mừng' + (sp.error ? ': ' + sp.error : ''));
+    ok(!!(await C.c.act('welcomeSpin', {})).error, 'quay lần 2 bị chặn');
+    const cp = sp.result && sp.result.coupon;
+    if (ok(!!cp, 'C nhận mã giảm giá ' + (cp ? cp.code : ''))) {
+      ok(!!(await B.c.act('couponCheck', { code: cp.code, items: [{ id: P.id, qty: 1 }] })).error, 'người khác không dùng được mã của C');
+      const ck = await C.c.act('couponCheck', { code: cp.code, items: [{ id: P.id, qty: 1 }] });
+      ok(!ck.error && ck.result.discount > 0, 'mã hợp lệ, giảm ' + (ck.result || {}).discount);
+      const oq = await C.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'Khách C', phone: '0987654321' }), coupon: cp.code });
+      const oo = (oq.result || {}).order || {};
+      ok(!oq.error && oo.discount === ck.result.discount && oo.coupon === cp.code, 'đặt hàng trừ đúng tiền mã giảm giá' + (oq.error ? ': ' + oq.error : ''));
+      ok(!!(await C.c.act('couponCheck', { code: cp.code, items: [{ id: P.id, qty: 1 }] })).error, 'mã đã dùng không dùng lại được');
+    }
+
+    // quản trị xem tài khoản C: thấy dữ liệu của C, không thao tác được, thoát ra về lại quản trị
+    const im = await owner.req('POST', '/api/admin/impersonate', { id: C.r.me.id });
+    ok(im.status === 200 && ((await owner.boot()).me || {}).id === C.r.me.id, 'quản trị vào xem tài khoản C');
+    ok(/chỉ xem/.test((await owner.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info })).error || ''), 'đang xem thì không đặt hàng thay được');
+    const lo = await owner.req('POST', '/api/logout', {});
+    ok(lo.json && lo.json.back && ((await owner.boot()).me || {}).id !== C.r.me.id && (await owner.req('GET', '/api/admin/db')).status === 200, 'thoát xem, quay về tài khoản quản trị');
+
+    // sửa thông tin và khóa tài khoản C
+    const ed = await owner.act('adminEditMember', { id: C.r.me.id, name: 'Khách C sửa', email: 'ktc@kiem-tra.vn', phone: '0987654321', username: 'ktc', status: 'locked' });
+    ok(!ed.error, 'quản trị sửa và khóa tài khoản C' + (ed.error ? ': ' + ed.error : ''));
+    ok(!(await C.c.boot()).me, 'C bị đăng xuất khi khóa');
+    ok(!!(await client(s.port).act('login', { login: 'ktc@kiem-tra.vn', pass: '123456a' })).error, 'tài khoản khóa không đăng nhập được');
+
+    // đường dẫn kích hoạt trong thư: sai mã thì hiện trang báo, không trơ ra
+    const vf = await guest.req('GET', '/api/verify?t=sai-ma');
+    ok(vf.status === 200 && /Chưa kích hoạt được/.test(vf.text), 'đường dẫn kích hoạt sai hiện trang báo rõ ràng');
     ok(!/TypeError|ReferenceError|SyntaxError|\[lỗi/.test(s.log()), 'nhật ký máy chủ không có lỗi');
   } finally { s.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
 }

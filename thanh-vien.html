@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="vi">
 <head>
+<script>/* đường dẫn kích hoạt trong thư cũ: chuyển sang máy chủ kích hoạt (viết kiểu cũ để chạy cả trên trình duyệt đời cũ) */
+var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replace('/api/verify?t=' + kh[1]);</script>
 <meta charset="utf-8">
 <style>html{background:#06080a}  .tier-perks { list-style: none; padding: 0; margin: 2px 0 0; display: grid; gap: 3px; font-size: 13px; color: var(--text-2); }
   .tier-perks li { position: relative; padding-left: 16px; }
@@ -22,8 +24,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261025a">
-<script src="js/lang.js?v=20261025a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028a">
+<script src="js/lang.js?v=20261028a"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -209,6 +211,14 @@
     .wh-tbl .c-s { grid-area: s; } .wh-tbl .c-b { grid-area: b; font-size: 12px; color: var(--text-3); text-align: right; }
     .wh-tbl .c-b::before { content: "Số dư "; }
   }
+  .cp-list { display: grid; gap: 8px; margin-top: 10px; }
+  .cp-item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px; border: 1px dashed rgba(243, 199, 107, .45); background: rgba(243, 199, 107, .05); }
+  .cp-item > div { flex: 1; min-width: 160px; } .cp-item small { display: block; color: var(--text-3); font-size: 12px; } .cp-item.off { opacity: .6; }
+  .modal.ww-modal { width: min(420px, 100%); }
+  .ww { position: relative; width: 300px; max-width: 100%; margin: 6px auto 0; }
+  .ww-face { display: block; width: 100%; height: auto; }
+  .ww-ptr { position: absolute; left: 50%; top: -4px; transform: translateX(-50%); width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent; border-top: 26px solid #f3c76b; z-index: 2; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+  .ww-win h3 { margin: 4px 0; font-size: 22px; } .ww-code { display: inline-block; margin: 6px 0; padding: 8px 18px; border-radius: 10px; border: 2px dashed #f3c76b; font-size: 22px; font-weight: 800; letter-spacing: 2px; color: #f3c76b; }
 </style>
 </head>
 <body data-page="member">
@@ -216,16 +226,16 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261025a"></script>
-<script src="js/api.js?v=20261025a"></script>
-<script src="js/data.js?v=20261025a"></script>
-<script src="js/app.js?v=20261025a"></script>
-<script src="js/psq-data.js?v=20261025a"></script>
+<script src="js/patch.js?v=20261028a"></script>
+<script src="js/api.js?v=20261028a"></script>
+<script src="js/data.js?v=20261028a"></script>
+<script src="js/app.js?v=20261028a"></script>
+<script src="js/psq-data.js?v=20261028a"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
   const view = $('#view');
-  const refCode = (PSQ.qs('ref') || '').trim().toUpperCase().slice(0, 20);
+  const refCode = ((PSQ.qs('ref') || '').trim() || PSQ.refCode()).toUpperCase().slice(0, 30);   // mã ở link lúc đăng ký, không có thì mã link đầu tiên đã nhớ
   const W = ADB.WALLETS, WK = ['cash', 'avail', 'sales', 'bonus', 'shop'].filter(k => W[k]).concat(Object.keys(W).filter(k => !['cash', 'avail', 'sales', 'bonus', 'shop'].includes(k)));
   const ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
   const WST = { done: ['Hoàn tất', 'ok'], pending: ['Chờ duyệt', 'pending'], rejected: ['Từ chối', 'failed'] };
@@ -305,7 +315,7 @@
         <button class="tv-out" id="tvOut" type="button">${icon('logout')} Đăng xuất</button>
       </aside>
       <div class="tv-main" id="tvPane"></div></div>`;
-    $('#tvOut').addEventListener('click', () => { auth.logout(); location.href = 'thanh-vien.html'; });
+    $('#tvOut').addEventListener('click', () => { const x = auth.logout(); location.href = (x && x.back) || 'thanh-vien.html'; });
     $('#tvNav').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) ACTIONS[b.dataset.act](); });
     $('#tvPick').addEventListener('change', e => { const v = e.target.value; if (ACTIONS[v]) { ACTIONS[v](); e.target.value = route(); } else location.hash = v; });
     // nút thao tác ví dùng chung trong mọi màn hình
@@ -314,9 +324,12 @@
       const h = e.target.closest('[data-wh]'); if (h) { e.preventDefault(); return walletHist(h.dataset.wh); }
       const cp = e.target.closest('[data-copy]'); if (cp) return copyFrom(document.getElementById(cp.dataset.copy));
       const c = e.target.closest('[data-cart]'); if (c) return PSQ.openCart(true);
+      if (e.target.closest('[data-welcome]')) return welcomeWheel();
+      const cc = e.target.closest('[data-cpcopy]'); if (cc) { navigator.clipboard && navigator.clipboard.writeText(cc.dataset.cpcopy).catch(() => {}); return toast('Đã sao chép mã ' + cc.dataset.cpcopy); }
     });
     addEventListener('hashchange', () => { render(); const top = $('#tvPane').getBoundingClientRect().top; if (top < 0) scrollTo({ top: scrollY + top - 90 }); });
     render();
+    { const d = ADB.load(), me = ADB.user(d, ME); if (!API.imp && ADB.welcomeCan(d, me)) setTimeout(welcomeWheel, 600); }
   }
   const route = () => location.hash.slice(1) || 'tong-quan';
 
@@ -377,6 +390,7 @@
         ${isKhach(me) ? `<div style="grid-column:1 / -1;min-width:0"><div class="ref-mini" style="margin:0"><input class="input" id="ovRef" value="${esc(refLinkOf(me))}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" data-copy="ovRef">${icon('check')} Sao chép</button></div>${khachNote()}</div>` : ''}
       </section>
 
+      ${welcomeCard(d, me)}
       ${(me.tier || '') === 'daily' ? actCard(d, me) : ''}
       <section class="wgrid mt-2">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><a class="wlink" href="#vi" aria-label="${esc(W[k].name)}: ${wamt(k, b[k])}"></a><span class="ico">${icon(W[k].icon)}</span><span class="amt">${wamt(k, b[k])}</span><span class="nm">${esc(W[k].name)}</span><small class="hide-s">${esc(wnote(k))}</small><div class="wfoot">${histBtn(k)}</div></div>`).join('')}</section>
 
@@ -392,6 +406,49 @@
         <div class="card glow-gold">${head('Điều kiện cấp bậc', 'Khách hàng, Cộng tác viên, Đại lý')}${tierSteps(d, me, P, spent)}</div>
       </section>`;
     PSQ.donut($('#tvDonut'), { segments: e.total ? KIND.map(([k, , c]) => ({ value: e[k], color: c })).filter(s => s.value > 0) : [{ value: 1, color: 'rgba(255,255,255,.08)' }], center: short(e.total), sub: 'tổng hoa hồng', size: 160 });
+  }
+
+  /* ---------- vòng quay chào mừng: quay 1 lần sau khi đăng ký, trúng mã giảm giá ---------- */
+  const cpOff = c => c.type === 'pct' ? `Giảm ${c.value}%${c.maxOff ? ', tối đa ' + money(c.maxOff) : ''}` : `Giảm ${money(c.value)}`;
+  function welcomeCard(d, me) {
+    const can = ADB.welcomeCan(d, me), list = ADB.couponsOf(d, me.id), now = today();
+    if (!can && !list.length) return '';
+    const st = c => c.status === 'used' ? `<span class="badge">Đã dùng${c.order ? ' · ' + esc(c.order) : ''}</span>` : c.expires && c.expires < now ? '<span class="badge failed">Hết hạn</span>' : '<span class="badge paid">Còn dùng được</span>';
+    return `<div class="card glow-gold mt-2" id="ma-giam-gia">${head('Mã giảm giá của tôi', can ? 'Anh chị có 1 lượt quay chào mừng' : list.length + ' mã')}
+      ${can ? `<div class="row wrap" style="gap:10px;align-items:center"><span class="stat-ico gold">${icon('gift')}</span><div style="flex:1;min-width:180px"><b>Quà chào mừng thành viên mới</b><div class="dim" style="font-size:13px">Quay 1 lần để nhận mã giảm giá cho đơn hàng.</div></div><button class="btn btn-gold" type="button" data-welcome>${icon('sparkle')} Quay nhận mã</button></div>` : ''}
+      ${list.length ? `<div class="cp-list">${list.map(c => `<div class="cp-item${c.status !== 'new' || (c.expires && c.expires < now) ? ' off' : ''}"><div><b class="gold">${esc(c.code)}</b><small>${esc(cpOff(c))}${c.minOrder ? ' · đơn từ ' + money(c.minOrder) : ''}${c.expires ? ' · hạn ' + fdate(c.expires) : ''}</small></div>${st(c)}${c.status === 'new' ? `<button class="btn btn-sm" type="button" data-cpcopy="${esc(c.code)}">${icon('copy')} Sao chép</button>` : ''}</div>`).join('')}</div>
+      <p class="dim mt-2" style="font-size:12.5px">Nhập mã ở bước xác nhận khi đặt hàng. Mỗi mã dùng 1 lần, đơn bị hủy thì mã được trả lại.</p>` : ''}</div>`;
+  }
+  function welcomeWheel() {
+    const d = ADB.load(), me = ADB.user(d, ME); if (!ADB.welcomeCan(d, me)) return;
+    const segs = ADB.welcomePrizes(d), n = segs.length, R = 150, C = 160;
+    const pt = a => [C + R * Math.sin(a), C - R * Math.cos(a)];
+    const face = segs.map((p, i) => {
+      const a0 = i * 2 * Math.PI / n, a1 = (i + 1) * 2 * Math.PI / n, [x0, y0] = pt(a0), [x1, y1] = pt(a1), mid = (i + .5) * 360 / n;
+      const path = n === 1 ? `<circle cx="${C}" cy="${C}" r="${R}" fill="${esc(p.color || '#f3c76b')}"/>` : `<path d="M${C} ${C}L${x0.toFixed(1)} ${y0.toFixed(1)}A${R} ${R} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}Z" fill="${esc(p.color || '#f3c76b')}" stroke="#0c1316" stroke-width="2"/>`;
+      return path + `<g transform="rotate(${mid.toFixed(1)} ${C} ${C})"><text x="${C}" y="${C - R + 22}" text-anchor="middle" font-size="${n > 8 ? 11 : 13}" font-weight="700" fill="#0c1316" font-family="Be Vietnam Pro, sans-serif">${esc(p.label)}</text></g>`;
+    }).join('');
+    const md = modal(`<div class="card-head"><div><h3>Quà chào mừng thành viên mới</h3><div class="sub">Quay 1 lần, trúng mã giảm giá cho đơn hàng</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Để sau">${icon('close')}</button></div>
+      <div class="ww"><div class="ww-ptr"></div><svg class="ww-face" viewBox="0 0 320 320" width="300" height="300"><circle cx="${C}" cy="${C}" r="${R + 6}" fill="#0c1316" stroke="#f3c76b" stroke-width="3"/>${face}<circle cx="${C}" cy="${C}" r="22" fill="#0c1316" stroke="#f3c76b" stroke-width="3"/></svg></div>
+      <div id="wwOut" class="center mt-2"><button class="btn btn-gold" type="button" id="wwGo">${icon('sparkle')} Quay ngay</button><div class="dim mt-1" style="font-size:12.5px">Anh chị có thể đóng lại và quay sau ở mục Tổng quan.</div></div>`);
+    md.el.querySelector('.modal').classList.add('ww-modal');
+    const go = md.el.querySelector('#wwGo'), faceEl = md.el.querySelector('.ww-face'), out = md.el.querySelector('#wwOut');
+    go.addEventListener('click', () => {
+      go.disabled = true;
+      const r = API.act('welcomeSpin', {});
+      if (r.error) { out.innerHTML = `<p class="red">${esc(r.error)}</p>`; return; }
+      const k = Math.max(0, segs.findIndex(p => p.id === r.prize.id)), seg = 360 / n;
+      const deg = 360 * 6 + (360 - (k + .5) * seg) + (Math.random() - .5) * seg * .6;
+      faceEl.style.transition = 'transform 4.2s cubic-bezier(.17,.67,.12,1)'; faceEl.style.transform = `rotate(${deg}deg)`;
+      setTimeout(() => {
+        const c = r.coupon;
+        out.innerHTML = c ? `<div class="ww-win"><div class="dim">Chúc mừng anh chị đã trúng</div><h3 class="gold">${esc(r.prize.label)}</h3><div class="ww-code">${esc(c.code)}</div><div class="dim" style="font-size:12.5px">${esc(cpOff(c))}${c.minOrder ? ' · đơn từ ' + money(c.minOrder) : ''}${c.expires ? ' · dùng đến ' + fdate(c.expires) : ''}</div>
+          <div class="row mt-2" style="justify-content:center;gap:8px"><button class="btn" type="button" data-cpc="${esc(c.code)}">${icon('copy')} Sao chép mã</button><a class="btn btn-gold" href="san-pham.html">${icon('cart')} Mua hàng ngay</a></div></div>` : `<div class="ww-win"><h3 class="gold">${esc(r.prize.label)}</h3><div class="dim">Cảm ơn anh chị đã tham gia.</div></div>`;
+        const b = out.querySelector('[data-cpc]'); if (b) b.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.cpc).catch(() => {}); toast('Đã sao chép mã ' + b.dataset.cpc); });
+        md.el.addEventListener('click', e => { if (e.target === md.el || e.target.closest('[data-close]')) render(); });
+        render();
+      }, 4400);
+    });
   }
 
   function tierSteps(d, me, P, spent) {
@@ -582,7 +639,7 @@
     box.innerHTML = ph('Hoa hồng', `CTV ${P.ctvRate}%, đại lý ${P.agentRate}% đơn hàng của người mình giới thiệu; đại lý hưởng ${P.overrideRate}% thu nhập của đại lý và CTV tuyến dưới`) + `
       <div class="grid g-3">${Object.keys(CK).map(k => `<div class="card stat glow-gold"><div class="stat-top"><span class="stat-ico ${KC[k][0]}">${icon(KC[k][1])}</span>${CK[k]}</div><div class="stat-val" style="font-size:clamp(17px,1.6vw,22px)">${k === 'override' ? ps(sum(k)) : money(sum(k))}</div></div>`).join('')}</div>
       <div class="card glow-mix mt-2">${head('Chi tiết hoa hồng', rows.length + ' khoản', `<div class="chips" id="comF">${[['', 'Tất cả'], ...Object.entries(CK)].map(([k, l]) => `<button class="chip${comK === k ? ' on' : ''}" type="button" data-k="${k}">${l}</button>`).join('')}</div>`)}
-        ${rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Từ thành viên</th><th>Cách tính</th><th>Số tiền / điểm</th><th>Trạng thái</th></tr></thead><tbody>${rows.slice(0, 200).map(c => { const f = ADB.user(d, c.from) || {}; return `<tr><td class="dim nowrap">${fdate(c.date)}</td><td class="nowrap">${esc(CK[c.kind] || c.kind || '')}<br><small class="dim">Đơn #${esc(c.order)}</small></td><td><b class="nowrap">${esc(f.name || '')}</b>${f.username ? `<br><small class="dim">@${esc(f.username)}</small>` : ''}</td><td class="dim nowrap" style="font-size:12.5px">${c.kind === 'ref' ? 'Thưởng cố định' : (c.rate || 0) + '% x ' + money(c.base || 0)}</td><td class="nowrap"><b class="gold">${c.kind === 'override' ? ps(c.amount) : money(c.amount)}</b></td><td><span class="badge ${(CS[c.status] || [])[1] || ''}">${(CS[c.status] || [c.status])[0]}</span></td></tr>`; }).join('')}</tbody></table></div>`
+        ${rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Từ thành viên</th><th>Cách tính</th><th>Số tiền / điểm</th><th>Trạng thái</th></tr></thead><tbody>${rows.slice(0, 200).map(c => { const f = ADB.user(d, c.from) || {}; return `<tr><td class="dim nowrap">${fdate(c.date)}</td><td class="nowrap">${esc(CK[c.kind] || c.kind || '')}<br><small class="dim">Đơn #${esc(c.order)}</small></td><td><b class="nowrap">${esc(f.name || (c.from ? '' : 'Khách lẻ'))}</b>${f.username ? `<br><small class="dim">@${esc(f.username)}</small>` : ''}</td><td class="dim nowrap" style="font-size:12.5px">${c.kind === 'ref' ? 'Thưởng cố định' : (c.rate || 0) + '% x ' + money(c.base || 0)}</td><td class="nowrap"><b class="gold">${c.kind === 'override' ? ps(c.amount) : money(c.amount)}</b></td><td><span class="badge ${(CS[c.status] || [])[1] || ''}">${(CS[c.status] || [c.status])[0]}</span></td></tr>`; }).join('')}</tbody></table></div>`
         : `<div class="empty">${icon('gift')}Chưa có hoa hồng. Hoa hồng phát sinh khi người anh chị giới thiệu kích hoạt hoặc đặt hàng.</div>`}
         <p class="dim mt-2" style="font-size:12px">Hoa hồng đã trả được cộng vào ví tương ứng trong Ví của tôi.</p></div>`;
     $('#comF', box).addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; comK = b.dataset.k; pCom(box, ADB.load(), me); });
@@ -935,18 +992,22 @@
     scrollTo({ top: 0, behavior: 'smooth' });
     const b = $('#rgRe'); if (b) b.addEventListener('click', () => { b.disabled = true; const x = API.act('resendVerify', { email: r.email }); toast(x.error || 'Đã gửi lại thư kích hoạt', x.error ? 'err' : undefined); setTimeout(() => { b.disabled = false; }, 60e3); });
   }
+  if (PSQ.qs('da-kich-hoat')) { history.replaceState(null, '', 'thanh-vien.html#tong-quan'); toast('Đã kích hoạt tài khoản, chào mừng anh chị!'); }
   // mở đường dẫn kích hoạt trong thư
+  let verifyErr = '';
   if (PSQ.qs('kich-hoat')) {
     const r = API.act('verifyEmail', { token: PSQ.qs('kich-hoat') });
-    history.replaceState(null, '', 'thanh-vien.html');
-    if (r.error) toast(r.error, 'err'); else { toast('Đã kích hoạt tài khoản, chào mừng anh chị!'); location.replace('thanh-vien.html#tong-quan'); return; }
+    // vẽ luôn trang thành viên tại chỗ (trước đây chuyển sang cùng trang chỉ khác #, trình duyệt không tải lại nên trang đứng im)
+    history.replaceState(null, '', r.error ? 'thanh-vien.html' : 'thanh-vien.html#tong-quan');
+    if (r.error) verifyErr = r.error; else toast('Đã kích hoạt tài khoản, chào mừng anh chị!');
   }
 
   const u = auth.user();
   if (PSQ.qs('dat-lai')) guest('reset');
   else if (!u && location.hash === '#quen-mat-khau') guest('forgot');
   else if (u) { ME = u.id; member(); }
-  else guest(PSQ.qs('dang-ky') || refCode ? 'register' : 'login');
+  else guest(PSQ.qs('dang-ky') || PSQ.qs('ref') ? 'register' : 'login');
+  if (verifyErr) { toast(verifyErr, 'err'); const e = $('#err'); if (e) e.innerHTML = `<span class="red">${esc(verifyErr)}</span>`; }
 })();
 </script>
 </body>

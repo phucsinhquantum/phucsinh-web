@@ -23,7 +23,7 @@
   const PAL = ['#f3c76b', '#4fe6df', '#b98cff', '#45e08f', '#ff9f6b', '#ff6b9a', '#9aa7ab'];
   const can = () => window.ADMIN ? ADMIN.can('finance') : false;
   const user = (d, id) => d.users.find(u => u.id === id);
-  const uname = (d, id) => (user(d, id) || {}).name || 'Không rõ';
+  const uname = (d, id) => id ? (user(d, id) || {}).name || 'Không rõ' : 'Khách lẻ';
   const who = (d, id, i = 0) => { const u = user(d, id) || { name: 'Không rõ' }; return `<div class="who"><span class="avatar ${AV[i % 3]}">${esc(initials(u.name))}</span><div><b>${esc(u.name)}</b><small>${esc(u.code || u.email || '')}</small></div></div>`; };
   const match = (d, id, q) => !q || [(user(d, id) || {}).name, (user(d, id) || {}).email, (user(d, id) || {}).code, (user(d, id) || {}).phone].join(' ').toLowerCase().includes(q);
   const commit = (d, action, detail, msg) => { ADB.log(d, action, detail); ADB.save(d); toast(msg || action); };

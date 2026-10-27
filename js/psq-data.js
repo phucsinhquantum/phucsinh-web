@@ -180,7 +180,8 @@
   function settleOrder(d, o) {
     if (!o || o.settled || !PAID(o)) return false;
     const buyer = ADB.user(d, o.userId); o.settled = true;
-    if (!buyer) return true;
+    // khách lẻ mua qua link giới thiệu (không có tài khoản): người giới thiệu nhận hoa hồng như đơn của người mình giới thiệu
+    if (!buyer) { const sp = o.refBy && ADB.user(d, o.refBy); if (sp) directCommission(d, o, { id: null }, sp, Math.max(0, itemsTotal(o) - (o.discount || 0)), o.date || now(), 'Khách lẻ mua qua link giới thiệu'); return true; }
     const P = plan(d), sp = buyer.sponsor ? ADB.user(d, buyer.sponsor) : null, date = o.date || now();
     buyer.tier = buyer.tier || 'khach';
     const isPkg = (o.items || []).some(x => x.id === PKG_ID), isAgentPkg = (o.items || []).some(x => x.id === AGENT_PKG_ID);
@@ -195,7 +196,7 @@
       credit(d, buyer.id, 'shop', 'package', P.pkgPoints, 'Điểm mua hàng từ gói kích hoạt cộng tác viên', o.id, { date });
       if (sp && (sp.tier === 'ctv' || sp.tier === 'daily')) addCommission(d, { kind: 'ref', order: o.id, user: sp.id, from: buyer.id, rate: 0, base: P.pkgPrice, amount: P.refBonus, date });
       else if (sp) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: 0, base: P.pkgPrice, amount: P.refBonus, date, status: 'missed', note: 'Chưa kích hoạt cộng tác viên' });
-    } else if (sp) directCommission(d, o, buyer, sp, itemsTotal(o), date);
+    } else if (sp) directCommission(d, o, buyer, sp, Math.max(0, itemsTotal(o) - (o.discount || 0)), date);   // hoa hồng tính trên tiền thực thu sau mã giảm giá
     // lên đại lý khi tổng mua cộng dồn đủ mốc
     if (buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = date; }
     return true;
@@ -288,7 +289,7 @@
       const inWin = o => PAID(o) && o.date && dd(o.date) >= 0 && dd(o.date) < P.activeDays;
       const lastOf = list => list.map(o => String(o.date).slice(0, 10)).sort().pop() || '';
       const buys = d.orders.filter(o => o.userId === id && inWin(o) && o.total >= (P.activeMinBuy || 0));
-      const sells = d.orders.filter(o => { const b = o.userId && ADB.user(d, o.userId); return b && b.sponsor === id && inWin(o) && itemsTotal(o) >= (P.activeMinSell || 0); });
+      const sells = d.orders.filter(o => { const b = o.userId && ADB.user(d, o.userId); return (b ? b.sponsor === id : o.refBy === id) && inWin(o) && itemsTotal(o) >= (P.activeMinSell || 0); });
       const part = (list, label) => { const last = lastOf(list), left = last ? P.activeDays - dd(last) : 0; return { ok: list.length > 0, last, count: list.length, amount: list.reduce((s, o) => s + o.total, 0), left, label }; };
       const buy = part(buys, 'Tự mua hàng'), sell = part(sells, 'Có đơn bán từ người mình giới thiệu');
       const all = P.activeRule === 'all', ok = all ? buy.ok && sell.ok : buy.ok || sell.ok;
@@ -449,7 +450,7 @@
       if (isPkg && status === 'paid') o.status = 'done';
       const r = { ok: true, status: o.status };
       if (['paid', 'ship', 'done'].includes(o.status)) r.stock = ADB.stockOut(d, o);
-      if (o.status === 'failed') { r.refunded = ADB.refundOrder(d, o); r.restocked = ADB.stockBack(d, o); }
+      if (o.status === 'failed') { r.refunded = ADB.refundOrder(d, o); r.restocked = ADB.stockBack(d, o); r.coupon = ADB.couponBack(d, o); }
       r.settled = settleOrder(d, o);
       if (PAID(o)) r.agent = ADB.agentUp(d, o.userId);
       return r;
@@ -672,6 +673,65 @@
       return head + (w.length > 1 ? ' ' + w[w.length - 1][0].toUpperCase() + '.' : '');
     }
   });
+  /* =====================================================================
+     VÒNG QUAY CHÀO MỪNG VÀ MÃ GIẢM GIÁ
+     Khách đăng ký xong được quay 1 lần (u.welcomeSpun). Trúng ô nào thì nhận mã giảm giá gắn với tài khoản,
+     dùng 1 lần khi đặt hàng. Quản trị cài các ô quà: giảm % hoặc số tiền, số suất (hết suất thì ô đó không ra nữa),
+     tỉ lệ trúng; hạn dùng mã, đơn tối thiểu. Đơn hủy thì mã được trả lại.
+     ===================================================================== */
+  const WELCOME = {
+    enabled: true, expireDays: 30, minOrder: 0,
+    prizes: [
+      { id: 'cm1', label: 'Giảm 5%', type: 'pct', value: 5, maxOff: 0, qty: null, weight: 45, color: '#4fe6df', active: true },
+      { id: 'cm2', label: 'Giảm 10%', type: 'pct', value: 10, maxOff: 0, qty: 100, weight: 30, color: '#f3c76b', active: true },
+      { id: 'cm3', label: 'Giảm 50.000đ', type: 'amt', value: 50000, maxOff: 0, qty: 100, weight: 20, color: '#b98cff', active: true },
+      { id: 'cm4', label: 'Giảm 15%', type: 'pct', value: 15, maxOff: 0, qty: 20, weight: 5, color: '#ff8fb1', active: true }
+    ]
+  };
+  const welcomeSet = d => { d.settings = d.settings || {}; const w = d.settings.welcome = Object.assign({}, WELCOME, d.settings.welcome || {}); w.prizes = Array.isArray(w.prizes) ? w.prizes : WELCOME.prizes.map(p => Object.assign({}, p)); return w; };
+  const offOf = (c, sub) => { const v = c.type === 'pct' ? Math.round(sub * (+c.value || 0) / 100) : +c.value || 0; return Math.max(0, Math.min(sub, c.maxOff > 0 ? Math.min(v, +c.maxOff) : v)); };
+  Object.assign(ADB, {
+    WELCOME,
+    welcome: welcomeSet,
+    // ô quà đang quay được: đang bật và còn suất (qty để trống là không giới hạn)
+    welcomePrizes(d) { return welcomeSet(d).prizes.filter(p => p.active !== false && (p.qty == null || p.qty === '' || +p.qty > 0)); },
+    welcomeCan(d, u) { const w = welcomeSet(d); return !!u && u.role !== 'admin' && !u.welcomeSpun && w.enabled !== false && ADB.welcomePrizes(d).length > 0; },
+    welcomeSpin(d, u) {
+      if (!u || u.role === 'admin') return { error: 'Anh chị đăng nhập tài khoản thành viên để quay.' };
+      if (u.welcomeSpun) return { error: 'Anh chị đã quay vòng quay chào mừng rồi.' };
+      const w = welcomeSet(d), list = ADB.welcomePrizes(d);
+      if (w.enabled === false || !list.length) return { error: 'Vòng quay chào mừng đang tạm dừng.' };
+      const p = pickWeighted(list), index = list.indexOf(p), at = stampNow();
+      if (p.qty != null && p.qty !== '') p.qty = Math.max(0, +p.qty - 1);
+      u.welcomeSpun = at;
+      let coupon = null;
+      if (p.type === 'pct' || p.type === 'amt') {
+        d.coupons = d.coupons || [];
+        const taken = new Set(d.coupons.map(c => c.code)); let code;
+        do { code = 'GG-'; for (let i = 0; i < 6; i++) code += CODE_CH[Math.floor(Math.random() * CODE_CH.length)]; } while (taken.has(code));
+        const exp = +w.expireDays > 0 ? new Date(Date.now() + w.expireDays * 864e5).toISOString().slice(0, 10) : null;
+        coupon = { code, user: u.id, label: p.label, type: p.type, value: +p.value, maxOff: +p.maxOff || 0, minOrder: +w.minOrder || 0, expires: exp, status: 'new', order: null, prize: p.id, from: 'welcome', createdAt: at };
+        d.coupons.push(coupon);
+      }
+      return { prize: p, index, segments: list, coupon };
+    },
+    couponsOf(d, userId) { return (d.coupons || []).filter(c => c.user === userId).sort((a, b) => (a.status === 'new' ? 0 : 1) - (b.status === 'new' ? 0 : 1) || String(b.createdAt).localeCompare(String(a.createdAt))); },
+    // kiểm tra mã trên tiền hàng (chưa tính phí giao): trả số tiền giảm
+    couponCheck(d, code, u, sub) {
+      const k = String(code || '').trim().toUpperCase(); if (!k) return { error: 'Anh chị nhập mã giảm giá.' };
+      const c = (d.coupons || []).find(x => x.code === k);
+      if (!c) return { error: 'Mã giảm giá không đúng.' };
+      if (!u || c.user !== u.id) return { error: 'Mã này thuộc tài khoản khác. Anh chị đăng nhập đúng tài khoản nhận mã.' };
+      if (c.status !== 'new') return { error: 'Mã này đã dùng cho đơn ' + (c.order || '') + '.' };
+      if (c.expires && c.expires < now()) return { error: 'Mã này đã hết hạn ngày ' + c.expires.split('-').reverse().join('/') + '.' };
+      if (c.minOrder > 0 && sub < c.minOrder) return { error: 'Mã này dùng cho đơn từ ' + PSQ.money(c.minOrder) + '.' };
+      return { coupon: c, discount: offOf(c, sub) };
+    },
+    couponUse(d, c, o, discount) { c.status = 'used'; c.order = o.id; c.usedAt = stampNow(); o.coupon = c.code; o.discount = discount; o.total = Math.max(0, o.total - discount); },
+    // đơn hủy: trả mã lại cho khách dùng đơn khác
+    couponBack(d, o) { const c = o && o.coupon && (d.coupons || []).find(x => x.code === o.coupon && x.order === o.id); if (!c) return false; c.status = 'new'; c.order = null; c.usedAt = null; return true; }
+  });
+
   {
     const baseLoad = ADB.load;
     ADB.load = function () { const d = baseLoad(); wheelData(d); return d; };

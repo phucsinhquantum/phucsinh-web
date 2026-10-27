@@ -135,8 +135,13 @@ function readBody(req, limit) {
     req.on('error', fail);
   });
 }
-const sidCookie = (t, maxAge) => `psq_sid=${t || ''}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${SECURE ? '; Secure' : ''}`;
+const sidCookie = (t, maxAge, name = 'psq_sid') => `${name}=${t || ''}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${SECURE ? '; Secure' : ''}`;
 const meOf = req => { const id = store.session(cookies(req).psq_sid); const u = id && A().user(D, id); return u && u.status !== 'locked' ? u : null; };
+// quản trị đang xem tài khoản thành viên: phiên thành viên tạo riêng, ghi mã quản trị; phiên quản trị gốc giữ ở cookie psq_asid
+const IMP_HOURS = 2;
+const impOf = req => { const i = store.sessionInfo(cookies(req).psq_sid); if (!i || !/^imp:/.test(i.ua)) return null; const a = A().user(D, i.ua.slice(4)); return isAdmin(a) ? a : null; };
+// đang xem thay thì chỉ được xem: các thao tác này đọc dữ liệu, không đổi gì
+const IMP_READ = ['payStatus', 'checkRef', 'checkUsername', 'lookupUser', 'trackOrder'];
 const isAdmin = u => !!u && u.role === 'admin' && u.status !== 'locked';
 const can = (u, perm) => { if (!isAdmin(u)) return false; if (A().isOwner(u)) return true; const r = (D.roles || []).find(x => x.id === (u.adminRole || 'owner')); return !!r && (r.perms.includes('*') || r.perms.includes(perm)); };
 
@@ -145,15 +150,26 @@ const fails = new Map();
 const limited = ip => { const f = fails.get(ip); return f && f.n >= 10 && Date.now() - f.at < 15 * 6e4; };
 const failed = ip => { const f = fails.get(ip); if (!f || Date.now() - f.at > 15 * 6e4) fails.set(ip, { n: 1, at: Date.now() }); else f.n++; };
 
-function bootPayload(me) {
+function bootPayload(me, imp) {
   const c = {}; content.forEach((v, k) => { if (v != null) c[k] = v; });
-  return { me: me ? clean(me) : null, db: scopeFor(D, me, A()), content: c, at: Date.now(), ...(TEST ? { mode: 'thu' } : {}) };
+  return { me: me ? clean(me) : null, db: scopeFor(D, me, A()), content: c, at: Date.now(), ...(TEST ? { mode: 'thu' } : {}), ...(imp ? { imp: { name: imp.name } } : {}) };
+}
+
+// bối cảnh chạy một thao tác (actions.js)
+function ctxFor(me, args, sid) {
+  return {
+    d: D, me, args, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc,
+    log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
+    mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+    sendNow: (to, subject, type, html) => sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
+  };
 }
 
 async function api(req, res, url) {
-  const me = meOf(req), route = url.pathname;
-  if (req.method === 'GET' && route === '/api/boot') return send(res, 200, bootPayload(me));
+  const me = meOf(req), route = url.pathname, imp = me && impOf(req);
+  if (req.method === 'GET' && route === '/api/boot') return send(res, 200, bootPayload(me, imp));
   if (route === '/api/confirm') return confirmPage(req, res, url);
+  if (req.method === 'GET' && route === '/api/verify') return verifyPage(req, res, url);
   if (route === '/api/ship') return shipPage(req, res, url);
   if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
   if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
@@ -163,22 +179,36 @@ async function api(req, res, url) {
   const raw = await readBody(req, route.startsWith('/api/admin') ? 25e6 : 3e6);
   let body; try { body = raw ? JSON.parse(raw) : {}; } catch (e) { return send(res, 400, { error: 'Dữ liệu không đọc được.' }); }
 
-  if (route === '/api/logout') { store.endSession(cookies(req).psq_sid); return send(res, 200, { ok: true }, { 'set-cookie': sidCookie('', 0) }); }
+  if (route === '/api/logout') {
+    const ck = cookies(req); store.endSession(ck.psq_sid);
+    // thoát chế độ xem thay: trả lại phiên quản trị gốc
+    if (imp && store.session(ck.psq_asid) === imp.id) {
+      (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: imp.name, action: 'Thôi xem tài khoản', detail: `${me.name} (@${me.username || ''})` }); save();
+      return send(res, 200, { ok: true, back: 'quan-tri.html#members' }, { 'set-cookie': [sidCookie(ck.psq_asid, 30 * 86400), sidCookie('', 0, 'psq_asid')] });
+    }
+    return send(res, 200, { ok: true }, { 'set-cookie': sidCookie('', 0) });
+  }
+  // quản trị xem tài khoản thành viên (để kiểm tra ví, điểm, đơn): chỉ xem, tối đa 2 giờ, ghi nhật ký
+  if (route === '/api/admin/impersonate') {
+    if (!(isAdmin(me) && can(me, 'members'))) return send(res, 403, { error: 'Tài khoản không có quyền xem thành viên.' });
+    const u = A().user(D, body.id);
+    if (!u || u.role === 'admin') return send(res, 400, { error: 'Chỉ xem được tài khoản thành viên.' });
+    const t = store.newSession(u.id, 'imp:' + me.id, ipOf(req), IMP_HOURS / 24);
+    (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: me.name, action: 'Xem tài khoản thành viên', detail: `${u.name} (@${u.username || ''}, ${u.code || ''})` }); save();
+    store.history(me.email, 'impersonate', u.id);
+    return send(res, 200, { ok: true }, { 'set-cookie': [sidCookie(t, IMP_HOURS * 3600), sidCookie(cookies(req).psq_sid, IMP_HOURS * 3600, 'psq_asid')] });
+  }
 
   if (route === '/api/act') {
     const def = ACTIONS[body.name]; if (!def) return send(res, 404, { error: 'Thao tác không có.' });
+    if (imp && !IMP_READ.includes(body.name)) return send(res, 200, { error: 'Anh chị đang xem tài khoản này với quyền quản trị (chỉ xem), không thao tác được. Bấm Thoát xem để quay lại.' });
     if (def.auth === 'member' && !me) return send(res, 401, { error: 'Anh chị đăng nhập lại giúp em.' });
     if (def.auth === 'admin' && !(isAdmin(me) && (!def.perm || can(me, def.perm)))) return send(res, 403, { error: 'Tài khoản không có quyền làm việc này.' });
     if (def.auth === 'owner' && !A().isOwner(me)) return send(res, 403, { error: 'Chỉ chủ sở hữu làm được việc này.' });
     const ip = ipOf(req), guarded = ['login', 'resetPass', 'forgot', 'register'].includes(body.name);
     if (guarded && limited(ip)) return send(res, 429, { error: 'Anh chị thử lại sau 15 phút.' });
     ACTOR = me; const sid = cookies(req).psq_sid;
-    const ctx = {
-      d: D, me, args: body.args || {}, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc,
-      log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
-      mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
-      sendNow: (to, subject, type, html) => sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
-    };
+    const ctx = ctxFor(me, body.args || {}, sid);
     let r;
     try { r = def.async ? await def.run(ctx) : def.run(ctx); }
     catch (e) { console.error('[lỗi thao tác]', body.name, e); ACTOR = null; D = store.getJSON('db'); return send(res, 500, { error: 'Máy chủ gặp lỗi, anh chị thử lại giúp em.' }); }
@@ -188,7 +218,7 @@ async function api(req, res, url) {
     const headers = {};
     let who = me;
     if (r && r.login) { headers['set-cookie'] = sidCookie(store.newSession(r.login, req.headers['user-agent'], ip), 30 * 86400); who = A().user(D, r.login); delete r.login; }
-    return send(res, 200, Object.assign({ result: r || { ok: true } }, bootPayload(who)), headers);
+    return send(res, 200, Object.assign({ result: r || { ok: true } }, bootPayload(who, who === me ? imp : null)), headers);
   }
 
   if (route.startsWith('/api/admin/')) {
@@ -222,6 +252,19 @@ function stripPass(p) {
     Object.values(users.set || {}).forEach(s => { if (s.$o) delete s.$o.pass; if (s.$v) delete s.$v.pass; });
     (users.add || []).forEach(x => { x.item.pass = ''; });
   }
+}
+
+/* ---------- kích hoạt tài khoản từ thư: làm hết trên máy chủ rồi chuyển trang, không cần trình duyệt chạy mã
+   (trước đây trang tự gọi kích hoạt bằng mã chạy trên trình duyệt, máy cũ hoặc trình duyệt trong app Gmail, Zalo đứng im) ---------- */
+function verifyPage(req, res, url) {
+  const r = ACTIONS.verifyEmail.run(ctxFor(null, { token: url.searchParams.get('t') || '' }, null));
+  if (r && r.error) return send(res, 200, `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Kích hoạt tài khoản</title>
+    <style>body{font-family:system-ui,Arial,sans-serif;background:#0e1417;color:#eee;margin:0;padding:24px 16px}main{max-width:460px;margin:auto;background:#151d21;border:1px solid #3a3122;border-radius:16px;padding:22px}h1{font-size:20px;color:#f3c76b;margin:0 0 12px}a{display:block;text-align:center;padding:14px;border-radius:12px;background:#f3c76b;color:#1a1408;font-weight:700;text-decoration:none}p{color:#c9d1d3}</style></head>
+    <body><main><h1>Chưa kích hoạt được</h1><p>${esc(r.error)}</p><p>Nếu anh chị đã bấm đường dẫn này trước đó thì tài khoản đã kích hoạt rồi, chỉ cần đăng nhập.</p><a href="/thanh-vien.html">Đăng nhập</a></main></body></html>`);
+  after();
+  const ip = ipOf(req), sid = store.newSession(r.login, req.headers['user-agent'], ip);
+  res.writeHead(302, { location: '/thanh-vien.html?da-kich-hoat=1#tong-quan', 'set-cookie': sidCookie(sid, 30 * 86400), 'cache-control': 'no-store' });
+  res.end();
 }
 
 /* ---------- xác nhận đã nhận tiền (mở từ tin Telegram) ---------- */

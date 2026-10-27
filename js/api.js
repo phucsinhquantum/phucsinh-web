@@ -29,7 +29,22 @@
   function put(p) {
     API.me = p.me || null; API.db = p.db || API.db; API.at = Date.now(); API.online = true;
     if (p.mode === 'thu' && !API.test) { API.test = true; testBanner(); }
+    API.imp = p.imp || null; if (API.imp) impBanner();
     if (p.content) CONTENT.forEach(k => { try { if (k in p.content) rawSet.call(localStorage, k, JSON.stringify(p.content[k])); else rawRemove.call(localStorage, k); } catch (e) {} });
+  }
+  // quản trị đang xem tài khoản thành viên: thanh vàng dưới cùng, bấm Thoát xem để quay lại quản trị
+  function impBanner() {
+    const add = () => {
+      if (document.getElementById('psqImp')) return;
+      const b = document.createElement('div'); b.id = 'psqImp'; b.setAttribute('role', 'status');
+      b.style.cssText = 'position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:10001;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 24px);padding:8px 10px 8px 14px;border-radius:12px;background:#f3c76b;color:#1a1408;font:600 13px/1.35 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4)';
+      const t = document.createElement('span'); t.textContent = 'Đang xem tài khoản ' + ((API.me || {}).name || '') + ' (' + ((API.me || {}).code || '') + ') với quyền quản trị, chỉ xem';
+      const x = document.createElement('button'); x.type = 'button'; x.textContent = 'Thoát xem';
+      x.style.cssText = 'flex:none;border:0;border-radius:9px;padding:7px 12px;background:#1a1408;color:#f3c76b;font:inherit;cursor:pointer';
+      x.onclick = () => { const r = API.logout(); location.href = (r && r.back) || 'quan-tri.html'; };
+      b.append(t, x); document.body.appendChild(b);
+    };
+    document.body ? add() : document.addEventListener('DOMContentLoaded', add);
   }
   // bản thử: dải đỏ cố định trên cùng để không nhầm với trang bán hàng thật
   function testBanner() {
@@ -74,7 +89,7 @@
       if (r.error) return { error: r.error };
       return r.result || { ok: true };
     },
-    logout() { call('POST', '/api/logout', {}); API.me = null; API.boot(); },
+    logout() { const r = call('POST', '/api/logout', {}); API.me = null; API.imp = null; API.boot(); return r; },
     saveContent(key, value) {
       const r = call('POST', '/api/admin/content', { key, value });
       if (r.error) API.fail(r.error);

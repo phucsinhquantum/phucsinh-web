@@ -36,6 +36,8 @@ function openStore(dir) {
       const t = rnd(); sql.prepare('INSERT INTO sessions (token, user, exp, ua, ip, at) VALUES (?, ?, ?, ?, ?, ?)').run(hashTok(t), user, now() + days * 864e5, String(ua || '').slice(0, 200), ip || '', now()); return t;
     },
     session(t) { if (!t) return null; const r = sql.prepare('SELECT user, exp FROM sessions WHERE token = ?').get(hashTok(t)); return r && r.exp > now() ? r.user : null; },
+    // phiên kèm ghi chú (ua): phiên quản trị xem tài khoản thành viên ghi 'imp:<mã quản trị>'
+    sessionInfo(t) { if (!t) return null; const r = sql.prepare('SELECT user, exp, ua FROM sessions WHERE token = ?').get(hashTok(t)); return r && r.exp > now() ? { user: r.user, ua: r.ua || '' } : null; },
     endSession(t) { if (t) sql.prepare('DELETE FROM sessions WHERE token = ?').run(hashTok(t)); },
     endSessionsOf(user, except) { sql.prepare('DELETE FROM sessions WHERE user = ? AND token != ?').run(user, except ? hashTok(except) : ''); },
     // mã một lần: đặt lại mật khẩu (reset), xác nhận đơn hoặc nạp tiền từ tin nhắn (confirm)
