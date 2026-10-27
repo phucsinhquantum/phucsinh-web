@@ -81,3 +81,23 @@ Khối Caddy của phucsinhquantum.com thêm `handle /api/*` và `handle @hidden
 ## Sao lưu
 
 Máy chủ tự sao lưu mỗi ngày vào `<thư mục dữ liệu>/backups` và giữ 30 bản. Nên chép thêm thư mục này ra ngoài VPS định kỳ.
+
+## Vận hành an toàn bản thử và bản chính (27/10)
+
+Nguyên tắc: **code chỉ sửa trên GitHub**, không sửa thẳng trên VPS. Bản thử chạy nhánh `may-chu`, bản chính chạy nhánh `main`.
+Anh Tuân kiểm tra bản thử xong, nhắn "đưa lên bản chính" thì mới đẩy `may-chu` sang `main` rồi cập nhật bản chính.
+
+Các lệnh ở `server/ops`, cài một lần bằng `bash /opt/web/phucsinhquantum/server/ops/cai-dat.sh` (chép vào `/opt/psq-ops`, đặt lịch cron):
+
+| Lệnh | Việc làm |
+|---|---|
+| `bash /opt/psq-ops/cap-nhat.sh thu` hoặc `chinh` | Lấy code từ GitHub, sao lưu dữ liệu, tự kiểm tra (`server/tools/kiem-tra.js`) trên bản sao dữ liệu, sai là dừng. Đúng thì đổi code, khởi động lại, kiểm tra trang và tên gọi trên mạng; hỏng thì tự quay về code cũ. Báo kết quả qua Telegram. Có sửa trực tiếp trên VPS thì dừng (đã giữ ở `backups/code-vps-*.patch`), chạy lại với `FORCE=1` khi chắc GitHub đã có các sửa đó. |
+| `canh-gac.sh` (cron mỗi 5 phút) | Trang chính, bản thử còn trả dữ liệu; tên gọi `psq-api`, `psq-api-thu` mỗi cái đúng 1 container; ổ đĩa dưới 90%. Sự cố thì báo Telegram, kéo dài thì nhắc mỗi giờ, hết thì báo đã ổn. |
+| `sao-luu-ngoai.sh` (cron 02:30) | Sao lưu dữ liệu bản chính, nén, gửi vào Telegram riêng của chủ (`ALERT_CHAT_ID`, mặc định mã đầu của `TELEGRAM_CHAT_ID`). |
+| `du-lieu-thu.sh` (cron 03:30 thứ Hai, hoặc chạy tay) | Làm mới dữ liệu bản thử từ bản chính, đã che tên, số điện thoại, email khách. Mật khẩu thành viên thử `thu123456`. |
+
+Bản thử tự nhận ra khi `BASE_URL` bắt đầu bằng `https://thu.` (hoặc đặt `SITE_MODE=thu`): tin Telegram có nhãn [THỬ], không gửi thư cho khách
+(đặt `TEST_MAIL_TO` trong `.env` bản thử nếu muốn nhận mọi thư thử về một hộp), trang hiện dải đỏ BẢN THỬ.
+
+Ghi đè đường dẫn, tên mạng (mặc định mạng Caddy tên `web`) trong `/opt/psq-ops/ops.conf`, ví dụ `PROXY_NET=web`.
+

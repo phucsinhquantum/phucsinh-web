@@ -4,7 +4,7 @@
 #   3. tự kiểm tra code mới trên bản sao dữ liệu (server/tools/kiem-tra.js), sai là dừng, không đụng gì,
 #   4. đổi code, khởi động lại, kiểm tra trang và tên gọi trên mạng, hỏng thì tự quay về code cũ, 5. báo Telegram.
 # Cách dùng: bash /opt/psq-ops/cap-nhat.sh thu|chinh        (FORCE=1 để bỏ qua sửa trực tiếp trên VPS, đã giữ trong bundle)
-set -u
+set -uo pipefail
 . "$(dirname "$0")/chung.sh"
 MODE=${1:-}
 ban "$MODE" || { echo "Cách dùng: cap-nhat.sh thu|chinh"; exit 2; }
@@ -32,6 +32,7 @@ echo "== Sao lưu dữ liệu"
 SEED="truoc-cap-nhat-$TS.db"
 sao_luu "$NAME" "$SEED" || { bao "${TAG}Cập nhật $LABEL dừng: không sao lưu được dữ liệu."; exit 1; }
 echo "Đã sao lưu $DATA/backups/$SEED"
+ls -1t "$DATA"/backups/truoc-cap-nhat-*.db 2>/dev/null | tail -n +21 | xargs -r rm -f   # giữ 20 bản gần nhất
 
 echo "== Tự kiểm tra code mới trên bản sao dữ liệu"
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
