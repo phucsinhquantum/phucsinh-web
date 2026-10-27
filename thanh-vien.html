@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028b">
-<script src="js/lang.js?v=20261028b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028c">
+<script src="js/lang.js?v=20261028c"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -219,6 +219,17 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   .ww-face { display: block; width: 100%; height: auto; }
   .ww-ptr { position: absolute; left: 50%; top: -4px; transform: translateX(-50%); width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent; border-top: 26px solid #f3c76b; z-index: 2; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
   .ww-win h3 { margin: 4px 0; font-size: 22px; } .ww-code { display: inline-block; margin: 6px 0; padding: 8px 18px; border-radius: 10px; border: 2px dashed #f3c76b; font-size: 22px; font-weight: 800; letter-spacing: 2px; color: #f3c76b; }
+  .fr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; } .fr-head label { margin: 0; }
+  #fr::placeholder { text-transform: none; font-size: 13px; letter-spacing: 0; }
+  .dl-glow { position: relative; display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: #1d1507; white-space: nowrap; text-decoration: none; overflow: hidden;
+    background: linear-gradient(135deg, #ffe09a, #f3c76b 45%, #e0a94a); box-shadow: 0 0 0 1px rgba(255, 224, 154, .6), 0 0 14px -2px rgba(243, 199, 107, .8); animation: dlPulse 2s ease-in-out infinite; }
+  .dl-glow svg { width: 14px; height: 14px; }
+  .dl-glow::after { content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .75), transparent); transform: skewX(-20deg); animation: dlShine 2.6s ease-in-out infinite; }
+  .dl-glow:hover { filter: brightness(1.08); }
+  @keyframes dlPulse { 0%, 100% { box-shadow: 0 0 0 1px rgba(255, 224, 154, .6), 0 0 10px -2px rgba(243, 199, 107, .6); } 50% { box-shadow: 0 0 0 1px rgba(255, 224, 154, .9), 0 0 22px 2px rgba(243, 199, 107, .95); } }
+  @media (max-width: 560px) { #fr::placeholder { font-size: 11.5px; } }
+  @media (prefers-reduced-motion: reduce) { .dl-glow, .dl-glow::after { animation: none; } }
+  @keyframes dlShine { 0%, 55% { left: -60%; } 100% { left: 130%; } }
 </style>
 </head>
 <body data-page="member">
@@ -226,11 +237,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261028b"></script>
-<script src="js/api.js?v=20261028b"></script>
-<script src="js/data.js?v=20261028b"></script>
-<script src="js/app.js?v=20261028b"></script>
-<script src="js/psq-data.js?v=20261028b"></script>
+<script src="js/patch.js?v=20261028c"></script>
+<script src="js/api.js?v=20261028c"></script>
+<script src="js/data.js?v=20261028c"></script>
+<script src="js/app.js?v=20261028c"></script>
+<script src="js/psq-data.js?v=20261028c"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -915,9 +926,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
           ${mode === 'reset' ? '' : `<div class="field mt-2"><label for="fe">${mode === 'login' ? 'Email hoặc tên truy cập' : 'Email'}</label><input class="input" id="fe" name="email" type="${mode === 'login' ? 'text' : 'email'}" autocomplete="${mode === 'login' ? 'username' : 'email'}" autocapitalize="off" spellcheck="false" required></div>`}
           ${mode === 'forgot' ? '' : `<div class="field mt-2"><label for="fw">${mode === 'reset' ? 'Mật khẩu mới' : 'Mật khẩu'}</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>`}
           ${mode === 'reset' || mode === 'register' ? `<div class="field mt-2"><label for="fw2">${mode === 'reset' ? 'Nhập lại mật khẩu mới' : 'Nhập lại mật khẩu'}</label><input class="input" id="fw2" name="pass2" type="password" autocomplete="new-password" minlength="6" required><small class="dim" id="fw2Hint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>` : ''}
-          ${mode === 'register' ? `<div class="field mt-2"><label for="fr">Mã giới thiệu <span class="red">*</span></label><input class="input" id="fr" name="ref" autocomplete="off" required placeholder="Ví dụ PS1001" value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small>
-            <small class="dim" style="font-size:12.5px;display:block">Hãy liên hệ người giới thiệu bạn để lấy mã số, hoặc chọn một trong những đại lý uy tín.</small>
-            <a class="btn btn-sm btn-outline-gold mt-1" href="dai-ly.html" target="_blank" rel="noopener">${icon('users')} Xem danh sách đại lý uy tín</a></div>
+          ${mode === 'register' ? `<div class="field mt-2"><div class="fr-head"><label for="fr">Mã giới thiệu <span class="red">*</span></label><a class="dl-glow" href="dai-ly.html" target="_blank" rel="noopener">${icon('award')} Đại lý uy tín</a></div><input class="input" id="fr" name="ref" autocomplete="off" required placeholder="Hãy liên hệ người giới thiệu bạn để lấy mã số, hoặc chọn một trong những đại lý uy tín" title="Hãy liên hệ người giới thiệu bạn để lấy mã số, hoặc chọn một trong những đại lý uy tín." value="${esc(refCode)}" style="text-transform:uppercase"><small class="dim" id="frHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>
           <div class="terms-h mt-2"><b>${icon('shield')} Điều khoản sử dụng</b><small id="termsHint">Cuộn đọc hết để đồng ý</small></div>
           <div class="terms-box" id="termsBox"><div class="terms" id="terms" tabindex="0" role="document" aria-label="Điều khoản sử dụng">${termsHtml(P)}</div></div>
           <label class="check mt-2 terms-ok"><input type="checkbox" name="agree" id="agree" required disabled> Tôi đã đọc và đồng ý với điều khoản sử dụng và chính sách bảo mật</label>` : ''}
@@ -934,6 +943,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     // mã giới thiệu, tên truy cập: kiểm tra trên máy chủ (chờ ngừng gõ một chút)
     const later = (fn, ms = 350) => { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
     const fr = $('#fr');
+    // chữ gợi ý trong ô: ô hẹp thì dùng câu ngắn hơn để không bị cắt
+    if (fr && fr.clientWidth) fr.placeholder = fr.clientWidth >= 640 ? fr.placeholder : fr.clientWidth >= 420 ? 'Hãy liên hệ người giới thiệu để lấy mã, hoặc chọn đại lý uy tín' : 'Hỏi người giới thiệu lấy mã hoặc chọn đại lý uy tín';
     if (fr) { const hint = () => { const c = fr.value.trim().toUpperCase(), r = c ? API.act('checkRef', { code: c }) : {};
       if (!$('#frHint')) return; $('#frHint').innerHTML = !c ? '' : r.name ? `Người giới thiệu: <b class="gold">${esc(r.name)}</b>` : `<span class="red">${esc(r.error || 'Mã giới thiệu chưa đúng.')}</span>`; };
       fr.addEventListener('input', later(hint)); if (fr.value) hint(); }
