@@ -418,4 +418,15 @@ daily(); setInterval(daily, 36e5);
 // nhắc giao hàng: kiểm tra mỗi 10 phút, mỗi đơn chỉ nhắc 1 lần mỗi ngày trong giờ 8h-18h
 const shipTick = () => remindShip().catch(e => console.error('[nhắc ship]', e));
 setTimeout(shipTick, 15e3); setInterval(shipTick, 10 * 6e4);
+// đăng ký quá 30 phút chưa kích hoạt: báo Telegram 1 lần (7h-22h) để gọi khách hoặc kích hoạt tay
+const verifyTick = () => {
+  try {
+    const h = vnNow().getUTCHours(), now = Date.now(); if (h < 7 || h >= 22 || !env.TELEGRAM_BOT_TOKEN) return;
+    const list = D.users.filter(u => u.verified === false && u.status !== 'locked' && !u.verifyNudged && u.verifySent && now - u.verifySent > 30 * 6e4 && now - u.verifySent < 3 * 864e5);
+    if (!list.length) return;
+    list.forEach(u => { u.verifyNudged = true; }); save();
+    tell(`📩 ${list.length} người đăng ký quá 30 phút chưa kích hoạt email:\n${list.map(u => `• ${u.name} · ${u.phone || 'chưa có SĐT'} · ${u.email}`).join('\n')}\nAnh gọi nhắc khách xem thư (cả Quảng cáo, Thư rác) hoặc vào Quản trị > Thành viên bấm Kích hoạt.`);
+  } catch (e) { console.error('[nhắc kích hoạt]', e); }
+};
+setInterval(verifyTick, 10 * 6e4);
 process.on('SIGTERM', () => { save(); process.exit(0); });

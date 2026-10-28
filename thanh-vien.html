@@ -1026,14 +1026,25 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     view.innerHTML = `<div class="card glow-mix" style="max-width:560px;margin:24px auto;padding:clamp(22px,4vw,36px);text-align:center">
       <span class="pw-ok" style="margin:0 auto 14px;width:56px;height:56px" aria-hidden="true">${icon('check')}</span>
       <h2 class="display" style="font-size:clamp(24px,3vw,32px)">Đăng ký thành công!</h2>
-      ${wait ? `<p class="mt-2">Anh chị vui lòng kiểm tra email <b class="gold">${esc(r.email)}</b> và bấm nút <b>Kích hoạt tài khoản</b> trong thư để bắt đầu sử dụng.</p>
-      <p class="dim mt-1" style="font-size:13px">Không thấy thư? Anh chị xem cả mục Thư rác hoặc Quảng cáo. Đường dẫn kích hoạt dùng được trong 72 giờ.</p>
+      ${wait ? `<p class="mt-2">Em đã gửi thư kích hoạt tới email:</p>
+      <p class="mt-1" style="font-size:clamp(17px,2.4vw,20px);word-break:break-all"><b class="gold" id="rgMail">${esc(r.email)}</b></p>
+      <p class="mt-1">Anh chị mở thư và bấm nút <b>Kích hoạt tài khoản</b> để bắt đầu sử dụng.</p>
+      <p class="mt-2" style="font-size:14px"><button type="button" class="link gold" id="rgFix" style="background:none;border:0;padding:0;cursor:pointer;font:inherit;text-decoration:underline">Email trên bị sai? Sửa lại</button></p>
+      <form id="rgFixF" class="mt-2" hidden style="max-width:380px;margin-left:auto;margin-right:auto;text-align:left"><label class="dim" style="font-size:13px" for="rgNew">Email đúng của anh chị</label>
+        <div class="row mt-1" style="gap:8px"><input class="input" id="rgNew" type="email" inputmode="email" autocomplete="email" required style="flex:1;min-width:0"><button class="btn btn-gold" type="submit">Gửi lại</button></div></form>
+      <div class="dim mt-3" style="font-size:13px;text-align:left;max-width:420px;margin-left:auto;margin-right:auto;line-height:1.6"><b>Không thấy thư?</b><br>1. Mở đúng Gmail vừa nhập ở trên (nhiều người có 2 Gmail).<br>2. Xem cả mục <b>Quảng cáo</b>, <b>Cập nhật</b>, <b>Thư rác</b> hoặc <b>Tất cả thư</b>.<br>3. Gõ <b>Phúc Sinh QuanTum</b> vào ô tìm kiếm Gmail.<br>4. Đợi 2 đến 3 phút rồi mới bấm gửi lại. Chỉ dùng thư mới nhất, đường dẫn dùng được 72 giờ.<br>Vẫn không được, anh chị gọi <a class="gold" href="tel:${esc(SITE.phone.replace(/\D/g, ''))}">${esc(SITE.phone)}</a> để được kích hoạt ngay.</div>
       <div class="row mt-3" style="gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn btn-gold" type="button" id="rgRe">${icon('upload')} Gửi lại thư kích hoạt</button><a class="btn btn-outline-gold" href="thanh-vien.html">Về trang đăng nhập</a></div>`
       : `<p class="mt-2">Chào mừng <b class="gold">${esc(f.name)}</b> đến với ${esc(SITE.brand)}. Tài khoản của anh chị đã sẵn sàng.</p>
       <div class="row mt-3" style="justify-content:center"><a class="btn btn-gold" href="thanh-vien.html#tong-quan">${icon('user')} Vào trang thành viên</a></div>`}
     </div>`;
     scrollTo({ top: 0, behavior: 'smooth' });
     const b = $('#rgRe'); if (b) b.addEventListener('click', () => { b.disabled = true; const x = API.act('resendVerify', { email: r.email }); toast(x.error || 'Đã gửi lại thư kích hoạt', x.error ? 'err' : undefined); setTimeout(() => { b.disabled = false; }, 60e3); });
+    const fx = $('#rgFix'), ff = $('#rgFixF');
+    if (fx) fx.addEventListener('click', () => { ff.hidden = !ff.hidden; if (!ff.hidden) { $('#rgNew').value = r.email; $('#rgNew').focus(); } });
+    if (ff) ff.addEventListener('submit', e => { e.preventDefault(); const ne = $('#rgNew').value.trim();
+      const x = API.act('fixVerifyEmail', { email: r.email, pass: f.pass, newEmail: ne });
+      if (x.error) return toast(x.error, 'err');
+      r.email = x.email; $('#rgMail').textContent = x.email; ff.hidden = true; toast('Đã sửa email và gửi thư kích hoạt tới ' + x.email); });
   }
   if (PSQ.qs('da-kich-hoat')) { history.replaceState(null, '', 'thanh-vien.html#tong-quan'); toast('Đã kích hoạt tài khoản, chào mừng anh chị!'); }
   // mở đường dẫn kích hoạt trong thư

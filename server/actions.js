@@ -218,6 +218,19 @@ const ACTIONS = {
     }
     return { ok: true };
   } },
+  // màn hình chờ kích hoạt: khách gõ nhầm email thì tự sửa (cần đúng mật khẩu vừa đặt), thư gửi lại địa chỉ mới
+  fixVerifyEmail: { auth: 'guest', run(c) {
+    const k = str(c.args.email, 120).toLowerCase(), ne = str(c.args.newEmail, 120).toLowerCase();
+    const u = k && c.d.users.find(x => (x.email || '').toLowerCase() === k);
+    if (!u || u.verified !== false || !verifyPass(String(c.args.pass || ''), u.pass)) return err('Không sửa được email, anh chị đăng ký lại hoặc liên hệ ' + c.site.phone + '.');
+    if (!EMAIL.test(ne)) return err('Email chưa đúng định dạng.');
+    if (mailTypo(ne)) return err(`Email có vẻ gõ nhầm, có phải là ${mailTypo(ne)} không?`);
+    if (ne !== k && c.d.users.some(x => x !== u && (x.email || '').toLowerCase() === ne)) return err('Email này đã có tài khoản.');
+    if (u.verifySent && Date.now() - u.verifySent < 5e3) return err('Anh chị chờ vài giây rồi thử lại.');
+    c.log('Sửa email chờ kích hoạt', `${u.name}: ${u.email} → ${ne}`, u);
+    u.email = ne; u.verifyNudged = false; verifyMail(c, u);
+    return { ok: true, email: ne };
+  } },
   resetPass: { auth: 'guest', run(c) {
     const id = c.store.token('reset', c.args.token), u = id && c.A.user(c.d, id), p = String(c.args.pass || '');
     if (!u) return err('Đường dẫn đặt lại mật khẩu đã hết hạn hoặc đã dùng. Anh chị yêu cầu lại.');
