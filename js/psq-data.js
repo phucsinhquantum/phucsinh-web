@@ -470,11 +470,15 @@
       d.users.forEach(u => { const t = tel(u.phone); if (u.role !== 'admin' && t.length >= 9) (by[t] = by[t] || []).push(u); });
       const em = {}; d.users.forEach(u => { const e = String(u.email || '').trim().toLowerCase(); if (u.role !== 'admin' && e) (em[e] = em[e] || []).push(u); });
       let n = 0; d.orders.forEach(o => {
-        if (o.userId) return;
-        const m = by[tel(o.phone)], e = em[String(o.email || '').trim().toLowerCase()], u = m && m.length === 1 ? m[0] : e && e.length === 1 ? e[0] : null; if (!u) return;
-        o.userId = u.id; o.linked = m && m.length === 1 ? 'phone' : 'email'; n++;
-        // đơn đã ghi nhận mà chưa ra hoa hồng nào (khách lẻ không có người giới thiệu): tính lại như đơn của thành viên
-        if (o.settled && !(d.commissions || []).some(c => c.order === o.id)) o.settled = false;
+        if (!o.userId) {
+          const m = by[tel(o.phone)], e = em[String(o.email || '').trim().toLowerCase()], u = m && m.length === 1 ? m[0] : e && e.length === 1 ? e[0] : null; if (!u) return;
+          o.userId = u.id; o.linked = m && m.length === 1 ? 'phone' : 'email'; n++;
+        }
+        // đơn vừa gắn (hoặc gắn từ bản trước, chạy 1 lần): lúc là khách lẻ chỉ ra hoa hồng bỏ lỡ hoặc không ra gì (người giới thiệu khi đó chưa đủ cấp)
+        // thì bỏ các dòng bỏ lỡ đó và tính lại như đơn của thành viên; đơn đã trả hoa hồng thật thì giữ nguyên, không trả trùng
+        if (!o.linked || o.relinked) return; o.relinked = true;
+        const cs = (d.commissions || []).filter(c => c.order === o.id);
+        if (o.settled && cs.every(c => c.status === 'missed')) { d.commissions = (d.commissions || []).filter(c => c.order !== o.id); o.settled = false; n++; }
       }); return n;
     },
     agentSync(d) { let n = 0; new Set(d.orders.filter(PAID).map(o => o.userId)).forEach(id => { if (ADB.agentUp(d, id)) n++; }); return n; },
