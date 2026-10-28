@@ -580,6 +580,16 @@ function botLookup(d, A, dealers, q, asker, base) {
   return { query: q, count: found.length, results, dealers: dl,
     rule: 'Chỉ nói tên, cấp bậc, mã giới thiệu, ngày tham gia. Thông tin liên hệ chỉ nói khi có trong dealer (đại lý uy tín, đã công khai). Mục self chỉ có khi người đang chat là chính chủ. Trùng nhiều người thì hỏi thêm khu vực hoặc mã PS. Khách xác nhận đúng người giới thiệu và đồng ý thì gửi refLink của người đó để khách đăng ký. Không tự nêu con số hoa hồng, thu nhập: mời khách hỏi người giới thiệu.' };
 }
+// An An hỏi sản phẩm đang bán trên web: không có trong danh sách = đã ngừng bán. Không trả giá tính thưởng (thông tin nội bộ).
+function botProducts(d, A, products, q, base) {
+  const qf = fold(str(q, 80)), b = String(base || '').replace(/\/$/, '');
+  const list = (products || []).filter(p => p.id !== A.PKG_ID && p.id !== A.AGENT_PKG_ID && p.active !== false);
+  const hit = qf ? list.filter(p => (' ' + fold(p.name + ' ' + (p.partnerName || '')) + ' ').includes(' ' + qf + ' ') || fold(p.id).includes(qf)) : list;
+  const out = hit.slice(0, 30).map(p => { const st = A.stockOf(d, p.id);
+    return { name: p.name, price: p.price, old: p.old || null, partner: !!p.partner, partnerName: p.partnerName || '', inStock: st !== 0, stock: st, spec: p.spec || '', warranty: p.warranty || '', link: b + '/san-pham-chi-tiet.html?id=' + encodeURIComponent(p.id) }; });
+  return { query: q || '', count: hit.length, total: list.length, products: out,
+    rule: 'Chỉ giới thiệu sản phẩm có trong danh sách này. Sản phẩm khách hỏi mà không có ở đây thì báo đã hết hàng hoặc ngừng bán, gợi ý sản phẩm tương tự. inStock false thì báo tạm hết hàng. Bảo hành theo trường warranty của từng sản phẩm; trống thì theo chính sách chung của công ty (hàng đối tác trống thì mời khách hỏi lại, em kiểm tra). Hàng đối tác do công ty giao.' };
+}
 const botKeyOf = store => (store.getJSON('secret:bot') || {}).key || '';
 
-module.exports = { botLookup, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };
+module.exports = { botLookup, botProducts, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };

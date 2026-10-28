@@ -17,7 +17,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { openStore } = require('./store');
 const { createEngine, esc, today } = require('./engine');
-const { ACTIONS, scopeFor, hashPass, clean, botLookup, botKeyOf } = require('./actions');
+const { ACTIONS, scopeFor, hashPass, clean, botLookup, botProducts, botKeyOf } = require('./actions');
 const { sendMail } = require('./mail');
 const N = require('./notify'), { chatName, chatsOf } = N;
 const P = require('../js/patch.js');
@@ -176,7 +176,7 @@ async function api(req, res, url) {
   if (route === '/api/ship') return shipPage(req, res, url);
   if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
   if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
-  if (route === '/api/bot/lookup') return botApi(req, res, url);
+  if (route === '/api/bot/lookup' || route === '/api/bot/products') return botApi(req, res, url, route.endsWith('products'));
   if (req.method !== 'POST') return send(res, 405, { error: 'Sai phương thức.' });
   // chống gửi giả từ trang khác: trình duyệt chỉ gửi được tiêu đề này khi cùng tên miền
   if (req.headers['x-psq'] !== '1') return send(res, 403, { error: 'Yêu cầu không hợp lệ.' });
@@ -249,14 +249,14 @@ async function api(req, res, url) {
   return send(res, 404, { error: 'Không có đường dẫn này.' });
 }
 /* ---------- An An (n8n) tra cứu thành viên: GET ?q=&asker= hoặc POST {q, asker}, tiêu đề x-bot-key hoặc Authorization: Bearer ---------- */
-async function botApi(req, res, url) {
+async function botApi(req, res, url, prod) {
   const ip = ipOf(req); if (limited(ip)) return send(res, 429, { error: 'Thử lại sau 15 phút.' });
   const key = botKeyOf(store), got = String(req.headers['x-bot-key'] || String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
   const ok = key && got.length === key.length && require('crypto').timingSafeEqual(Buffer.from(got), Buffer.from(key));
   if (!ok) { failed(ip); return send(res, 401, { error: key ? 'Khóa tra cứu chưa đúng.' : 'Cổng tra cứu đang tắt. Chủ sở hữu tạo khóa trong Quản trị > Thiết lập.' }); }
   let a = Object.fromEntries(url.searchParams);
   if (req.method === 'POST') { try { const raw = await readBody(req, 4096); Object.assign(a, raw ? JSON.parse(raw) : {}); } catch (e) { return send(res, 400, { error: 'Dữ liệu không đọc được.' }); } }
-  const r = botLookup(D, A(), content.get('psq_dealers_v1') ?? E.sandbox.DEALERS, a.q, a.asker, BASE);
+  const r = prod ? botProducts(D, A(), E.PRODUCTS, a.q, BASE) : botLookup(D, A(), content.get('psq_dealers_v1') ?? E.sandbox.DEALERS, a.q, a.asker, BASE);
   return send(res, r.error ? 400 : 200, r, { 'cache-control': 'no-store' });
 }
 

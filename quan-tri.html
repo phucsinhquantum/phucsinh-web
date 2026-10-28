@@ -468,11 +468,12 @@
         <label class="check full"><input type="checkbox" name="hot"${p.hot ? ' checked' : ''}> Hiện trong mục bán chạy</label>
         <label class="check"><input type="checkbox" name="partner"${p.partner ? ' checked' : ''}> Sản phẩm đối tác (hiện ở mục Sản phẩm đối tác)</label>
         <div class="field"><label>Tên đối tác</label><input class="input" name="partnerName" value="${esc(p.partnerName || '')}" placeholder="ví dụ: Công ty ABC"></div>
+        <div class="field full"><label>Bảo hành (để trống = theo chính sách chung)</label><input class="input" name="warranty" value="${esc(p.warranty || '')}" placeholder="ví dụ: Bảo hành 12 tháng theo nhà sản xuất"></div>
       </div>
       <div class="row mt-3" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu</button></div></form>`);
     $('#pf', m.el).addEventListener('submit', e => {
       e.preventDefault(); const f = new FormData(e.target);
-      const np = { ...p, name: f.get('name').trim(), cat: f.get('cat'), price: +f.get('price'), old: +f.get('old') || undefined, art: f.get('art'), image: f.get('image').trim(), desc: f.get('desc'), hot: !!f.get('hot'), partner: !!f.get('partner') || undefined, partnerName: f.get('partnerName').trim() || undefined };
+      const np = { ...p, name: f.get('name').trim(), cat: f.get('cat'), price: +f.get('price'), old: +f.get('old') || undefined, art: f.get('art'), image: f.get('image').trim(), desc: f.get('desc'), hot: !!f.get('hot'), partner: !!f.get('partner') || undefined, partnerName: f.get('partnerName').trim() || undefined, warranty: f.get('warranty').trim() || undefined };
       const psv = String(f.get('ps') ?? '').trim(); if (psv === '') delete np.ps; else np.ps = Math.max(0, Math.round(+psv) || 0);
       if (!np.partner) { delete np.partner; delete np.partnerName; }
       if (isNew) np.id = np.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36).slice(-4);

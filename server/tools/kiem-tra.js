@@ -137,7 +137,10 @@ async function flow() {
       ok((oqo.items || [])[0] && oqo.items[0].ps === 8000000 && oqo.total >= 10000000, 'đơn ghi lại 8.000.000 PS lúc đặt, khách trả 10.000.000đ');
       ok(bq && bq.amount === 800000, 'CTV B nhận 10% của 8.000.000 PS = 800.000đ' + (bq ? ` (thực tế ${bq.amount})` : ''));
       ok(aq && aq.amount === 320000, 'đại lý A nhận 40% của 800.000đ = 320.000đ' + (aq ? ` (thực tế ${aq.amount})` : ''));
+      const bp = async q => (await (await fetch(`http://127.0.0.1:${s.port}/api/bot/products?q=${encodeURIComponent(q)}`, { headers: { 'x-bot-key': (await owner.act('botKeyNew', {})).result.key } })).json());
+      const p1 = await bp('đối tác thử'); ok(p1.count === 1 && p1.products[0].partner && !('ps' in p1.products[0]) && /san-pham-chi-tiet/.test(p1.products[0].link), 'An An tra được hàng đối tác đang bán, không lộ giá tính thưởng');
       await owner.req('POST', '/api/admin/content', { key: 'psq_products_v1', value: null });
+      ok((await bp('đối tác thử')).count === 0, 'An An: sản phẩm gỡ khỏi web thì không còn trong danh sách');
     }
 
     // khách lẻ bấm link của B rồi đặt hàng không tài khoản: tính cho B; lần sau vào link của A vẫn tính cho B

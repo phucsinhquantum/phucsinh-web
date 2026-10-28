@@ -142,7 +142,7 @@
         <div class="row wrap" style="gap:8px"><a class="badge ship" href="san-pham.html?cat=${p.cat}">${esc(cat.name)}</a>${p.hot ? '<span class="badge violet">Bán chạy</span>' : ''}${out ? '<span class="badge failed">Hết hàng</span>' : '<span class="badge ok">Còn hàng</span>'}</div>
         <h2 class="display">${esc(p.name)}</h2>
         <div class="price-row"><span class="now">${money(p.price)}</span>${p.old ? `<s class="dim">${money(p.old)}</s><span class="badge gold">Tiết kiệm ${money(p.old - p.price)}</span>` : ''}</div>
-        <div class="pts">${icon('sparkle')}<span>Thanh toán bằng ví điểm hoặc chuyển khoản. Đơn của thành viên được cộng <b id="ptsVal">${money(PSQ.psOf(p)).replace('đ', ' PS')}</b> vào doanh số mua hàng để lên Đại lý.</span></div>${p.partner ? `<div class="pts">${icon('award')}<span>Sản phẩm đối tác${p.partnerName ? ': <b>' + esc(p.partnerName) + '</b>' : ''}</span></div>` : ''}
+        <div class="pts">${icon('sparkle')}<span>Thanh toán bằng ví điểm hoặc chuyển khoản. Đơn của thành viên được cộng <b id="ptsVal">${money(PSQ.psOf(p)).replace('đ', ' PS')}</b> vào doanh số mua hàng để lên Đại lý.</span></div>${p.partner ? `<div class="pts">${icon('award')}<span>Sản phẩm đối tác${p.partnerName ? ': <b>' + esc(p.partnerName) + '</b>' : ''}</span></div>` : ''}${p.warranty ? `<div class="pts">${icon('check')}<span>${esc(p.warranty)}</span></div>` : ''}
         <p class="muted">${esc(p.desc)}</p>
         <div class="divider" style="margin:2px 0"></div>
         <div class="buy">
