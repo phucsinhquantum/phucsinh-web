@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028e">
-<script src="js/lang.js?v=20261028e"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028f">
+<script src="js/lang.js?v=20261028f"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -231,6 +231,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   @media (prefers-reduced-motion: reduce) { .dl-glow, .dl-glow::after { animation: none; } }
   @keyframes dlShine { 0%, 55% { left: -60%; } 100% { left: 130%; } }
   .w-info { display: block; margin-top: 3px; font-size: 12px; line-height: 1.45; color: var(--text-2); } .w-info b { color: var(--text); font-weight: 600; }
+  .ref-lbl { display: inline-flex; align-items: center; gap: 5px; flex: none; font-size: 12.5px; color: var(--gold); font-weight: 600; } .ref-lbl svg { width: 15px; height: 15px; }
+  @media (max-width: 560px) { .ref-mini { flex-wrap: wrap; } .ref-lbl { flex-basis: 100%; } }
 </style>
 </head>
 <body data-page="member">
@@ -238,11 +240,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261028e"></script>
-<script src="js/api.js?v=20261028e"></script>
-<script src="js/data.js?v=20261028e"></script>
-<script src="js/app.js?v=20261028e"></script>
-<script src="js/psq-data.js?v=20261028e"></script>
+<script src="js/patch.js?v=20261028f"></script>
+<script src="js/api.js?v=20261028f"></script>
+<script src="js/data.js?v=20261028f"></script>
+<script src="js/app.js?v=20261028f"></script>
+<script src="js/psq-data.js?v=20261028f"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -340,6 +342,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       const cp = e.target.closest('[data-copy]'); if (cp) return copyFrom(document.getElementById(cp.dataset.copy));
       const c = e.target.closest('[data-cart]'); if (c) return PSQ.openCart(true);
       if (e.target.closest('[data-welcome]')) return welcomeWheel();
+      if (e.target.closest('[data-share-ref]')) { const u = $('#ovRef').value; navigator.share({ title: 'Phúc Sinh QuanTum', text: 'Mời anh chị đăng ký thành viên Phúc Sinh QuanTum qua link giới thiệu của em:', url: u }).catch(() => {}); return; }
       const cc = e.target.closest('[data-cpcopy]'); if (cc) { navigator.clipboard && navigator.clipboard.writeText(cc.dataset.cpcopy).catch(() => {}); return toast('Đã sao chép mã ' + cc.dataset.cpcopy); }
     });
     addEventListener('hashchange', () => { render(); const top = $('#tvPane').getBoundingClientRect().top; if (top < 0) scrollTo({ top: scrollY + top - 90 }); });
@@ -402,7 +405,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
           <div class="row wrap mt-1" style="gap:8px">${tierB(me)}<span class="dim" style="font-size:12.5px">Mã giới thiệu <b class="gold">${esc(me.code || '')}</b></span></div>
 </div>
         <div class="acts"><a class="btn btn-sm btn-outline-gold" href="#don-hang">${icon('truck')} Đơn hàng</a><a class="btn btn-sm" href="#giao-dich">${icon('activity')} Giao dịch</a></div>
-        ${isKhach(me) ? `<div style="grid-column:1 / -1;min-width:0"><div class="ref-mini" style="margin:0"><input class="input" id="ovRef" value="${esc(refLinkOf(me))}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" data-copy="ovRef">${icon('check')} Sao chép</button></div>${khachNote()}</div>` : ''}
+        <div style="grid-column:1 / -1;min-width:0"><div class="ref-mini" style="margin:0"><span class="ref-lbl">${icon('link')} Link giới thiệu</span><input class="input" id="ovRef" value="${esc(refLinkOf(me))}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" data-copy="ovRef">${icon('copy')} Sao chép</button>${navigator.share ? `<button class="btn btn-sm btn-outline-gold" type="button" data-share-ref>${icon('share')} Chia sẻ</button>` : ''}</div>${isKhach(me) ? khachNote() : ''}</div>
       </section>
 
       ${welcomeCard(d, me)}
