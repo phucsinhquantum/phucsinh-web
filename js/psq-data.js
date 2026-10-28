@@ -82,7 +82,7 @@
     // khách mua chưa có tài khoản, gộp theo số điện thoại: đơn, tổng đã trả, người giới thiệu (refBy của đơn mới nhất)
     guests(d, refBy) {
       const by = new Map();
-      d.orders.filter(o => !o.userId && (!refBy || o.refBy === refBy)).forEach(o => {
+      d.orders.filter(o => !o.userId && o.status !== 'failed' && (!refBy || o.refBy === refBy)).forEach(o => {
         const k = String(o.phone || o.id), g = by.get(k) || { phone: o.phone || '', name: o.name, orders: [], paid: 0, last: '', refBy: o.refBy || null };
         g.orders.push(o); if (PAID(o)) g.paid += o.total; if (String(o.date) >= g.last) { g.last = String(o.date); g.name = o.name; if (o.refBy) g.refBy = o.refBy; }
         by.set(k, g);
