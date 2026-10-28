@@ -464,6 +464,19 @@
     // rà toàn bộ thành viên (máy chủ chạy sau mỗi lần lưu), sửa cả tài khoản đã đủ mốc từ trước
     // ghi nhận các đơn đã thanh toán mà chưa tính hoa hồng (đơn trước khi đổi luật, đơn quản trị lưu thẳng)
     settleSync(d) { let n = 0; d.orders.filter(o => PAID(o) && !o.settled).sort((a, b) => String(a.date).localeCompare(String(b.date))).forEach(o => { if (settleOrder(d, o)) n++; }); return n; },
+    // đơn đặt không đăng nhập mà số điện thoại trùng đúng 1 tài khoản thành viên: ghi vào tài khoản đó (tính tổng mua, lên đại lý, hiện ở Đơn hàng của tôi)
+    linkGuests(d) {
+      const tel = p => String(p || '').replace(/[^\d]/g, '').replace(/^84/, '0'), by = {};
+      d.users.forEach(u => { const t = tel(u.phone); if (u.role !== 'admin' && t.length >= 9) (by[t] = by[t] || []).push(u); });
+      const em = {}; d.users.forEach(u => { const e = String(u.email || '').trim().toLowerCase(); if (u.role !== 'admin' && e) (em[e] = em[e] || []).push(u); });
+      let n = 0; d.orders.forEach(o => {
+        if (o.userId) return;
+        const m = by[tel(o.phone)], e = em[String(o.email || '').trim().toLowerCase()], u = m && m.length === 1 ? m[0] : e && e.length === 1 ? e[0] : null; if (!u) return;
+        o.userId = u.id; o.linked = m && m.length === 1 ? 'phone' : 'email'; n++;
+        // đơn đã ghi nhận mà chưa ra hoa hồng nào (khách lẻ không có người giới thiệu): tính lại như đơn của thành viên
+        if (o.settled && !(d.commissions || []).some(c => c.order === o.id)) o.settled = false;
+      }); return n;
+    },
     agentSync(d) { let n = 0; new Set(d.orders.filter(PAID).map(o => o.userId)).forEach(id => { if (ADB.agentUp(d, id)) n++; }); return n; },
     // sản phẩm có thể đổi cho đơn đã thanh toán: same: cùng giá với phần hàng đã trả; more: giá cao hơn (khách chuyển bù)
     exchangeOptions(d, o) {

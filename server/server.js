@@ -63,6 +63,7 @@ if (env.OWNER_EMAIL && !D.users.some(u => (u.email || '').toLowerCase() === env.
   console.log('Đã tạo tài khoản chủ sở hữu', env.OWNER_EMAIL);
 }
 A().wheel(D);
+if (A().linkGuests(D)) console.log('Đã ghi đơn khách lẻ vào tài khoản trùng số điện thoại');
 { const n = A().settleSync(D); if (n) console.log('Đã ghi nhận hoa hồng cho', n, 'đơn đã thanh toán'); }
 if (A().agentSync(D)) console.log('Đã cập nhật thành viên đủ mốc lên đại lý');
 store.setJSON('db', D);
@@ -74,7 +75,7 @@ D.users.filter(u => u.role === 'admin' && !u.pass).forEach(u => {
 
 const save = () => store.setJSON('db', D);
 const stamp = () => { const t = new Date(Date.now() + 7 * 36e5); return t.toISOString().slice(0, 10) + ' ' + t.toISOString().slice(11, 16); };
-function after() { try { A().wheelSync(D); A().releaseHeld(D); A().settleSync(D); A().agentSync(D); } catch (e) { console.error(e); } save(); }
+function after() { try { A().linkGuests(D); A().wheelSync(D); A().releaseHeld(D); A().settleSync(D); A().agentSync(D); } catch (e) { console.error(e); } save(); }
 
 /* ---------- thư và báo tin ---------- */
 const mailCfg = () => TEST && !env.TEST_MAIL_TO ? null : store.getJSON('secret:mail');

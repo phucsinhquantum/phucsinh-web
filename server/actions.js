@@ -291,6 +291,7 @@ const ACTIONS = {
       const kept = (d.guestRefs || {})[phone], found = findRef(d, args.ref), fromLink = found && !found.company && found.user.role !== 'admin' ? found.user.id : null;
       const sp = mem ? mem.sponsor : kept && c.A.user(d, kept) ? kept : fromLink;
       if (sp) { o.refBy = sp; if (!mem && !kept) (d.guestRefs = d.guestRefs || {})[phone] = sp; }
+      if (mem && d.users.filter(u => u.role !== 'admin' && normPhone(u.phone) === phone).length === 1) { o.userId = mem.id; o.linked = 'phone'; }   // số điện thoại là của thành viên: đơn tính cho tài khoản đó
     }
     // 1 mã giảm giá mỗi đơn (mã cá nhân hoặc mã chương trình khuyến mãi): giảm trên tiền hàng, trước khi trừ ví
     if (args.coupon) {

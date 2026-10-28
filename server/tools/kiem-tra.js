@@ -180,6 +180,20 @@ async function flow() {
     ok(!!(await client(s.port).act('login', { login: 'ktc@kiem-tra.vn', pass: '123456a' })).error, 'tài khoản khóa không đăng nhập được');
 
     // đường dẫn kích hoạt trong thư: sai mã thì hiện trang báo, không trơ ra
+    // thành viên đặt hàng khi chưa đăng nhập (vd chưa kích hoạt email): đơn tự gắn vào tài khoản trùng SĐT, tính doanh số, lên đại lý, người giới thiệu có hoa hồng
+    const T = client(s.port), tr = await T.act('register', { name: 'Thành Viên Quên Đăng Nhập', username: 'ktquen', email: 'ktquen@kiem-tra.vn', phone: '0977000111', pass: '123456a', ref: B.r.me.code, agree: true });
+    ok(!tr.error, 'thêm thành viên có SĐT 0977000111, người giới thiệu B');
+    const qty2 = Math.ceil(plan.agentThreshold / P.price), tInfo = { name: 'Thành Viên Quên Đăng Nhập', phone: '0977 000 111', address: '9 Đường Thử, Quận 1', pay: 'bank' };
+    n0 = s.log().length;
+    const ot = await client(s.port).act('placeOrder', { items: [{ id: P.id, qty: qty2 }], info: tInfo });
+    ok(!ot.error, `đặt ${qty2} sản phẩm không đăng nhập, cùng SĐT thành viên` + (ot.error ? ': ' + ot.error : ''));
+    const otId = ((ot.result || {}).order || {}).id;
+    await confirm(s, owner, n0, 'đơn chưa đăng nhập', guest, otId, '0977000111');
+    db = (await owner.req('GET', '/api/admin/db')).json.db;
+    const tu = db.users.find(u => u.username === 'ktquen'), tOrd = db.orders.find(o => o.id === otId);
+    ok(tOrd && tOrd.userId === (tu || {}).id, 'đơn tự gắn vào tài khoản trùng số điện thoại');
+    ok(tu && tu.tier === 'daily', 'thành viên lên đại lý nhờ đơn đặt khi chưa đăng nhập');
+    ok((db.commissions || []).some(c => c.order === otId && c.user === B.r.me.id && c.kind === 'direct' && c.amount > 0), 'người giới thiệu (B) nhận hoa hồng đơn đó');
     // An An tra cứu thành viên: có khóa mới tra được, người lạ không thấy SĐT, email, ví; chính chủ (SĐT trùng) thấy ví và đơn
     const bot = async (q, key, asker) => { const r = await fetch(`http://127.0.0.1:${s.port}/api/bot/lookup?q=${encodeURIComponent(q)}${asker ? '&asker=' + encodeURIComponent(asker) : ''}`, { headers: key ? { 'x-bot-key': key } : {} }); return { status: r.status, j: await r.json() }; };
     ok((await bot('CTV B')).status === 401, 'An An: chưa có khóa thì không tra được');
