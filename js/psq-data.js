@@ -463,7 +463,7 @@
     },
     // rà toàn bộ thành viên (máy chủ chạy sau mỗi lần lưu), sửa cả tài khoản đã đủ mốc từ trước
     // ghi nhận các đơn đã thanh toán mà chưa tính hoa hồng (đơn trước khi đổi luật, đơn quản trị lưu thẳng)
-    settleSync(d) { let n = 0; d.orders.filter(o => PAID(o) && !o.settled).sort((a, b) => String(a.date).localeCompare(String(b.date))).forEach(o => { if (settleOrder(d, o)) n++; }); return n; },
+    settleSync(d) { let n = 0; d.orders.filter(o => PAID(o) && !o.settled).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(String(b.id), 'en', { numeric: true })).forEach(o => { if (settleOrder(d, o)) n++; }); return n; },
     // đơn đặt không đăng nhập mà số điện thoại trùng đúng 1 tài khoản thành viên: ghi vào tài khoản đó (tính tổng mua, lên đại lý, hiện ở Đơn hàng của tôi)
     linkGuests(d) {
       const tel = p => String(p || '').replace(/[^\d]/g, '').replace(/^84/, '0'), by = {};
