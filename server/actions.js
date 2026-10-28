@@ -553,6 +553,7 @@ const ACTIONS = {
    Chỉ chính chủ (asker = SĐT của người đang chat, trùng SĐT tài khoản): điểm các ví, đơn gần đây.
    Không bao giờ trả: SĐT, email, địa chỉ, tiền của người khác. */
 const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const FILLER = new Set(['ho', 'ten', 'la', 'ban', 'nguoi', 'co', 'o', 'anh', 'chi', 'em', 'tham', 'gia', 'cong', 'tac', 'vien', 'dai', 'ly', 'ctv', 'gioi', 'thieu', 'cua', 'minh', 'toi', 'nhe', 'a', 'oi']);
 const CALL = /^(anh|chi|em|co|chu|bac|ong|ba|di|cau|thim|mo|ban|a|c|e)\s+/;
 const ORDER_ST = { pending: 'Chờ xác nhận', paid: 'Đã thanh toán', ship: 'Đang giao', done: 'Hoàn thành', failed: 'Đã hủy' };
 function botLookup(d, A, dealers, q, asker, base) {
@@ -561,11 +562,16 @@ function botLookup(d, A, dealers, q, asker, base) {
   let qf = fold(q); while (CALL.test(qf)) qf = qf.replace(CALL, '');
   const shown = (dealers || []).filter(x => x && !x.hidden);
   const dealerOf = u => shown.find(x => (x.code || '').toUpperCase() === (u.code || '').toUpperCase());
-  const hit = name => { const n = ' ' + fold(name).replace(/^dai ly /, '') + ' '; return !!qf && n.includes(' ' + qf + ' '); };
+  // khớp tên theo từng chữ, không cần đúng thứ tự: "Lê Nhị" ra "Lê Thị Nhị". Không ra ai thì bỏ các chữ nói thêm (họ, tên, bạn...) rồi thử lại.
+  let toks = qf.split(' ').filter(Boolean);
+  const words = name => new Set(fold(name).replace(/^dai ly /, '').split(' '));
+  const hit = name => { const w = words(name); return toks.length > 0 && toks.every(t => w.has(t)); };
   const pub = x => ({ name: x.name, code: x.code || '', refLink: refLink(x.code), area: x.area || '', address: x.address || '', phone: x.phone || '', zalo: x.zalo || x.phone || '', note: x.note || '' });
   if (!q) return { error: 'Thiếu nội dung cần tra (q): tên, số điện thoại hoặc mã PS.' };
   const users = d.users.filter(u => u.role !== 'admin' && u.status !== 'locked' && u.verified !== false && u.code);
-  const found = users.filter(u => (u.code || '').toUpperCase() === qc || (qp.length >= 9 && normPhone(u.phone) === qp) || hit(u.name));
+  const find = () => users.filter(u => (u.code || '').toUpperCase() === qc || (qp.length >= 9 && normPhone(u.phone) === qp) || hit(u.name));
+  let found = find();
+  if (!found.length) { const t2 = toks.filter(t => !FILLER.has(t)); if (t2.length && t2.length < toks.length) { toks = t2; found = find(); } }
   const results = found.slice(0, 5).map(u => {
     const dl = dealerOf(u), r = { name: u.name, code: u.code, refLink: refLink(u.code), tier: A.tierOf(u).name, since: u.created || '', trusted: !!dl, dealer: dl ? pub(dl) : null };
     if (me.length >= 9 && normPhone(u.phone) === me) {

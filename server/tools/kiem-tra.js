@@ -236,6 +236,7 @@ async function flow() {
     ok(!hr.error, 'An An: thêm thành viên Nguyễn Văn Hà' + (hr.error ? ': ' + hr.error : ''));
     const h1 = await bot('anh Hà', bk.key, '0900000000'), r1 = (h1.j.results || [])[0];
     ok(r1 && r1.name === 'Nguyễn Văn Hà' && !r1.self, 'An An: "anh Hà" (có xưng hô) ra đúng người, người lạ không có mục chính chủ');
+    ok((((await bot('bạn Hà họ Nguyễn', bk.key)).j.results || [])[0] || {}).name === 'Nguyễn Văn Hà', 'An An: nhớ họ và tên không liền nhau (bạn Hà họ Nguyễn) vẫn ra đúng người');
     const r2 = ((await bot('ha', bk.key, '+84 912 345 678')).j.results || [])[0];
     ok(r2 && r2.self && r2.self.wallets && Array.isArray(r2.self.orders), 'An An: chính chủ (SĐT trùng) xem được ví và đơn của mình');
     await owner.act('botKeyOff', {});
