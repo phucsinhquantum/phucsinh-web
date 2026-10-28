@@ -84,6 +84,7 @@ async function flow() {
     ok(!C.r.error && C.r.me && C.r.me.sponsor === B.r.me.id, 'C đăng ký bằng mã của B');
     ok((await guest.act('checkRef', { code: 'PS9999' })).error, 'mã giới thiệu sai bị chặn');
     ok(/mã giới thiệu/.test((await client(s.port).act('register', { name: 'Không mã', username: 'ktkhongma', email: 'ktkhongma@kiem-tra.vn', pass: '123456a', agree: true })).error || ''), 'đăng ký không có mã giới thiệu bị chặn');
+    ok(/gmail\.com không/.test((await client(s.port).act('register', { name: 'Gõ Nhầm', username: 'ktnham', email: 'ktnham@gmail.con', pass: '123456a', ref: 'PS1000', agree: true })).error || ''), 'email gõ nhầm tên miền (gmail.con) bị chặn, gợi ý gmail.com');
     ok((await client(s.port).act('register', { name: 'Trùng', username: 'kttrung', email: 'kta@kiem-tra.vn', pass: '123456a', agree: true })).error, 'email đã có tài khoản bị chặn');
     ok(!!(await client(s.port).act('login', { login: 'kta@kiem-tra.vn', pass: 'sai-mat-khau' })).error, 'sai mật khẩu không đăng nhập được');
 

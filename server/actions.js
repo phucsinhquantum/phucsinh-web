@@ -6,6 +6,9 @@ const crypto = require('crypto');
 
 const UNAME = /^[a-z0-9._]{3,30}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// gõ nhầm tên miền email hay gặp: thư kích hoạt gửi đi rồi bị trả về, khách tưởng không nhận được thư
+const MAIL_FIX = { 'gmail.con': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.cm': 'gmail.com', 'gmail.om': 'gmail.com', 'gmail.vn': 'gmail.com', 'gmail.com.vn': 'gmail.com', 'gmai.com': 'gmail.com', 'gmial.com': 'gmail.com', 'gamil.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmaill.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmali.com': 'gmail.com', 'gmail.comm': 'gmail.com', 'yahoo.con': 'yahoo.com', 'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'hotmail.con': 'hotmail.com', 'hotmal.com': 'hotmail.com', 'outlook.con': 'outlook.com', 'icloud.con': 'icloud.com' };
+const mailTypo = e => { const at = e.lastIndexOf('@'), fix = at > 0 && MAIL_FIX[e.slice(at + 1)]; return fix ? e.slice(0, at + 1) + fix : ''; };
 const PHONE = /^[0-9 +.]{9,15}$/;
 const money = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ';
 const ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
@@ -150,6 +153,7 @@ const ACTIONS = {
     let username = str(args.username, 40).toLowerCase();
     if (name.length < 2 || !email || !pass) return err('Anh chị điền đủ họ tên, email và mật khẩu.');
     if (!EMAIL.test(email)) return err('Email chưa đúng định dạng.');
+    if (mailTypo(email)) return err(`Email có vẻ gõ nhầm, có phải là ${mailTypo(email)} không? Anh chị sửa lại để nhận được thư kích hoạt.`);
     if (phone && !PHONE.test(phone)) return err('Số điện thoại chưa đúng.');
     if (pass.length < 6 || pass.length > 100) return err('Mật khẩu tối thiểu 6 ký tự.');
     if (!args.agree) return err('Anh chị cần đồng ý với điều khoản.');
