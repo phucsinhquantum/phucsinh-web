@@ -256,7 +256,7 @@ async function botApi(req, res, url) {
   if (!ok) { failed(ip); return send(res, 401, { error: key ? 'Khóa tra cứu chưa đúng.' : 'Cổng tra cứu đang tắt. Chủ sở hữu tạo khóa trong Quản trị > Thiết lập.' }); }
   let a = Object.fromEntries(url.searchParams);
   if (req.method === 'POST') { try { const raw = await readBody(req, 4096); Object.assign(a, raw ? JSON.parse(raw) : {}); } catch (e) { return send(res, 400, { error: 'Dữ liệu không đọc được.' }); } }
-  const r = botLookup(D, A(), content.get('psq_dealers_v1') ?? E.sandbox.DEALERS, a.q, a.asker);
+  const r = botLookup(D, A(), content.get('psq_dealers_v1') ?? E.sandbox.DEALERS, a.q, a.asker, BASE);
   return send(res, r.error ? 400 : 200, r, { 'cache-control': 'no-store' });
 }
 

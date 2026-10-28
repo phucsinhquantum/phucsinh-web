@@ -15,10 +15,16 @@ Cũng nhận `POST` JSON `{ "q": "...", "asker": "..." }`, hoặc `Authorization
 Trong n8n: công cụ HTTP Request cho AI agent, tên "Tra cứu thành viên".
 
 Kết quả:
-- `results[]` (tối đa 5): `name`, `code`, `tier` (Khách hàng, Cộng tác viên, Đại lý), `since`, `trusted`, `dealer` (chỉ khi là đại lý uy tín đang hiện trên web: khu vực, địa chỉ, SĐT, Zalo như trang Đại lý uy tín).
+- `results[]` (tối đa 5): `name`, `code`, `refLink` (link đăng ký có sẵn mã giới thiệu của người đó), `tier` (Khách hàng, Cộng tác viên, Đại lý), `since`, `trusted`, `dealer` (chỉ khi là đại lý uy tín đang hiện trên web: khu vực, địa chỉ, SĐT, Zalo như trang Đại lý uy tín).
 - `self`: chỉ có khi `asker` trùng SĐT tài khoản: SĐT, email, điểm các ví, 5 đơn gần nhất, số người mình giới thiệu.
 - `dealers[]`: đại lý uy tín khớp tên hoặc khu vực mà không có tài khoản trùng.
 - `count`: tổng số người khớp. Nhiều hơn 1 thì An An hỏi thêm khu vực hoặc mã PS.
 - `rule`: nhắc An An những gì được nói.
 
 Không bao giờ trả SĐT, email, địa chỉ, tiền của người khác. Khóa sai 10 lần trong 15 phút thì IP đó bị chặn 15 phút.
+
+## Kịch bản người giới thiệu (anh Tuân chốt 28/10)
+Khách hỏi về thu nhập, hoa hồng CTV hoặc đại lý: An An giới thiệu chung, không tự nêu con số, rồi hỏi khách biết công ty qua đâu, có ai giới thiệu không.
+Khách nói tên: tra `q=<tên>`, hỏi lại "Có phải anh/chị <tên>, <cấp>, mã <code> không ạ?" (nhiều người trùng thì hỏi thêm khu vực).
+Khách xác nhận: hỏi có cần gửi link giới thiệu của người đó để đăng ký không. Khách đồng ý thì gửi `refLink`, và mời khách hỏi người giới thiệu để được tư vấn chi tiết.
+Khách không có ai giới thiệu: gửi trang Đại lý uy tín hoặc đại lý khớp khu vực trong `dealers[]`.
