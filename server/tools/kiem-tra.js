@@ -135,6 +135,10 @@ async function flow() {
     const gOrders = db.orders.filter(o => !o.userId && o.phone === guestInfo.phone);
     ok(gOrders.length === 2 && gOrders.every(o => o.refBy === B.r.me.id), 'cả 2 đơn khách lẻ ghi cho B (người gửi link đầu tiên)');
     ok(gOrders.every(o => com(B.r.me.id, 'direct').some(c => c.order === o.id && c.amount === want)), `B nhận ${plan.ctvRate}% trên đơn khách lẻ`);
+    const bBoot = (await B.c.boot()).db, bg = (bBoot.guests || []).find(g => g.phone === guestInfo.phone);
+    ok(bg && bg.orders.length === 2 && !('address' in bg.orders[0]), 'B thấy khách lẻ của mình (2 đơn, có SĐT, không có địa chỉ nhà) để gọi chăm sóc');
+    ok(!((await A.c.boot()).db.guests || []).some(g => g.phone === guestInfo.phone), 'A không thấy khách lẻ của B');
+    ok(db.users.filter(u => u.role !== 'admin').every(u => u.placed) && db.users.find(u => u.id === B.r.me.id).parent === A.r.me.id, 'thành viên đăng ký tự lên cây ngay dưới người giới thiệu');
     const bw = ((await B.c.boot()).db.wallet || []).find(w => w.ref === gOrders[0].id && w.type === 'commission');
     ok(bw && bw.info && /Khách lẻ thử/.test(bw.info.buyer), 'lịch sử ví của B ghi rõ người mua (khách lẻ)');
     const aw = ((await A.c.boot()).db.wallet || []).find(w => w.ref === ocId && w.type === 'override');

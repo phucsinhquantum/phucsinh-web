@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028j">
-<script src="js/lang.js?v=20261028j"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028k">
+<script src="js/lang.js?v=20261028k"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -240,11 +240,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261028j"></script>
-<script src="js/api.js?v=20261028j"></script>
-<script src="js/data.js?v=20261028j"></script>
-<script src="js/app.js?v=20261028j"></script>
-<script src="js/psq-data.js?v=20261028j"></script>
+<script src="js/patch.js?v=20261028k"></script>
+<script src="js/api.js?v=20261028k"></script>
+<script src="js/data.js?v=20261028k"></script>
+<script src="js/app.js?v=20261028k"></script>
+<script src="js/psq-data.js?v=20261028k"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -356,7 +356,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     let r = route();
     if (r === 'cho-len-cay') { history.replaceState(null, '', '#khach-hang'); r = 'khach-hang'; } // đường dẫn cũ
     if (!PANES[r]) r = 'tong-quan';
-    const menu = MENU(d, me), wait = d.users.filter(x => x.sponsor === me.id && isKhach(x)).length;
+    const menu = MENU(d, me), wait = d.users.filter(x => x.sponsor === me.id && isKhach(x)).length + (d.guests || []).length;
     $('#tvMe').innerHTML = `${av(me, 'g')}<div><b>${esc(me.name)}</b>@${esc(me.username || '')} · <span style="color:${ADB.tierOf(me).color}">${esc(ADB.tierOf(me).name)}</span></div>`;
     $('#tvNav').innerHTML = (me.role === 'admin' ? `<a href="quan-tri.html">${icon('shield')}<span>Trang quản trị</span></a>` : '') + menu.map(([g, list]) => (g ? `<h4>${esc(g)}</h4>` : '') + list.map(([id, l, ic]) => ACTIONS[id]
       ? `<button type="button" data-act="${id}">${icon(ic)}<span>${esc(l)}</span></button>`
@@ -560,12 +560,31 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   function pCustomers(box, d, me) {
     const w = d.users.filter(x => x.sponsor === me.id && isKhach(x)).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
     const nOrd = id => d.orders.filter(o => o.userId === id && ['paid', 'ship', 'done'].includes(o.status)).length;
-    box.innerHTML = ph('Khách hàng', 'Người anh chị giới thiệu, đang ở cấp khách hàng (chưa kích hoạt cộng tác viên)') + `<div class="stack">
+    box.innerHTML = ph('Khách hàng', 'Người anh chị giới thiệu ở cấp khách hàng, và khách mua qua link chưa có tài khoản') + `<div class="stack">
       ${isKhach(me) ? `<div class="card glow-gold">${head('Đường dẫn giới thiệu của tôi', 'mã ' + esc(me.code || ''))}<div class="ref-link"><input class="input" id="khRef" value="${esc(refLinkOf(me))}" readonly aria-label="Đường dẫn giới thiệu"><button class="btn btn-gold" type="button" data-copy="khRef">${icon('check')} Sao chép</button></div>${khachNote()}</div>` : ''}
       <div class="card glow-cyan">${head('Danh sách khách hàng', w.length + ' người')}
       <p class="biz-note">${icon('info')}Khách hàng cũng có đường dẫn giới thiệu riêng để chia sẻ, nhưng chưa nhận hoa hồng cho đến khi kích hoạt cộng tác viên.</p>
       ${w.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Khách hàng</th><th>Ngày tham gia</th><th>Đơn đã mua</th><th>Tổng mua</th></tr></thead><tbody>${w.map((x, i) => `<tr><td><div class="who">${av(x, ['', 'v', 'g'][i % 3])}<div><b>${esc(x.name)}</b><small>@${esc(x.username || '')}</small></div></div></td><td class="dim nowrap">${fdate(x.created)}</td><td>${nOrd(x.id)}</td><td class="gold nowrap"><b>${money(ADB.spent(d, x.id))}</b></td></tr>`).join('')}</tbody></table></div>`
-      : `<div class="empty">${icon('user')}Chưa có khách hàng nào. Người đăng ký bằng mã giới thiệu của anh chị và chưa kích hoạt CTV sẽ hiện ở đây.</div>`}</div></div>`;
+      : `<div class="empty">${icon('user')}Chưa có khách hàng nào. Người đăng ký bằng mã giới thiệu của anh chị và chưa kích hoạt CTV sẽ hiện ở đây.</div>`}</div>
+      ${guestCard(d, me)}</div>`;
+    box.querySelectorAll('[data-invite]').forEach(b => b.addEventListener('click', async () => {
+      const t = b.dataset.invite; try { await navigator.clipboard.writeText(t); } catch (e) { const x = document.createElement('textarea'); x.value = t; document.body.appendChild(x); x.select(); try { document.execCommand('copy'); } catch (er) {} x.remove(); }
+      toast('Đã sao chép lời mời, anh chị dán vào Zalo gửi khách');
+    }));
+  }
+  // khách mua qua link của mình mà chưa có tài khoản (anh Tuân chốt 28/10): gọi, nhắn Zalo, gửi lời mời đăng ký đúng tuyến.
+  // Khách đăng ký bằng đúng số điện thoại này thì đơn cũ tự gắn vào tài khoản và khách rời khỏi danh sách.
+  function guestCard(d, me) {
+    const g = d.guests || [], tel = p => String(p || '').replace(/[^\d]/g, '');
+    const invite = x => `Chào ${x.name}, em là ${me.name} ở ${SITE.brand}. Anh chị đăng ký tài khoản qua link này (dùng số ${x.phone}) để theo dõi đơn hàng, tích điểm và nhận ưu đãi nhé: ${refLinkOf(me)}`;
+    return `<div class="card glow-gold">${head('Khách mua qua link, chưa có tài khoản', g.length + ' khách', '')}
+      <p class="biz-note">${icon('info')}Khách mua qua đường dẫn của anh chị nhưng chưa đăng ký. Anh chị gọi hỏi thăm, mời khách đăng ký bằng đúng số điện thoại đã mua để đơn được ghi vào tài khoản của khách.</p>
+      ${g.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Khách</th><th>Đơn đã đặt</th><th>Đã thanh toán</th><th>Lần mua gần nhất</th><th>Liên hệ</th></tr></thead><tbody>${g.map((x, i) => `<tr>
+        <td><div class="who">${av(x, ['', 'v', 'g'][i % 3])}<div><b>${esc(x.name)}</b><small>${esc(x.phone)}</small></div></div></td>
+        <td style="font-size:13px">${x.orders.map(o => `<div>#${esc(o.id)} ${statusBadge(o.status)}<br><span class="dim">${(o.items || []).map(it => esc(it.name) + ' x' + it.qty).join(', ')}</span></div>`).join('')}</td>
+        <td class="gold nowrap">${money(x.paid)}</td><td class="dim nowrap">${fdate(x.last)}</td>
+        <td><div class="row" style="gap:6px;flex-wrap:wrap">${tel(x.phone) ? `<a class="btn btn-sm btn-gold" href="tel:${tel(x.phone)}">${icon('phone')} Gọi</a><a class="btn btn-sm" href="https://zalo.me/${tel(x.phone)}" target="_blank" rel="noopener">${icon('zalo')} Zalo</a>` : ''}<button class="btn btn-sm btn-outline-gold" type="button" data-invite="${esc(invite(x))}">${icon('copy')} Lời mời đăng ký</button></div></td></tr>`).join('')}</tbody></table></div>`
+      : `<div class="empty">${icon('user')}Chưa có khách nào. Khách mua qua đường dẫn của anh chị mà không đăng ký sẽ hiện ở đây.</div>`}</div>`;
   }
   function pLeader(box, d, me) {
     const L = ADB.leader(d, me.id), ranks = d.settings.leaderRanks, i = ranks.findIndex(r => r.id === L.rank.id), nx = ranks[i + 1];

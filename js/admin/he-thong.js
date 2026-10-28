@@ -273,7 +273,6 @@
           <div class="field"><label for="hs-p_overrideMode">Đại lý chưa đủ điều kiện</label><select class="input" id="hs-p_overrideMode" name="p_overrideMode"${dis}>${MODES.map(([k, l]) => `<option value="${k}"${P.overrideMode === k ? ' selected' : ''}>${l}</option>`).join('')}</select><small class="dim ht-help">Cách xử lý khoản thu nhập từ đại lý tuyến dưới khi đại lý chưa đủ điều kiện.</small></div>
           <div class="ht-sec full mt-2">Ví và điểm</div>
           ${f('minWithdraw', 'Rút tiền tối thiểu (đồng)', S.minWithdraw, 'number', ' min="0" step="10000"')}
-          <label class="check" style="align-self:end;padding-bottom:10px"><input type="checkbox" name="autoPlace"${S.autoPlace ? ' checked' : ''}${dis}> Tự xếp thành viên mới lên cây theo người giới thiệu</label>
         </div>
         <p class="red mt-2" data-err style="font-size:13px;min-height:1em"></p>
         ${edit ? `<div class="row" style="justify-content:flex-end"><button class="btn btn-gold" type="submit">${icon('check')} Lưu thiết lập</button></div>` : '<p class="dim" style="font-size:13px">Vai trò của anh chị chỉ được xem thiết lập.</p>'}
@@ -311,7 +310,7 @@
         const d2 = ADB.load();
         d2.settings = Object.assign({}, ADB.DEFAULT_SETTINGS, d2.settings || {}, {
           shopName: v('shopName'), hotline: v('hotline'), email: v('email'), address: v('address'), mailSender: v('mailSender'),
-          minWithdraw: Math.round(mw), autoPlace: form.autoPlace.checked,
+          minWithdraw: Math.round(mw),
           plan: Object.assign({}, ADB.PLAN, (d2.settings || {}).plan || {}, plan)
         });
         const site = { brand: v('shopName'), phone: v('hotline'), zalo: v('zalo'), email: v('email'), address: v('address'), hours: v('hours'), mapEmbed: v('mapEmbed'), messenger: v('messenger'),

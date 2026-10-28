@@ -72,6 +72,23 @@
     tree(d, id) { const u = ADB.user(d, id); return u ? { user: u, kids: ADB.children(d, id).map(c => ADB.tree(d, c.id)) } : null; },
     roots(d) { return d.users.filter(u => u.role !== 'admin' && u.placed && !u.parent); },
     pending(d) { return d.users.filter(u => u.role !== 'admin' && !u.placed); },
+    // anh Tuân chốt 28/10: ai đăng ký (đều có người giới thiệu) tự lên cây ngay dưới người giới thiệu; xếp người trên trước, người dưới sau
+    placeAll(d) {
+      let n = 0, moved = true;
+      while (moved) { moved = false; ADB.pending(d).forEach(u => { const sp = u.sponsor && ADB.user(d, u.sponsor); if (!sp || sp.role === 'admin' || sp.placed) { u.placed = true; u.parent = sp && sp.role !== 'admin' ? sp.id : null; n++; moved = true; } }); }
+      ADB.pending(d).forEach(u => { u.placed = true; u.parent = u.sponsor || null; n++; });   // vòng tham chiếu lạ: vẫn xếp dưới người giới thiệu
+      return n;
+    },
+    // khách mua chưa có tài khoản, gộp theo số điện thoại: đơn, tổng đã trả, người giới thiệu (refBy của đơn mới nhất)
+    guests(d, refBy) {
+      const by = new Map();
+      d.orders.filter(o => !o.userId && (!refBy || o.refBy === refBy)).forEach(o => {
+        const k = String(o.phone || o.id), g = by.get(k) || { phone: o.phone || '', name: o.name, orders: [], paid: 0, last: '', refBy: o.refBy || null };
+        g.orders.push(o); if (PAID(o)) g.paid += o.total; if (String(o.date) >= g.last) { g.last = String(o.date); g.name = o.name; if (o.refBy) g.refBy = o.refBy; }
+        by.set(k, g);
+      });
+      return [...by.values()].sort((a, b) => b.last.localeCompare(a.last));
+    },
     // doanh số cá nhân và nhóm (đơn không hủy)
     sales(d, id) { return d.orders.filter(o => o.userId === id && o.status !== 'failed').reduce((s, o) => s + o.total, 0); },
     teamSales(d, id) { return ADB.downline(d, id).reduce((s, x) => s + ADB.sales(d, x.user.id), ADB.sales(d, id)); },

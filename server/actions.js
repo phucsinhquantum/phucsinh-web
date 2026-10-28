@@ -66,6 +66,8 @@ function scopeFor(d, me, A) {
       const buyer = A.user(d, o.userId), via = cm && cm.from && A.user(d, cm.from), tag = u => `${u.name}${u.code ? ' (' + u.code + ')' : ''}`;
       return Object.assign({}, w, { info: { buyer: buyer ? tag(buyer) : 'Khách lẻ ' + (o.name || ''), via: via && (!buyer || via.id !== buyer.id) ? tag(via) : '', order: o.id, total: o.total, items: (o.items || []).map(x => `${x.qty} x ${x.name}`).join(', ') } });
     });
+    // khách mua qua link của mình mà chưa có tài khoản: để người giới thiệu gọi chăm sóc, mời đăng ký (không gửi địa chỉ nhà)
+    out.guests = A.guests(d, me.id).map(g => ({ phone: g.phone, name: g.name, paid: g.paid, last: g.last, orders: g.orders.map(o => pick(o, ['id', 'items', 'total', 'status', 'date'])) }));
     out.coupons = (d.coupons || []).filter(x => x.user === me.id);
     out.topups = (d.topups || []).filter(t => t.user === me.id);
     out.addresses = (d.addresses || []).filter(a => a.user === me.id);
@@ -162,7 +164,7 @@ const ACTIONS = {
     if (!ref) return err('Anh chị cần nhập mã giới thiệu. Hãy liên hệ người giới thiệu mình để lấy mã, hoặc chọn một đại lý uy tín trong danh sách.');
     if (!found) return err('Mã giới thiệu chưa đúng, anh chị kiểm tra lại với người giới thiệu.');
     if (found && found.company) u.refCode = found.user.code;
-    if (sp) { u.sponsor = sp.id; const auto = d.settings && d.settings.autoPlace; u.placed = !!auto; u.parent = auto ? sp.id : null; }
+    if (sp) { u.sponsor = sp.id; u.placed = true; u.parent = sp.id; }   // đăng ký là lên cây ngay dưới người giới thiệu
     else { u.sponsor = null; u.placed = true; }
     // email gửi thư đã cài: tài khoản chờ kích hoạt qua thư; chưa cài thì dùng được ngay
     const verify = c.mailReady(); if (verify) u.verified = false;

@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028j">
-<script src="js/lang.js?v=20261028j"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028k">
+<script src="js/lang.js?v=20261028k"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -182,27 +182,27 @@
   </div>
 </div>
 
-<script src="js/patch.js?v=20261028j"></script>
-<script src="js/api.js?v=20261028j"></script>
-<script src="js/data.js?v=20261028j"></script>
-<script src="js/app.js?v=20261028j"></script>
-<script src="js/psq-data.js?v=20261028j"></script>
+<script src="js/patch.js?v=20261028k"></script>
+<script src="js/api.js?v=20261028k"></script>
+<script src="js/data.js?v=20261028k"></script>
+<script src="js/app.js?v=20261028k"></script>
+<script src="js/psq-data.js?v=20261028k"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261028j"></script>
-<script src="js/admin/nguoi-dung.js?v=20261028j"></script>
-<script src="js/admin/noi-dung.js?v=20261028j"></script>
-<script src="js/admin/kho.js?v=20261028j"></script>
-<script src="js/admin/tai-chinh.js?v=20261028j"></script>
-<script src="js/admin/he-thong.js?v=20261028j"></script>
-<script src="js/admin/vong-quay.js?v=20261028j"></script>
-<script src="js/admin/chao-mung.js?v=20261028j"></script>
-<script src="js/admin/khuyen-mai.js?v=20261028j"></script>
-<script src="js/admin/quy-diem.js?v=20261028j"></script>
-<script src="js/admin/gioi-thieu.js?v=20261028j"></script>
-<script src="js/admin/dai-ly.js?v=20261028j"></script>
-<script src="js/admin/danh-gia.js?v=20261028j"></script>
-<script src="js/admin/dieu-khoan.js?v=20261028j"></script>
-<script src="js/admin/quyen-loi.js?v=20261028j"></script>
+<script src="js/admin/pha-he.js?v=20261028k"></script>
+<script src="js/admin/nguoi-dung.js?v=20261028k"></script>
+<script src="js/admin/noi-dung.js?v=20261028k"></script>
+<script src="js/admin/kho.js?v=20261028k"></script>
+<script src="js/admin/tai-chinh.js?v=20261028k"></script>
+<script src="js/admin/he-thong.js?v=20261028k"></script>
+<script src="js/admin/vong-quay.js?v=20261028k"></script>
+<script src="js/admin/chao-mung.js?v=20261028k"></script>
+<script src="js/admin/khuyen-mai.js?v=20261028k"></script>
+<script src="js/admin/quy-diem.js?v=20261028k"></script>
+<script src="js/admin/gioi-thieu.js?v=20261028k"></script>
+<script src="js/admin/dai-ly.js?v=20261028k"></script>
+<script src="js/admin/danh-gia.js?v=20261028k"></script>
+<script src="js/admin/dieu-khoan.js?v=20261028k"></script>
+<script src="js/admin/quyen-loi.js?v=20261028k"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -237,7 +237,7 @@
   // [mã mục, tên, biểu tượng, quyền cần có]
   const NAV = [
     ['Tổng quan', [['overview', 'Bảng điều khiển', 'chart', 'dashboard'], ['videos', 'Video khách hàng', 'activity', 'content']]],
-    ['Phả hệ', [['tree', 'Sơ đồ phả hệ', 'users', 'tree'], ['pending', 'Chờ lên cây', 'clock', 'tree'], ['leaders', 'Cấp bậc lãnh đạo', 'star', 'tree']]],
+    ['Phả hệ', [['tree', 'Sơ đồ phả hệ', 'users', 'tree'], ['pending', 'Khách chưa có tài khoản', 'clock', 'tree'], ['leaders', 'Cấp bậc lãnh đạo', 'star', 'tree']]],
     ['Người dùng', [['members', 'Danh sách thành viên', 'users', 'members'], ['admins', 'Danh sách quản trị', 'shield', 'admins'], ['roles', 'Vai trò & phân quyền', 'lock', 'admins']]],
     ['Trang web', [['about', 'Trang giới thiệu', 'info', 'content'], ['dealers', 'Đại lý uy tín', 'shield', 'content'], ['reviews', 'Khách hàng nói gì', 'chat', 'content'], ['perks', 'Quyền lợi CTV, đại lý', 'award', 'content'], ['terms', 'Điều khoản đăng ký', 'lock', 'content']]],
     ['Sản phẩm', [['categories', 'Danh mục sản phẩm', 'grid', 'products'], ['products', 'Quản lý sản phẩm', 'bag', 'products']]],
@@ -257,7 +257,7 @@
   window.ADMIN = { can, show: id => show(id), items: ITEMS };
   function badgeFor(id) {
     const d = ADB.load();
-    if (id === 'pending') return ADB.pending(d).length;
+    if (id === 'pending') return ADB.guests(d).length;
     if (id === 'messages') return (d.messages || []).filter(m => m.status === 'new').length;
     if (id === 'topups') return (d.topups || []).filter(t => t.status === 'pending').length;
     if (id === 'orders') return d.orders.filter(o => o.status === 'pending').length;

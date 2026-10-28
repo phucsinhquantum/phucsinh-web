@@ -121,66 +121,30 @@
     }
   };
 
-  /* ---------- CHỜ LÊN CÂY ---------- */
-  function place(d, u, parentId) { u.placed = true; u.parent = parentId || null; }
-  function autoAll(d) {
-    let n = 0, moved = true;
-    while (moved) {
-      moved = false;
-      ADB.pending(d).forEach(u => { const sp = u.sponsor && ADB.user(d, u.sponsor); if (!sp || sp.role === 'admin' || sp.placed) { place(d, u, sp && sp.role !== 'admin' ? sp.id : null); n++; moved = true; } });
-    }
-    return n;
-  }
+  /* ---------- KHÁCH CHƯA CÓ TÀI KHOẢN (trước là Chờ lên cây) ---------- */
+  // anh Tuân chốt 28/10: thành viên đăng ký là tự lên cây (máy chủ xếp ngay dưới người giới thiệu).
+  // Mục này giờ là khách mua hàng chưa có tài khoản, để giao người giới thiệu (hoặc đại lý) gọi chăm sóc, mời đăng ký.
   ADMIN_MODULES.pending = {
     render(el) {
-      const d = ADB.load();
-      if (d.settings.autoPlace && ADB.pending(d).length) { const n = autoAll(d); if (n) { ADB.log(d, 'Xếp lên cây', `Tự động xếp ${n} thành viên dưới người giới thiệu`); ADB.save(d); toast(`Đã tự động xếp ${n} thành viên lên cây`); } }
-      const list = ADB.pending(d).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+      const d = ADB.load(), list = ADB.guests(d), tel = p => String(p || '').replace(/[^\d]/g, '');
       el.innerHTML = `<div class="card glow-cyan">
-        <div class="card-head"><h3>Thành viên chờ xếp lên cây</h3><span class="sub">${list.length} người</span></div>
-        <div class="toolbar">
-          <label class="check"><input type="checkbox" id="pdAuto"${d.settings.autoPlace ? ' checked' : ''}> Tự động xếp dưới người giới thiệu</label>
-          <button class="btn btn-sm btn-gold" type="button" id="pdAll" style="margin-left:auto"${list.length ? '' : ' disabled'}>${icon('check')} Xếp tự động tất cả</button>
-          <button class="btn btn-sm btn-outline-gold" type="button" id="pdCsv">${icon('download')} Tải Excel (CSV)</button>
-        </div>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Người giới thiệu</th><th>Tỉnh thành</th><th>Đăng ký</th><th></th></tr></thead><tbody>
-        ${list.length ? list.map((u, i) => { const sp = u.sponsor && ADB.user(d, u.sponsor); return `<tr><td>${who(u, i)}</td>
-          <td>${sp ? `<b>${esc(sp.name)}</b><br><small class="dim">${esc(sp.code || '')}${sp.placed ? '' : ' · chưa lên cây'}</small>` : '<span class="dim">Không có</span>'}</td>
-          <td>${esc(u.city || '')}</td><td class="dim nowrap">${fdate(u.created)}</td>
-          <td><button class="btn btn-sm btn-outline-gold nowrap" type="button" data-place="${u.id}">Xếp lên cây</button></td></tr>`; }).join('')
-          : `<tr><td colspan="5"><div class="empty">${icon('check')}Không còn ai chờ xếp lên cây.</div></td></tr>`}
+        <div class="card-head"><h3>Khách mua chưa có tài khoản</h3><span class="sub">${list.length} khách</span></div>
+        <div class="toolbar"><span class="dim" style="font-size:13px">Thành viên đăng ký đều tự lên cây ngay dưới người giới thiệu. Ở đây là khách đặt hàng mà chưa đăng ký: người giới thiệu thấy khách của mình trong trang thành viên (mục Khách hàng) để gọi chăm sóc.</span>
+          <button class="btn btn-sm btn-outline-gold" type="button" id="pdCsv" style="margin-left:auto">${icon('download')} Tải Excel (CSV)</button></div>
+        <div class="table-wrap"><table class="tbl"><thead><tr><th>Khách</th><th>Đơn</th><th>Đã thanh toán</th><th>Người giới thiệu</th><th>Gần nhất</th><th></th></tr></thead><tbody>
+        ${list.length ? list.map((g, i) => `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${esc(initials(g.name))}</span><div><b>${esc(g.name)}</b><small>${esc(g.phone)}</small></div></div></td>
+          <td style="font-size:13px">${g.orders.map(o => `<div>#${esc(o.id)} ${PSQ.statusBadge(o.status)}</div>`).join('')}</td>
+          <td class="gold nowrap">${PSQ.money(g.paid)}</td>
+          <td>${g.refBy ? `<b>${esc(nameOf(d, g.refBy))}</b>` : '<span class="dim">Không qua link (công ty chăm sóc)</span>'}</td>
+          <td class="dim nowrap">${fdate(g.last)}</td>
+          <td>${tel(g.phone) ? `<div class="row" style="gap:6px;flex-wrap:nowrap"><a class="btn btn-sm btn-gold" href="tel:${tel(g.phone)}">${icon('phone')} Gọi</a><a class="btn btn-sm" href="https://zalo.me/${tel(g.phone)}" target="_blank" rel="noopener">${icon('zalo')} Zalo</a></div>` : ''}</td></tr>`).join('')
+          : `<tr><td colspan="6"><div class="empty">${icon('check')}Không có khách nào mua mà chưa có tài khoản.</div></td></tr>`}
         </tbody></table></div>
-        <p class="dim mt-2" style="font-size:12px">Khi bật tự động, thành viên mới đăng ký qua mã giới thiệu sẽ được xếp ngay dưới người giới thiệu mỗi lần mở mục này.</p>
+        <p class="dim mt-2" style="font-size:12px">Khách đăng ký bằng đúng số điện thoại đã mua thì đơn cũ tự ghi vào tài khoản mới và khách rời khỏi danh sách này.</p>
       </div>`;
-      const again = () => this.render(el);
-      $('#pdAuto', el).onchange = e => { const x = ADB.load(); x.settings.autoPlace = e.target.checked; ADB.log(x, 'Thiết lập phả hệ', 'Tự động xếp lên cây: ' + (e.target.checked ? 'bật' : 'tắt')); ADB.save(x); toast(e.target.checked ? 'Đã bật tự động xếp lên cây' : 'Đã tắt tự động xếp lên cây'); again(); };
-      $('#pdAll', el).onclick = () => { if (!confirm('Xếp tất cả thành viên đang chờ vào ngay dưới người giới thiệu?')) return; const x = ADB.load(), n = autoAll(x); ADB.log(x, 'Xếp lên cây', `Xếp tự động ${n} thành viên`); ADB.save(x); toast(`Đã xếp ${n} thành viên lên cây`); again(); };
-      $('#pdCsv', el).onclick = () => ADB.csv('cho-len-cay', [['Mã', 'Họ tên', 'Điện thoại', 'Email', 'Người giới thiệu', 'Ngày đăng ký'], ...list.map(u => [u.code, u.name, u.phone, u.email, nameOf(d, u.sponsor), u.created])]);
-      $$('[data-place]', el).forEach(b => b.onclick = () => placeModal(b.dataset.place, again));
+      $('#pdCsv', el).onclick = () => ADB.csv('khach-chua-co-tai-khoan', [['Họ tên', 'Điện thoại', 'Số đơn', 'Mã đơn', 'Đã thanh toán', 'Người giới thiệu', 'Lần mua gần nhất'], ...list.map(g => [g.name, g.phone, g.orders.length, g.orders.map(o => o.id).join(' '), g.paid, g.refBy ? nameOf(d, g.refBy) : '', g.last])]);
     }
   };
-  function placeModal(id, done) {
-    const d = ADB.load(), u = ADB.user(d, id), sp = u.sponsor && ADB.user(d, u.sponsor);
-    const placed = placedList(d), branch = sp && sp.placed ? [sp, ...ADB.downline(d, sp.id).map(x => x.user)] : [];
-    const ids = new Set(branch.map(x => x.id)), others = placed.filter(x => !ids.has(x.id));
-    const opt = (x, lv) => `<option value="${x.id}"${sp && x.id === sp.id ? ' selected' : ''}>${esc(x.name)} (${esc(x.code || '')})${lv ? ' · F' + lv : ''}</option>`;
-    const m = modal(`<form id="pdF"><div class="card-head"><h3>Xếp ${esc(u.name)} lên cây</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
-      <p class="muted" style="font-size:14px">Người giới thiệu: <b>${esc(sp ? sp.name + ' (' + (sp.code || '') + ')' : 'Không có')}</b>${sp && !sp.placed ? ' <span class="badge pending">chưa lên cây</span>' : ''}</p>
-      <div class="field mt-2"><label>Chọn tuyến trên trực tiếp</label><select class="input" name="parent">
-        <option value="">Làm gốc mới (không có tuyến trên)</option>
-        ${branch.length ? `<optgroup label="Nhánh của người giới thiệu">${branch.map((x, i) => opt(x, i ? ADB.downline(d, sp.id).find(y => y.user.id === x.id).level : 0)).join('')}</optgroup>` : ''}
-        ${others.length ? `<optgroup label="Thành viên khác đã lên cây">${others.map(x => opt(x)).join('')}</optgroup>` : ''}
-      </select></div>
-      <p class="dim mt-1" style="font-size:12px">Mặc định xếp ngay dưới người giới thiệu. Hoa hồng vẫn tính theo người giới thiệu.</p>
-      <div class="row mt-3" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Xếp lên cây</button></div></form>`);
-    $('#pdF', m.el).addEventListener('submit', e => {
-      e.preventDefault(); const pid = new FormData(e.target).get('parent');
-      const x = ADB.load(), t = ADB.user(x, id); place(x, t, pid);
-      ADB.log(x, 'Xếp lên cây', `${t.name} (${t.code}) dưới ${pid ? nameOf(x, pid) : 'gốc mới'}`); ADB.save(x);
-      m.close(); toast('Đã xếp ' + t.name + ' lên cây'); done();
-    });
-  }
-
   /* ---------- CẤP BẬC LÃNH ĐẠO ---------- */
   const LV = { rank: '', q: '' };
   ADMIN_MODULES.leaders = {
