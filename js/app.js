@@ -534,6 +534,48 @@
     }
     cart.changed();
   }
+  /* ---------- hướng dẫn từng bước: bàn tay nhấp nháy chỉ vào nút cần bấm tiếp theo, kèm 1 dòng chữ ----------
+     Mặc định bật; khách quen bấm "Tắt hướng dẫn" (nhớ trên máy). Nút ở ngoài màn hình thì hiện dải nhắc ở dưới, bấm để cuộn tới. */
+  const GUIDE_KEY = 'psq_guide_v1';
+  const guide = {
+    el: null, bar: null, target: null, text: '', timer: 0,
+    on() { try { return localStorage.getItem(GUIDE_KEY) !== '0'; } catch (e) { return true; } },
+    set(v) { try { localStorage.setItem(GUIDE_KEY, v ? '1' : '0'); } catch (e) {} $$('[data-guide-toggle]').forEach(b => { b.innerHTML = guide.label(); b.setAttribute('aria-pressed', String(guide.on())); }); if (!v) guide.hide(); else if (guide.refresh) guide.refresh(); },
+    label() { return guide.on() ? '👆 Hướng dẫn: Bật' : '👆 Hướng dẫn: Tắt'; },
+    toggle() { return `<button class="guide-toggle" type="button" data-guide-toggle aria-pressed="${guide.on()}" title="Bật hoặc tắt bàn tay chỉ dẫn từng bước">${guide.label()}</button>`; },
+    // chỉ vào phần tử (hoặc bỏ chỉ khi không có); refresh là hàm trang gọi lại để chọn bước khi bật lại hướng dẫn
+    point(target, text) {
+      guide.target = target || null; guide.text = text || '';
+      if (!guide.target || !guide.on()) return guide.hide();
+      if (!guide.el) {
+        guide.el = document.createElement('div'); guide.el.className = 'guide-hand'; guide.el.setAttribute('aria-hidden', 'true');
+        guide.el.innerHTML = '<span class="gh-tip"></span><span class="gh-hand">👇</span>';
+        guide.bar = document.createElement('button'); guide.bar.type = 'button'; guide.bar.className = 'guide-bar';
+        guide.bar.addEventListener('click', () => guide.target && guide.target.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        document.body.append(guide.el, guide.bar);
+        addEventListener('scroll', guide.place, { passive: true }); addEventListener('resize', guide.place);
+      }
+      guide.el.querySelector('.gh-tip').textContent = guide.text;
+      clearInterval(guide.timer); guide.timer = setInterval(guide.place, 400);
+      guide.place();
+    },
+    place() {
+      const t = guide.target; if (!guide.el) return;
+      if (!t || !guide.on() || !t.isConnected || !t.offsetParent) { guide.el.hidden = true; guide.bar.hidden = true; return; }
+      const r = t.getBoundingClientRect(), top = (document.querySelector('.topbar') || { offsetHeight: 64 }).offsetHeight + 10, bottom = innerHeight - (innerWidth < 900 ? 90 : 16);
+      const seen = r.bottom > top + 10 && r.top < bottom - 10;
+      guide.bar.hidden = seen; guide.el.hidden = !seen;
+      if (!seen) { guide.bar.textContent = (r.top >= bottom ? '👇 ' : '👆 ') + guide.text + ' (bấm để tới)'; return; }
+      const up = r.top - top < 70;   // không đủ chỗ phía trên thì chỉ từ dưới lên
+      guide.el.classList.toggle('up', up);
+      guide.el.querySelector('.gh-hand').textContent = up ? '👆' : '👇';
+      const x = Math.min(Math.max(r.left + r.width / 2, 70), innerWidth - 70);
+      guide.el.style.left = x + 'px'; guide.el.style.top = (up ? r.bottom + 4 : r.top - 4) + 'px';
+    },
+    hide() { clearInterval(guide.timer); if (guide.el) { guide.el.hidden = true; guide.bar.hidden = true; } }
+  };
+  document.addEventListener('click', e => { if (e.target.closest('[data-guide-toggle]')) guide.set(!guide.on()); });
+
   function openCart(on) { $('.drawer')?.classList.toggle('open', on); $('.drawer-back')?.classList.toggle('open', on); $('.drawer')?.setAttribute('aria-hidden', String(!on)); }
   function renderDrawer() {
     const body = $('#drawerBody'), foot = $('#drawerFoot'); if (!body) return;
@@ -615,7 +657,7 @@
     };
   })();
 
-  window.PSQ = { promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {

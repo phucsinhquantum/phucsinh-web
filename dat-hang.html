@@ -21,8 +21,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028d">
-<script src="js/lang.js?v=20261028d"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028e">
+<script src="js/lang.js?v=20261028e"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -93,8 +93,14 @@
   .lookup-res:empty { display: none; }
   .lookup-res .box { padding: 14px; border-radius: 12px; background: rgba(0, 0, 0, .22); border: 1px solid var(--line); display: grid; gap: 8px; font-size: 13px; }
   .lookup-res .box .row { justify-content: space-between; }
+  .guide-row { display: flex; justify-content: flex-end; margin: -6px 0 8px; }
   @media (max-width: 1099px) {
     .co { grid-template-columns: 1fr; }
+    /* điện thoại, máy tính bảng: tóm tắt đơn (có ô mã giảm giá) lên trên, bỏ danh sách sản phẩm lặp lại */
+    .co-side { display: contents !important; }
+    #summary { order: -1; }
+    #summary .sum-items, #summary .sum-items + .divider { display: none; }
+    .co-side > .card:not(#summary) { order: 2; }
     .co-side { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   }
   @media (max-width: 699px) {
@@ -118,6 +124,7 @@
 </head>
 <body data-page="order">
 <div id="page" data-title="Đặt hàng" data-crumb="Đặt hàng">
+  <div class="guide-row" id="guideRow"></div>
   <section class="card glow-mix steps reveal" id="steps" aria-label="Các bước đặt hàng"></section>
   <section class="co mt-3">
     <div class="co-main" id="main"></div>
@@ -136,11 +143,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261028d"></script>
-<script src="js/api.js?v=20261028d"></script>
-<script src="js/data.js?v=20261028d"></script>
-<script src="js/app.js?v=20261028d"></script>
-<script src="js/psq-data.js?v=20261028d"></script>
+<script src="js/patch.js?v=20261028e"></script>
+<script src="js/api.js?v=20261028e"></script>
+<script src="js/data.js?v=20261028e"></script>
+<script src="js/app.js?v=20261028e"></script>
+<script src="js/psq-data.js?v=20261028e"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -364,7 +371,33 @@
     renderSteps(); renderSummary();
     $('#main').innerHTML = placed ? viewSuccess(placed) : [viewCart, viewInfo, viewReview][step]();
     if (scroll) scrollTo({ top: 0, behavior: 'smooth' });
+    guideStep();
   }
+  // bàn tay chỉ bước tiếp theo (PSQ.guide trong app.js); chọn lại mỗi khi trang đổi
+  function guideStep() {
+    const G = PSQ.guide, m = $('#main'); if (!G) return;
+    if (placed) {
+      const pick = $('#pwBill .pw-pick'), send = $('#pwSend'), claim = $('#pwClaim');
+      if (send && !send.disabled) return G.point(send, 'Bấm Gửi bill cho công ty');
+      if (pick) return G.point(pick, 'Bấm vào đây chọn ảnh bill chuyển khoản');
+      if (claim) return G.point(claim, 'Chuyển khoản xong, bấm nút này để gửi ảnh bill');
+      return G.point(null);
+    }
+    if (!cart.count()) return G.point(m.querySelector('a[href="san-pham.html"]'), 'Chọn sản phẩm để mua');
+    if (step === 0) return G.point(m.querySelector('[data-go="1"]'), innerWidth < 1100 ? 'Có mã giảm giá thì nhập ở ô phía trên, rồi bấm Tiếp tục' : 'Bấm Tiếp tục để điền thông tin nhận hàng');
+    if (step === 1) {
+      const need = [['#f-name', 'Điền họ và tên người nhận'], ['#f-phone', 'Điền số điện thoại'], ['#f-province', 'Chọn tỉnh, thành phố'], ['#f-address', 'Điền địa chỉ nhận hàng']]
+        .find(([q]) => { const f = m.querySelector(q); return f && !String(f.value || '').trim(); });
+      if (need) return G.point(m.querySelector(need[0]), need[1]);
+      if (!m.querySelector('input[name=pay]:checked')) return G.point(m.querySelector('input[name=pay][value=bank]').closest('label'), 'Chọn cách thanh toán');
+      return G.point(m.querySelector('#infoForm button[type=submit]'), 'Bấm Xem lại đơn');
+    }
+    return G.point($('#placeBtn'), 'Kiểm tra lại rồi bấm Xác nhận đặt hàng');
+  }
+  PSQ.guide.refresh = guideStep;
+  $('#guideRow').innerHTML = PSQ.guide.toggle();
+  { let gt; new MutationObserver(() => { clearTimeout(gt); gt = setTimeout(guideStep, 120); }).observe($('#main'), { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
+    ['input', 'change'].forEach(ev => $('#main').addEventListener(ev, () => { clearTimeout(gt); gt = setTimeout(guideStep, 300); })); }
   function go(n) {
     if (n === step || placed) return;
     if (step === 1) { readForm(); if (n > 1 && !validate()) return; }

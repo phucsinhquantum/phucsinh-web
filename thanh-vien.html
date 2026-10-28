@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028d">
-<script src="js/lang.js?v=20261028d"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028e">
+<script src="js/lang.js?v=20261028e"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -230,6 +230,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   @media (max-width: 560px) { #fr::placeholder { font-size: 11.5px; } }
   @media (prefers-reduced-motion: reduce) { .dl-glow, .dl-glow::after { animation: none; } }
   @keyframes dlShine { 0%, 55% { left: -60%; } 100% { left: 130%; } }
+  .w-info { display: block; margin-top: 3px; font-size: 12px; line-height: 1.45; color: var(--text-2); } .w-info b { color: var(--text); font-weight: 600; }
 </style>
 </head>
 <body data-page="member">
@@ -237,11 +238,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261028d"></script>
-<script src="js/api.js?v=20261028d"></script>
-<script src="js/data.js?v=20261028d"></script>
-<script src="js/app.js?v=20261028d"></script>
-<script src="js/psq-data.js?v=20261028d"></script>
+<script src="js/patch.js?v=20261028e"></script>
+<script src="js/api.js?v=20261028e"></script>
+<script src="js/data.js?v=20261028e"></script>
+<script src="js/app.js?v=20261028e"></script>
+<script src="js/psq-data.js?v=20261028e"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -256,6 +257,9 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   // ảnh đại diện (nếu có) hoặc chữ viết tắt
   const av = (u, cls = '') => `<span class="avatar ${cls}">${u && u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials((u && u.name) || ''))}</span>`;
   const wamt = (k, n) => (W[k] && W[k].unit === 'vnd') ? money(n) : ps(n);
+  // chi tiết khoản nhận từ đơn hàng: ai mua, qua ai, đơn bao nhiêu
+  const winfo = w => { const i = w.info; if (!i) return ''; const sell = w.type === 'referral' ? 'Người kích hoạt' : 'Người mua';
+    return `<small class="w-info">${sell}: <b>${esc(i.buyer)}</b>${i.via ? ` · qua <b>${esc(i.via)}</b>` : ''}<br>Đơn ${esc(i.order)}: ${money(i.total)}${i.items ? ` (${esc(i.items)})` : ''}</small>`; };
   const wnote = k => { const t = (ADB.load().settings.plan || {}).taxRate ?? 10; return k === 'sales' ? 'Hoa hồng bằng tiền, rút sang ví tiền mặt trừ thuế thu nhập ' + t + '%' : k === 'bonus' ? 'Thu nhập từ đại lý tuyến dưới, chuyển sang ví khả dụng trừ thuế ' + t + '%' : W[k].note; };
   const lower1 = s => s.charAt(0).toLowerCase() + s.slice(1);
   const histBtn = k => `<button class="icon-btn whist" type="button" data-wh="${k}" aria-label="Lịch sử ${esc(lower1(W[k].name))}" title="Lịch sử giao dịch">${icon('clock')}</button>`;
@@ -610,12 +614,12 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     const sg = n => `<b class="nowrap ${n < 0 ? 'red' : 'green'}">${n > 0 ? '+' : ''}${wamt(k, n)}</b>`;
     const md = modal(`<div class="card-head"><div><h3>Lịch sử ${esc(lower1(W[k].name))}</h3><div class="sub">${rows.length} giao dịch · mới nhất trước</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
       <div class="wh-sum"><div><span>Số dư hiện tại</span><b style="color:${W[k].color}">${wamt(k, ADB.balances(d, me.id)[k])}</b></div><div><span>Tổng cộng vào</span><b class="green">${wamt(k, inn)}</b></div><div><span>Tổng trừ ra</span><b class="red">${wamt(k, out)}</b></div></div>
-      ${rows.length ? `<div class="table-wrap"><table class="tbl wh-tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Số dư sau</th><th>Trạng thái</th></tr></thead><tbody>${rows.map(({ w, bal }) => `<tr${w.status === 'rejected' ? ' style="opacity:.6"' : ''}><td class="dim nowrap c-d">${fdate(w.date)}</td><td class="nowrap c-t">${esc(ADB.walletType[w.type] || w.type)}</td><td class="dim c-n" style="min-width:190px">${esc(w.note || '')}${w.type === 'tocash' && w.amount < 0 && w.tax ? `<br><small>Thuế ${money(w.tax)}, thực nhận ${money(w.net != null ? w.net : -w.amount - w.tax)}</small>` : ''}</td><td class="c-a">${sg(w.amount)}</td><td class="nowrap c-b">${wamt(k, bal)}</td><td class="c-s">${wB(w.status)}</td></tr>`).join('')}</tbody></table></div>`
+      ${rows.length ? `<div class="table-wrap"><table class="tbl wh-tbl"><thead><tr><th>Ngày</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Số dư sau</th><th>Trạng thái</th></tr></thead><tbody>${rows.map(({ w, bal }) => `<tr${w.status === 'rejected' ? ' style="opacity:.6"' : ''}><td class="dim nowrap c-d">${fdate(w.date)}</td><td class="nowrap c-t">${esc(ADB.walletType[w.type] || w.type)}</td><td class="dim c-n" style="min-width:190px">${esc(w.note || '')}${winfo(w)}${w.type === 'tocash' && w.amount < 0 && w.tax ? `<br><small>Thuế ${money(w.tax)}, thực nhận ${money(w.net != null ? w.net : -w.amount - w.tax)}</small>` : ''}</td><td class="c-a">${sg(w.amount)}</td><td class="nowrap c-b">${wamt(k, bal)}</td><td class="c-s">${wB(w.status)}</td></tr>`).join('')}</tbody></table></div>`
         : `<div class="empty">${icon('clock')}Ví này chưa có giao dịch.</div>`}`);
     md.el.querySelector('.modal').classList.add('wh-modal');
   }
   function txTable(rows) {
-    return rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Ví</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>${rows.map(w => `<tr><td class="dim nowrap">${fdate(w.date)}</td><td>${wdot(ADB.walletOf(w))}</td><td class="nowrap">${esc(ADB.walletType[w.type] || w.type)}</td><td class="dim" style="min-width:200px">${esc(w.note || '')}</td><td><b class="nowrap ${w.amount < 0 ? 'red' : 'green'}">${w.amount > 0 ? '+' : ''}${wamt(ADB.walletOf(w), w.amount)}</b></td><td>${wB(w.status)}</td></tr>`).join('')}</tbody></table></div>`
+    return rows.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Ví</th><th>Loại</th><th>Nội dung</th><th>Số tiền</th><th>Trạng thái</th></tr></thead><tbody>${rows.map(w => `<tr><td class="dim nowrap">${fdate(w.date)}</td><td>${wdot(ADB.walletOf(w))}</td><td class="nowrap">${esc(ADB.walletType[w.type] || w.type)}</td><td class="dim" style="min-width:200px">${esc(w.note || '')}${winfo(w)}</td><td><b class="nowrap ${w.amount < 0 ? 'red' : 'green'}">${w.amount > 0 ? '+' : ''}${wamt(ADB.walletOf(w), w.amount)}</b></td><td>${wB(w.status)}</td></tr>`).join('')}</tbody></table></div>`
       : `<div class="empty">${icon('wallet')}Chưa có giao dịch.</div>`;
   }
   let txF = { w: '', t: '' };

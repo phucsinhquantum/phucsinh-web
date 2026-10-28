@@ -1024,3 +1024,19 @@ html.reduce-motion .pw-ring, html.reduce-motion .pw-ring i, html.reduce-motion .
 .nav a .promo-badge { margin-left: auto; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: .5px; color: #fff; background: linear-gradient(135deg, #ff5f6d, #ff9a3d); box-shadow: 0 0 10px rgba(255, 110, 70, .7); }
 @keyframes promoGlow { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 160, 80, .35), 0 0 10px -4px rgba(255, 140, 60, .5); } 50% { box-shadow: inset 0 0 0 1px rgba(255, 190, 110, .8), 0 0 22px -2px rgba(255, 140, 60, .9); } }
 html.reduce-motion .nav a.promo-on, html.reduce-motion .nav a.promo-on svg { animation: none !important; }
+
+/* hướng dẫn từng bước */
+.guide-hand { position: fixed; z-index: 9000; pointer-events: none; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.guide-hand.up { transform: translate(-50%, 0); flex-direction: column-reverse; }
+.guide-hand .gh-hand { font-size: 34px; line-height: 1; filter: drop-shadow(0 0 8px rgba(243, 199, 107, .9)); animation: ghBounce 1s ease-in-out infinite; }
+.guide-hand.up .gh-hand { animation-name: ghBounceUp; }
+.guide-hand .gh-tip { max-width: min(260px, 80vw); padding: 5px 11px; border-radius: 10px; font-size: 13px; font-weight: 700; line-height: 1.35; text-align: center; color: #1d1507; background: linear-gradient(135deg, #ffe09a, #f3c76b); box-shadow: 0 4px 16px rgba(0, 0, 0, .5), 0 0 14px rgba(243, 199, 107, .6); }
+.guide-bar { position: fixed; z-index: 9000; left: 50%; transform: translateX(-50%); bottom: 18px; max-width: calc(100vw - 32px); padding: 9px 16px; border: 0; border-radius: 999px; font: 700 13.5px/1.35 inherit; font-family: inherit; color: #1d1507; background: linear-gradient(135deg, #ffe09a, #f3c76b); box-shadow: 0 6px 20px rgba(0, 0, 0, .55), 0 0 16px rgba(243, 199, 107, .7); cursor: pointer; animation: ghPulse 1.6s ease-in-out infinite; }
+@media (max-width: 899px) { .guide-bar { bottom: 92px; } }
+.guide-toggle { display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 999px; border: 1px solid rgba(243, 199, 107, .45); background: rgba(243, 199, 107, .08); color: var(--gold); font: 600 12.5px/1.4 inherit; font-family: inherit; cursor: pointer; }
+.guide-toggle[aria-pressed="false"] { color: var(--text-3); border-color: var(--line-2); background: none; }
+@keyframes ghBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+@keyframes ghBounceUp { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes ghPulse { 50% { box-shadow: 0 6px 20px rgba(0, 0, 0, .55), 0 0 26px rgba(243, 199, 107, 1); } }
+html.reduce-motion .guide-hand .gh-hand, html.reduce-motion .guide-bar { animation: none; }
+@media (prefers-reduced-motion: reduce) { .guide-hand .gh-hand, .guide-bar { animation: none; } }

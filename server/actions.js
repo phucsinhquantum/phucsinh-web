@@ -58,7 +58,14 @@ function scopeFor(d, me, A) {
     out.orders = d.orders.filter(o => o.userId === me.id).concat(d.orders.filter(o => team.has(o.userId)).map(o => pick(o, ['id', 'userId', 'name', 'items', 'total', 'status', 'date', 'settled', 'pay'])));
     out.commissions = (d.commissions || []).filter(c => c.user === me.id);
     (out.commissions).forEach(c => { if (c.from) addU(A.user(d, c.from), ['id', 'name', 'username', 'code', 'tier']); });
-    out.wallet = (d.wallet || []).filter(w => w.user === me.id);
+    // lịch sử ví: khoản nhận từ đơn hàng ghi kèm người mua, người tuyến dưới mang lại khoản đó, giá trị đơn
+    const kindOf = { commission: 'direct', referral: 'ref', override: 'override' };
+    out.wallet = (d.wallet || []).filter(w => w.user === me.id).map(w => {
+      const o = w.ref && kindOf[w.type] && d.orders.find(x => x.id === w.ref); if (!o) return w;
+      const cm = (d.commissions || []).find(x => x.user === me.id && x.order === o.id && x.kind === kindOf[w.type]);
+      const buyer = A.user(d, o.userId), via = cm && cm.from && A.user(d, cm.from), tag = u => `${u.name}${u.code ? ' (' + u.code + ')' : ''}`;
+      return Object.assign({}, w, { info: { buyer: buyer ? tag(buyer) : 'Khách lẻ ' + (o.name || ''), via: via && (!buyer || via.id !== buyer.id) ? tag(via) : '', order: o.id, total: o.total, items: (o.items || []).map(x => `${x.qty} x ${x.name}`).join(', ') } });
+    });
     out.coupons = (d.coupons || []).filter(x => x.user === me.id);
     out.topups = (d.topups || []).filter(t => t.user === me.id);
     out.addresses = (d.addresses || []).filter(a => a.user === me.id);
@@ -67,6 +74,12 @@ function scopeFor(d, me, A) {
   }
   out.users = [...users.values()];
   return out;
+}
+
+// nội dung đơn cho tin Telegram: người mua, người giới thiệu, sản phẩm, mã giảm giá, đã trả bằng ví, địa chỉ
+function orderText(o) {
+  const paid = (o.shopPaid || 0) + (o.cashPaid || 0);
+  return `${o.name} · ${o.phone}\n${(o.items || []).map(x => `${x.qty} x ${x.name}`).join('\n')}\nTổng ${money(o.total)}${o.discount ? ` (đã giảm ${money(o.discount)}, mã ${o.coupon})` : ''}${paid ? `, đã trả bằng ví ${money(paid)}` : ''}${o.address ? `\nĐịa chỉ: ${o.address}` : ''}`;
 }
 
 /* ---------- thư mẫu ---------- */
@@ -225,7 +238,7 @@ const ACTIONS = {
     (o.bills = o.bills || []).push({ f, at: c.stamp() });
     const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
     const what = c.A.isAgentPkgOrder(o) ? 'gói đại lý' : (o.items || []).some(x => x.id === c.A.PKG_ID) ? 'gói kích hoạt CTV' : 'đơn';
-    c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${o.name} · ${o.phone}\nSố tiền ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
+    c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${orderText(o)}\nSố tiền cần nhận ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
     c.log('Khách gửi bill chuyển khoản', o.id);
     return { ok: true };
   } },
@@ -302,8 +315,8 @@ const ACTIONS = {
     }
     c.log('Đặt hàng', `${o.id}: ${name}, ${money(o.total)}`);
     const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
-    c.notify(`Đơn hàng mới ${o.id}\n${name} · ${phone}\n${items.map(x => `${x.qty} x ${x.name}`).join('\n')}\nTổng ${money(o.total)}${o.discount ? ` (đã giảm ${money(o.discount)}, mã ${o.coupon})` : ''}${due < o.total ? `, đã trả bằng ví ${money(o.total - due)}` : ''}\n${due ? `Chờ chuyển khoản ${money(due)} (nội dung ${o.id})` : 'Đã thanh toán đủ bằng ví'}\nĐịa chỉ: ${address}`,
-      due ? { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' } : null);
+    // chưa thanh toán thì chưa báo Telegram; khách gửi bill chuyển khoản (paidClaim) mới báo kèm đủ chi tiết đơn
+    if (!due) c.notify(`Đơn hàng mới ${o.id} (đã thanh toán bằng ví)\n${orderText(o)}`);
     if (email) c.mail(email, `Xác nhận đơn hàng ${o.id}`, 'Đơn hàng', wrapMail(c.site, 'Cảm ơn ' + c.e(name) + ' đã đặt hàng',
       `<p>Mã đơn: <b>${o.id}</b></p><table style="width:100%;border-collapse:collapse">${items.map(x => `<tr><td style="padding:4px 0">${x.qty} x ${c.e(x.name)}</td><td style="text-align:right">${money(x.price * x.qty)}</td></tr>`).join('')}${o.discount ? `<tr><td>Mã giảm giá ${c.e(o.coupon)}</td><td style="text-align:right">-${money(o.discount)}</td></tr>` : ''}<tr><td style="padding-top:8px"><b>Tổng</b></td><td style="text-align:right"><b>${money(o.total)}</b></td></tr></table>
        ${due ? `<p>Anh chị chuyển khoản <b>${money(due)}</b> tới ${c.e(c.site.bank.name)} ${c.e(c.site.bank.account)} (${c.e(c.site.bank.owner)}), nội dung <b>${o.id}</b>.</p>` : '<p>Đơn đã thanh toán đủ bằng ví.</p>'}
@@ -360,7 +373,6 @@ const ACTIONS = {
     if (has) return { order: has };
     const o = A.buyPackage(d, me, 'bank');
     c.log('Đặt gói kích hoạt CTV', `${me.name}: đơn ${o.id}, ${money(o.total)}`);
-    c.notify(`Đơn gói kích hoạt CTV ${o.id}\n${me.name} (@${me.username}) · ${me.phone || ''}\nSố tiền ${money(o.total)}, nội dung chuyển khoản ${o.id}`, { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' });
     return { order: o };
   } },
   buyAgentPackage: { auth: 'member', run(c) {
@@ -372,7 +384,6 @@ const ACTIONS = {
     if (has) return { order: has };
     const o = A.buyAgentPackage(d, me, 'bank');
     c.log('Đặt gói đại lý', `${me.name}: đơn ${o.id}, ${money(o.total)}`);
-    c.notify(`Đơn gói đại lý ${o.id}\n${me.name} (@${me.username}) · ${me.phone || ''}\nSố tiền ${money(o.total)}, nội dung chuyển khoản ${o.id}`, { kind: 'order', ref: o.id, button: '✅ Xác nhận đã nhận tiền' });
     return { order: o };
   } },
   deposit: { auth: 'member', run(c) {
@@ -382,7 +393,8 @@ const ACTIONS = {
     const code = 'NAP ' + String(me.username || me.code || '').toUpperCase();
     const r = A.deposit(d, me, a, method, { status: 'pending', code }); if (r.error) return r;
     c.log('Yêu cầu nạp tiền', `${me.name}: ${money(a)} qua ${method}`);
-    c.notify(`Yêu cầu nạp tiền ví\n${me.name} (@${me.username})\nSố tiền ${money(a)} qua ${method}${method === 'Chuyển khoản' ? `, nội dung ${code}` : ''}`, { kind: 'topup', ref: r.topup.id, button: '✅ Xác nhận đã nhận tiền' });
+    // chuyển khoản: chờ thành viên gửi bill (topupClaim) mới báo; nộp tiền mặt tại cửa hàng thì báo luôn
+    if (method !== 'Chuyển khoản') c.notify(`Yêu cầu nạp tiền ví\n${me.name} (@${me.username})\nSố tiền ${money(a)} nộp tiền mặt tại cửa hàng`, { kind: 'topup', ref: r.topup.id, button: '✅ Xác nhận đã nhận tiền' });
     return { topup: r.topup };
   } },
   wallet: { auth: 'member', run(c) {

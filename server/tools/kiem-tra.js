@@ -49,8 +49,14 @@ function client(port) {
 
 // lấy đường dẫn xác nhận mới nhất trong nhật ký (khi chưa cài Telegram, máy chủ in tin ra nhật ký)
 const lastConfirm = (log, n0) => { const m = log().slice(n0).match(/\/api\/confirm\?t=[\w-]+/g); return m && m[m.length - 1]; };
-async function confirm(s, c, n0, what) {
-  const u = lastConfirm(s.log, n0); if (!ok(!!u, what + ': có đường dẫn xác nhận đã nhận tiền')) return;
+// ảnh bill giả (đúng đầu tệp PNG) để thử bước khách gửi bill
+const BILL = 'data:image/png;base64,' + Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(400)]).toString('base64');
+// đơn chuyển khoản: lúc đặt chưa báo Telegram; khách gửi bill mới báo kèm nút xác nhận
+async function confirm(s, c, n0, what, payer, id, phone) {
+  ok(!lastConfirm(s.log, n0), what + ': đặt xong chưa thanh toán thì chưa báo Telegram');
+  const pc = await payer.act('paidClaim', { id, phone, bill: BILL });
+  ok(!pc.error, what + ': khách gửi bill' + (pc.error ? ': ' + pc.error : ''));
+  const u = lastConfirm(s.log, n0); if (!ok(!!u, what + ': gửi bill xong mới báo, có đường dẫn xác nhận đã nhận tiền')) return;
   const r = await c.req('POST', '/api/confirm', null, { t: new URL(u, 'http://x').searchParams.get('t') });
   ok(/Đã xác nhận/.test(r.text), what + ': bấm xác nhận thành công');
 }
@@ -85,7 +91,7 @@ async function flow() {
     for (const [X, nm] of [[A, 'A'], [B, 'B']]) {
       const n0 = s.log().length, r = await X.c.act('buyPackage', {});
       ok(!r.error && r.result && r.result.order, nm + ' đặt gói CTV');
-      await confirm(s, owner, n0, nm + ' gói CTV');
+      await confirm(s, owner, n0, nm + ' gói CTV', X.c, (r.result.order || {}).id);
       ok(((await X.c.boot()).me || {}).tier === 'ctv', nm + ' lên CTV sau khi xác nhận');
     }
     let db = (await owner.req('GET', '/api/admin/db')).json.db;
@@ -98,14 +104,14 @@ async function flow() {
     let n0 = s.log().length;
     const oa = await A.c.act('placeOrder', { items: [{ id: P.id, qty }], info });
     ok(!oa.error, `A đặt đơn ${qty} x ${P.name}` + (oa.error ? ': ' + oa.error : ''));
-    await confirm(s, owner, n0, 'đơn của A');
+    await confirm(s, owner, n0, 'đơn của A', A.c, ((oa.result || {}).order || {}).id);
     ok(((await A.c.boot()).me || {}).tier === 'daily', 'A tự lên đại lý khi tổng mua đã thanh toán đủ mốc');
 
     // C mua qua CTV B: B 10%, A (đại lý tuyển B) 40% thu nhập của B
     n0 = s.log().length;
     const oc = await C.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'Khách C', phone: '0987654321' }) });
     ok(!oc.error, 'C đặt đơn' + (oc.error ? ': ' + oc.error : ''));
-    await confirm(s, owner, n0, 'đơn của C');
+    await confirm(s, owner, n0, 'đơn của C', C.c, ((oc.result || {}).order || {}).id);
     db = (await owner.req('GET', '/api/admin/db')).json.db;
     const ocId = ((oc.result || {}).order || {}).id || (db.orders.find(o => o.userId === C.r.me.id) || {}).id;
     const bDirect = com(B.r.me.id, 'direct').find(c => c.order === ocId);
@@ -120,15 +126,19 @@ async function flow() {
     n0 = s.log().length;
     const og = await client(s.port).act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: guestInfo, ref: B.r.me.code });
     ok(!og.error, 'khách lẻ đặt đơn qua link của B' + (og.error ? ': ' + og.error : ''));
-    await confirm(s, owner, n0, 'đơn khách lẻ');
+    await confirm(s, owner, n0, 'đơn khách lẻ', guest, ((og.result || {}).order || {}).id, guestInfo.phone);
     n0 = s.log().length;
     const og2 = await client(s.port).act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: guestInfo, ref: A.r.me.code });
     ok(!og2.error, 'khách lẻ đó đặt lần 2 qua link của A');
-    await confirm(s, owner, n0, 'đơn khách lẻ lần 2');
+    await confirm(s, owner, n0, 'đơn khách lẻ lần 2', guest, ((og2.result || {}).order || {}).id, guestInfo.phone);
     db = (await owner.req('GET', '/api/admin/db')).json.db;
     const gOrders = db.orders.filter(o => !o.userId && o.phone === guestInfo.phone);
     ok(gOrders.length === 2 && gOrders.every(o => o.refBy === B.r.me.id), 'cả 2 đơn khách lẻ ghi cho B (người gửi link đầu tiên)');
     ok(gOrders.every(o => com(B.r.me.id, 'direct').some(c => c.order === o.id && c.amount === want)), `B nhận ${plan.ctvRate}% trên đơn khách lẻ`);
+    const bw = ((await B.c.boot()).db.wallet || []).find(w => w.ref === gOrders[0].id && w.type === 'commission');
+    ok(bw && bw.info && /Khách lẻ thử/.test(bw.info.buyer), 'lịch sử ví của B ghi rõ người mua (khách lẻ)');
+    const aw = ((await A.c.boot()).db.wallet || []).find(w => w.ref === ocId && w.type === 'override');
+    ok(aw && aw.info && /Khách C/.test(aw.info.buyer) && /CTV B/.test(aw.info.via), 'lịch sử ví của A ghi người mua C, qua CTV B' + (aw && aw.info ? ` (${aw.info.buyer} · ${aw.info.via})` : ''));
 
     // vòng quay chào mừng: C quay 1 lần, nhận mã, dùng mã khi đặt hàng
     const sp = await C.c.act('welcomeSpin', {});
