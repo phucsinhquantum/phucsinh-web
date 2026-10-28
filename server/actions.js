@@ -35,6 +35,8 @@ function scopeFor(d, me, A) {
   if (me && me.role === 'admin' && me.status !== 'locked') { const o = Object.assign({}, d); o.users = d.users.map(clean); return o; }
   const out = { v: d.v, settings: Object.assign({}, d.settings), stock: d.stock || {}, stockMin: d.stockMin, users: [], orders: [], commissions: [], wallet: [], topups: [], addresses: [], messages: [], logs: [], mails: [], fundbook: [], receipts: [], expenses: [], stores: d.stores || [], roles: [] };
   delete out.settings.fundWarn;
+  // chương trình khuyến mãi đang chạy (công khai), không gửi danh sách người đã dùng
+  out.promos = A.promosLive(d).map(p => pick(p, ['id', 'title', 'desc', 'start', 'end', 'code', 'type', 'value', 'maxOff', 'minOrder', 'color', 'link']));
   const users = new Map();
   const addU = (u, keys) => { if (!u) return; const prev = users.get(u.id) || {}; users.set(u.id, Object.assign(prev, keys ? pick(u, keys) : clean(u))); };
   // danh sách thành viên mới ở trang chủ
@@ -277,11 +279,10 @@ const ACTIONS = {
       const sp = mem ? mem.sponsor : kept && c.A.user(d, kept) ? kept : fromLink;
       if (sp) { o.refBy = sp; if (!mem && !kept) (d.guestRefs = d.guestRefs || {})[phone] = sp; }
     }
-    // mã giảm giá (thành viên): giảm trên tiền hàng, trước khi trừ ví
+    // 1 mã giảm giá mỗi đơn (mã cá nhân hoặc mã chương trình khuyến mãi): giảm trên tiền hàng, trước khi trừ ví
     if (args.coupon) {
-      if (!me) return err('Anh chị đăng nhập để dùng mã giảm giá.');
-      const cc = c.A.couponCheck(d, args.coupon, me, o.total - (+c.site.shipFee || 0)); if (cc.error) return cc;
-      c.A.couponUse(d, cc.coupon, o, cc.discount);
+      const cc = c.A.codeCheck(d, args.coupon, me, o.total - (+c.site.shipFee || 0), phone); if (cc.error) return cc;
+      c.A.codeUse(d, cc, o);
     }
     d.orders.unshift(o);
     let used = 0, usedC = 0;
@@ -421,10 +422,10 @@ const ACTIONS = {
     c.log('Vòng quay chào mừng', `${c.me.name} (${c.me.code || ''}): ${r.prize.label}${r.coupon ? ', mã ' + r.coupon.code : ''}`);
     return { prize: r.prize, index: r.index, segments: r.segments, coupon: r.coupon };
   } },
-  couponCheck: { auth: 'member', run(c) {
+  couponCheck: { run(c) {
     const sub = (Array.isArray(c.args.items) ? c.args.items : []).reduce((s, x) => { const p = c.products.find(q => q.id === x.id); return s + (p ? p.price * Math.max(0, int(x.qty)) : 0); }, 0);
-    const r = c.A.couponCheck(c.d, c.args.code, c.me, sub); if (r.error) return r;
-    return { code: r.coupon.code, label: r.coupon.label, discount: r.discount };
+    const r = c.A.codeCheck(c.d, c.args.code, c.me, sub, normPhone(c.args.phone)); if (r.error) return r;
+    return r.coupon ? { code: r.coupon.code, label: r.coupon.label, discount: r.discount } : { code: String(r.promo.code).toUpperCase(), label: r.promo.title, discount: r.discount, promo: true };
   } },
 
   /* ===== quản trị ===== */

@@ -728,8 +728,34 @@
       return { coupon: c, discount: offOf(c, sub) };
     },
     couponUse(d, c, o, discount) { c.status = 'used'; c.order = o.id; c.usedAt = stampNow(); o.coupon = c.code; o.discount = discount; o.total = Math.max(0, o.total - discount); },
-    // đơn hủy: trả mã lại cho khách dùng đơn khác
-    couponBack(d, o) { const c = o && o.coupon && (d.coupons || []).find(x => x.code === o.coupon && x.order === o.id); if (!c) return false; c.status = 'new'; c.order = null; c.usedAt = null; return true; }
+    // đơn hủy: trả mã lại cho khách dùng đơn khác (mã cá nhân, hoặc 1 lượt của mã chương trình khuyến mãi)
+    couponBack(d, o) {
+      if (o && o.promo) { const p = (d.promos || []).find(x => x.id === o.promo), u = p && (p.uses || []).findIndex(x => x.order === o.id); if (!p || u < 0) return false; p.uses.splice(u, 1); p.used = Math.max(0, (+p.used || 0) - 1); return true; }
+      const c = o && o.coupon && (d.coupons || []).find(x => x.code === o.coupon && x.order === o.id); if (!c) return false; c.status = 'new'; c.order = null; c.usedAt = null; return true;
+    },
+
+    /* ---------- chương trình khuyến mãi (quản trị đăng, hiện ở trang Khuyến mãi; có thể kèm mã dùng chung) ----------
+       Mỗi đơn chỉ dùng 1 mã: mã cá nhân (vòng quay) hoặc mã chương trình, không cộng dồn. Mã chương trình mỗi người
+       (theo tài khoản hoặc số điện thoại) dùng 1 lần, có giới hạn tổng số lượt nếu quản trị đặt. */
+    promoLive(p, day) { day = day || now(); return !!p && p.active !== false && (!p.start || p.start <= day) && (!p.end || p.end >= day); },
+    promosLive(d) { return (d.promos || []).filter(p => ADB.promoLive(p)).sort((a, b) => String(a.end || '9999').localeCompare(String(b.end || '9999'))); },
+    codeCheck(d, code, u, sub, phone) {
+      const k = String(code || '').trim().toUpperCase(); if (!k) return { error: 'Anh chị nhập mã giảm giá.' };
+      if ((d.coupons || []).some(x => x.code === k)) return ADB.couponCheck(d, k, u, sub);
+      const p = (d.promos || []).find(x => x.code && String(x.code).toUpperCase() === k);
+      if (!p) return { error: 'Mã giảm giá không đúng.' };
+      if (!ADB.promoLive(p)) return { error: p.start && p.start > now() ? 'Chương trình này chưa bắt đầu.' : 'Chương trình này đã kết thúc.' };
+      if (+p.limit > 0 && (+p.used || 0) >= +p.limit) return { error: 'Mã này đã hết lượt dùng.' };
+      if (+p.minOrder > 0 && sub < +p.minOrder) return { error: 'Mã này dùng cho đơn từ ' + PSQ.money(+p.minOrder) + '.' };
+      const ph = String(phone || '').replace(/\D/g, '');
+      if ((p.uses || []).some(x => (u && x.user === u.id) || (ph && x.phone === ph))) return { error: 'Anh chị đã dùng mã này cho đơn trước rồi.' };
+      return { promo: p, discount: offOf(p, sub), label: p.title };
+    },
+    codeUse(d, r, o) {
+      if (r.coupon) return ADB.couponUse(d, r.coupon, o, r.discount);
+      const p = r.promo; p.used = (+p.used || 0) + 1; (p.uses = p.uses || []).push({ order: o.id, user: o.userId || null, phone: String(o.phone || '').replace(/\D/g, ''), at: stampNow() });
+      o.coupon = String(p.code).toUpperCase(); o.promo = p.id; o.discount = r.discount; o.total = Math.max(0, o.total - r.discount);
+    }
   });
 
   {

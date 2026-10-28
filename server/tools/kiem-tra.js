@@ -145,6 +145,17 @@ async function flow() {
       ok(!!(await C.c.act('couponCheck', { code: cp.code, items: [{ id: P.id, qty: 1 }] })).error, 'mã đã dùng không dùng lại được');
     }
 
+    // chương trình khuyến mãi kèm mã: khách lẻ dùng được 1 lần, công khai ở trang, mỗi đơn 1 mã
+    const pr = { id: 'kmkt', title: 'Khuyến mãi thử', active: true, start: '2020-01-01', end: '', code: 'KMTHU', type: 'pct', value: 10, maxOff: 0, minOrder: 0, limit: 0, used: 0, uses: [] };
+    const pp = await owner.req('POST', '/api/admin/patch', { patch: { $o: { promos: { $v: [pr] } } } });
+    ok(pp.status === 200 && ((await guest.boot()).db.promos || []).some(x => x.code === 'KMTHU' && !x.uses), 'quản trị đăng chương trình khuyến mãi, trang công khai thấy (không lộ người dùng mã)');
+    const gk = client(s.port), gInfo = { name: 'Khách khuyến mãi', phone: '0908777666', address: '3 Đường Thử, Quận 5', pay: 'bank' };
+    const gck = await gk.act('couponCheck', { code: 'kmthu', phone: gInfo.phone, items: [{ id: P.id, qty: 1 }] });
+    ok(!gck.error && gck.result.discount === Math.round(P.price * 0.1), 'khách lẻ kiểm tra mã khuyến mãi được giảm 10%' + (gck.error ? ': ' + gck.error : ''));
+    const gq = await gk.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: gInfo, coupon: 'KMTHU' });
+    ok(!gq.error && ((gq.result || {}).order || {}).discount === Math.round(P.price * 0.1), 'khách lẻ đặt hàng có mã khuyến mãi' + (gq.error ? ': ' + gq.error : ''));
+    ok(/đã dùng mã này/.test((await client(s.port).act('couponCheck', { code: 'KMTHU', phone: gInfo.phone, items: [{ id: P.id, qty: 1 }] })).error || ''), 'cùng số điện thoại không dùng mã lần 2');
+
     // quản trị xem tài khoản C: thấy dữ liệu của C, không thao tác được, thoát ra về lại quản trị
     const im = await owner.req('POST', '/api/admin/impersonate', { id: C.r.me.id });
     ok(im.status === 200 && ((await owner.boot()).me || {}).id === C.r.me.id, 'quản trị vào xem tài khoản C');

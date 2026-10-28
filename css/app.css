@@ -1016,3 +1016,11 @@ html.reduce-motion .pw-ring, html.reduce-motion .pw-ring i, html.reduce-motion .
 .pts-pay small b { font-size: inherit; }
 .pts-pay #ptBuy { flex: none; }
 @media (max-width: 560px) { .pts-pay { flex-wrap: wrap; } .pts-pay #ptBuy { width: 100%; } }
+
+/* mục Khuyến mãi trên menu: sáng khi công ty đang có chương trình, mờ khi không có */
+.nav a.promo-off { opacity: .55; }
+.nav a.promo-on { color: #ffd27a; background: linear-gradient(90deg, rgba(255, 120, 60, .16), rgba(243, 199, 107, .08)); box-shadow: inset 0 0 0 1px rgba(255, 160, 80, .45), 0 0 18px -4px rgba(255, 140, 60, .7); animation: promoGlow 1.8s ease-in-out infinite; }
+.nav a.promo-on svg { color: #ff8a3d; animation: giftBlink 1s ease-in-out infinite; }
+.nav a .promo-badge { margin-left: auto; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: .5px; color: #fff; background: linear-gradient(135deg, #ff5f6d, #ff9a3d); box-shadow: 0 0 10px rgba(255, 110, 70, .7); }
+@keyframes promoGlow { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 160, 80, .35), 0 0 10px -4px rgba(255, 140, 60, .5); } 50% { box-shadow: inset 0 0 0 1px rgba(255, 190, 110, .8), 0 0 22px -2px rgba(255, 140, 60, .9); } }
+html.reduce-motion .nav a.promo-on, html.reduce-motion .nav a.promo-on svg { animation: none !important; }

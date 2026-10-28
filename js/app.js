@@ -71,6 +71,7 @@
     filter: '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
     trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
     activity: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+    fire: '<path d="M12 22c4 0 7-2.7 7-6.8 0-3.6-2.4-6-4.3-8.2-.4 2.2-1.5 3.6-2.9 4.3C12 8 10.8 4.8 8.5 2.5 8.6 6.2 5 8.9 5 14.6 5 19 8 22 12 22z"/><path d="M12 22c-1.7 0-3-1.3-3-3.1 0-2 1.6-3 2.4-4.6.9 1.4 3.6 2.6 3.6 4.7 0 1.7-1.3 3-3 3z"/>',
     bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     download: '<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>',
     upload: '<path d="M12 20V9M7 14l5-5 5 5M4 4h16"/>',
@@ -402,13 +403,20 @@
     { id: 'order', href: 'dat-hang.html', label: 'Đặt hàng', icon: 'cart', cart: true },
     { id: 'member', href: 'thanh-vien.html', label: 'Thành viên', icon: 'user' },
     { id: 'wheel', href: 'vong-quay.html', label: 'Vòng quay may mắn', icon: 'gift' },
+    { id: 'promo', href: 'khuyen-mai.html', label: 'Khuyến mãi', icon: 'fire', promo: true },
     { id: 'contact', href: 'lien-he.html', label: 'Liên hệ', icon: 'chat' }
   ];
   const TABS = ['home', 'shop', 'learn', 'order', 'member'];
+  // chương trình khuyến mãi đang chạy (máy chủ gửi kèm dữ liệu trang; quản trị nhận đủ danh sách nên lọc lại theo ngày)
+  function promos() {
+    const day = today(), list = (window.API && API.db && API.db.promos) || [];
+    return list.filter(p => p && p.active !== false && (!p.start || p.start <= day) && (!p.end || p.end >= day));
+  }
   function shell() {
     const page = $('#page'); if (!page) return;
     const cur = document.body.dataset.page, u = auth.user();
-    const link = (n, i = 9) => `<a href="${n.href}" style="--i:${i}" class="${n.id === cur ? 'active' : ''}${n.icon === 'gift' ? ' gift-blink' : ''}"${n.id === cur ? ' aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span>${n.cart ? '<span class="badge gold" data-cart-count hidden>0</span>' : ''}</a>`;
+    const promoOn = promos().length > 0;
+    const link = (n, i = 9) => `<a href="${n.href}" style="--i:${i}" class="${n.id === cur ? 'active' : ''}${n.icon === 'gift' ? ' gift-blink' : ''}${n.promo ? (promoOn ? ' promo-on' : ' promo-off') : ''}"${n.id === cur ? ' aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span>${n.promo && promoOn ? '<span class="badge promo-badge">HOT</span>' : ''}${n.cart ? '<span class="badge gold" data-cart-count hidden>0</span>' : ''}</a>`;
     const app = document.createElement('div'); app.className = 'app';
     try { if (localStorage.getItem('psq_side_pin') === '1') app.classList.add('side-pinned'); } catch (e) {}
     app.innerHTML = `
@@ -607,7 +615,7 @@
     };
   })();
 
-  window.PSQ = { refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {
