@@ -18,10 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028l">
-<script src="js/lang.js?v=20261028l"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028m">
+<script src="js/lang.js?v=20261028m"></script>
 <link rel="stylesheet" href="css/intro.css">
-<script src="js/intro.js?v=20261028l"></script>
+<script src="js/intro.js?v=20261028m"></script>
 </head>
 <body data-page="home">
 <div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
@@ -98,18 +98,18 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261028l"></script>
-<script src="js/api.js?v=20261028l"></script>
-<script src="js/data.js?v=20261028l"></script>
-<script src="js/app.js?v=20261028l"></script>
-<script src="js/psq-data.js?v=20261028l"></script>
+<script src="js/patch.js?v=20261028m"></script>
+<script src="js/api.js?v=20261028m"></script>
+<script src="js/data.js?v=20261028m"></script>
+<script src="js/app.js?v=20261028m"></script>
+<script src="js/psq-data.js?v=20261028m"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, productCard, area, modal } = PSQ;
   const ico = ['', 'gold', 'violet', 'green'];
   $('#stats').innerHTML = STATS.map((s, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat reveal"><div class="stat-top"><span class="stat-ico ${ico[i]}">${icon(s.icon)}</span>${esc(s.label)}</div><div class="stat-val">${esc(s.value)}</div></div>`).join('');
   $('#cats').innerHTML = CATEGORIES.map((c, i) => {
-    const n = PRODUCTS.filter(p => p.cat === c.id).length, p = PRODUCTS.find(x => x.cat === c.id);
+    const n = PSQ.shopList().filter(p => p.cat === c.id).length, p = PSQ.shopList().find(x => x.cat === c.id);
     return `<a class="card ${['glow-cyan', 'glow-gold', 'glow-mix'][i % 3]} cat-item" href="san-pham.html?cat=${c.id}"><div class="p-img">${p ? PSQ.art(p) : ''}<span class="cat-go">Xem sản phẩm ${icon('arrow')}</span></div><div class="cat-name"><h3>${esc(c.name)}</h3><span>${n} sản phẩm</span></div></a>`;
   }).join('');
   // nút trượt chỉ hiện khi danh mục nhiều hơn số ô nhìn thấy
@@ -180,7 +180,7 @@
       dlRow.scrollBy({ left: dir * w, behavior: 'smooth' });
     });
   }
-  $('#best').innerHTML = [...PRODUCTS].sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0)).slice(0, 8).map(productCard).join('');
+  $('#best').innerHTML = PSQ.shopList().sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0)).slice(0, 8).map(productCard).join('');
   const months = ['T11', 'T12', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10'];
   const draw = () => area($('#journey'), { labels: months, height: 250, mark: 9, fmt: v => Math.round(v).toLocaleString('vi-VN'),
     series: [{ name: 'Khách mới', color: '#f3c76b', dots: true, values: [320, 380, 360, 470, 450, 560, 520, 610, 640, 780, 700, 760] },

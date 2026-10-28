@@ -162,6 +162,9 @@
 
   /* ---------- giỏ hàng ---------- */
   const product = id => PRODUCTS.find(p => p.id === id);
+  // giá tính thưởng (PS): chưa đặt thì bằng giá bán. Hàng đối tác nằm ở trang riêng.
+  const psOf = p => (p && p.ps != null && p.ps !== '' && +p.ps >= 0) ? Math.round(+p.ps) : (p ? p.price : 0);
+  const shopList = partner => PRODUCTS.filter(p => !!p.partner === !!partner);
   // tồn kho do quản trị cập nhật (Kho): null là chưa quản lý tồn kho, coi như còn hàng
   let stockC = null;
   const stockMap = () => stockC || (setTimeout(() => { stockC = null; }), stockC = (API.db || {}).stock || {});
@@ -403,6 +406,7 @@
     { id: 'home', href: 'index.html', label: 'Trang chủ', icon: 'home' },
     { id: 'about', href: 'gioi-thieu.html', label: 'Giới thiệu', icon: 'info' },
     { id: 'shop', href: 'san-pham.html', label: 'Sản phẩm', icon: 'bag' },
+    { id: 'partner', href: 'doi-tac.html', label: 'Sản phẩm đối tác', icon: 'award' },
     { id: 'learn', href: 'kien-thuc.html', label: 'Kiến thức trầm', icon: 'book' },
     { id: 'order', href: 'dat-hang.html', label: 'Đặt hàng', icon: 'cart', cart: true },
     { id: 'member', href: 'thanh-vien.html', label: 'Thành viên', icon: 'user' },
@@ -631,7 +635,7 @@
     return `<article class="card p-card${out ? ' sold-out' : ''}">
       <a class="p-img" href="san-pham-chi-tiet.html?id=${p.id}">${art(p)}${out ? '<span class="badge failed tag">Hết hàng</span>' : p.old ? `<span class="badge gold tag">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : p.hot ? '<span class="badge violet tag">Bán chạy</span>' : ''}</a>
       <div class="p-body"><h3><a href="san-pham-chi-tiet.html?id=${p.id}">${esc(p.name)}</a></h3>
-        <div class="row" style="gap:8px;flex-wrap:wrap"><span class="p-price">${money(p.price)}</span>${p.old ? `<s class="dim" style="font-size:12px">${money(p.old)}</s>` : ''}</div>
+        <div class="row" style="gap:8px;flex-wrap:wrap"><span class="p-price">${money(p.price)}</span>${p.old ? `<s class="dim" style="font-size:12px">${money(p.old)}</s>` : ''}</div>${API.me ? `<small class="p-ps">Giá tính thưởng <b>${money(psOf(p)).replace('đ', ' PS')}</b></small>` : ''}${p.partner && p.partnerName ? `<small class="dim">Đối tác: ${esc(p.partnerName)}</small>` : ''}
 </div>
       <div class="p-actions">${out ? `<button class="btn btn-ghost btn-sm" type="button" disabled>Hết hàng</button>` : `<button class="btn btn-outline-gold btn-sm" type="button" data-add="${p.id}">${icon('cart')} Thêm</button><button class="btn btn-gold btn-sm" type="button" data-add="${p.id}" data-go="1">Mua ngay</button>`}</div>
     </article>`;
@@ -661,7 +665,7 @@
     };
   })();
 
-  window.PSQ = { guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {

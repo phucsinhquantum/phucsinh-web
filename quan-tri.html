@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028l">
-<script src="js/lang.js?v=20261028l"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028m">
+<script src="js/lang.js?v=20261028m"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -182,27 +182,27 @@
   </div>
 </div>
 
-<script src="js/patch.js?v=20261028l"></script>
-<script src="js/api.js?v=20261028l"></script>
-<script src="js/data.js?v=20261028l"></script>
-<script src="js/app.js?v=20261028l"></script>
-<script src="js/psq-data.js?v=20261028l"></script>
+<script src="js/patch.js?v=20261028m"></script>
+<script src="js/api.js?v=20261028m"></script>
+<script src="js/data.js?v=20261028m"></script>
+<script src="js/app.js?v=20261028m"></script>
+<script src="js/psq-data.js?v=20261028m"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261028l"></script>
-<script src="js/admin/nguoi-dung.js?v=20261028l"></script>
-<script src="js/admin/noi-dung.js?v=20261028l"></script>
-<script src="js/admin/kho.js?v=20261028l"></script>
-<script src="js/admin/tai-chinh.js?v=20261028l"></script>
-<script src="js/admin/he-thong.js?v=20261028l"></script>
-<script src="js/admin/vong-quay.js?v=20261028l"></script>
-<script src="js/admin/chao-mung.js?v=20261028l"></script>
-<script src="js/admin/khuyen-mai.js?v=20261028l"></script>
-<script src="js/admin/quy-diem.js?v=20261028l"></script>
-<script src="js/admin/gioi-thieu.js?v=20261028l"></script>
-<script src="js/admin/dai-ly.js?v=20261028l"></script>
-<script src="js/admin/danh-gia.js?v=20261028l"></script>
-<script src="js/admin/dieu-khoan.js?v=20261028l"></script>
-<script src="js/admin/quyen-loi.js?v=20261028l"></script>
+<script src="js/admin/pha-he.js?v=20261028m"></script>
+<script src="js/admin/nguoi-dung.js?v=20261028m"></script>
+<script src="js/admin/noi-dung.js?v=20261028m"></script>
+<script src="js/admin/kho.js?v=20261028m"></script>
+<script src="js/admin/tai-chinh.js?v=20261028m"></script>
+<script src="js/admin/he-thong.js?v=20261028m"></script>
+<script src="js/admin/vong-quay.js?v=20261028m"></script>
+<script src="js/admin/chao-mung.js?v=20261028m"></script>
+<script src="js/admin/khuyen-mai.js?v=20261028m"></script>
+<script src="js/admin/quy-diem.js?v=20261028m"></script>
+<script src="js/admin/gioi-thieu.js?v=20261028m"></script>
+<script src="js/admin/dai-ly.js?v=20261028m"></script>
+<script src="js/admin/danh-gia.js?v=20261028m"></script>
+<script src="js/admin/dieu-khoan.js?v=20261028m"></script>
+<script src="js/admin/quyen-loi.js?v=20261028m"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -449,7 +449,7 @@
     const sold = {}; d.orders.filter(o => o.status !== 'failed').forEach(o => o.items.forEach(it => { sold[it.id] = sold[it.id] || { n: 0, v: 0 }; sold[it.id].n += it.qty; sold[it.id].v += it.qty * it.price; }));
     const list = PRODUCTS.filter(p => !q || p.name.toLowerCase().includes(q));
     $('#pcount').textContent = list.length + ' sản phẩm';
-    $('#plist').innerHTML = list.map(p => `<tr><td><div class="who"><span class="thumb">${art(p)}</span><div><b>${esc(p.name)}</b><small>${p.id}</small></div></div></td><td>${esc(catName(p.cat))}</td><td class="gold nowrap">${money(p.price)}</td><td>${(sold[p.id] || {}).n || 0}</td><td class="nowrap">${money((sold[p.id] || {}).v || 0)}</td>
+    $('#plist').innerHTML = list.map(p => `<tr><td><div class="who"><span class="thumb">${art(p)}</span><div><b>${esc(p.name)}</b><small>${p.id}</small></div></div></td><td>${esc(catName(p.cat))}</td><td class="gold nowrap">${money(p.price)}${p.ps != null && p.ps !== '' && +p.ps !== p.price ? `<br><small class="muted">Tính thưởng ${money(ADB.psOf(p)).replace('đ', ' PS')}</small>` : ''}${p.partner ? `<br><span class="badge">Đối tác${p.partnerName ? ': ' + esc(p.partnerName) : ''}</span>` : ''}</td><td>${(sold[p.id] || {}).n || 0}</td><td class="nowrap">${money((sold[p.id] || {}).v || 0)}</td>
       <td class="nowrap"><button class="btn btn-sm" type="button" data-edit="${p.id}">Sửa</button> <button class="btn btn-sm btn-ghost" type="button" data-hide="${p.id}" aria-label="Ẩn">${icon('trash')}</button></td></tr>`).join('');
   }
   $('#pq').addEventListener('input', productsPane);
@@ -460,16 +460,21 @@
         <div class="field full"><label>Tên sản phẩm</label><input class="input" name="name" value="${esc(p.name)}" required></div>
         <div class="field"><label>Danh mục</label><select class="input" name="cat">${CATEGORIES.map(c => `<option value="${c.id}"${c.id === p.cat ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
         <div class="field"><label>Giá bán (đồng)</label><input class="input" name="price" type="number" min="0" step="1000" value="${p.price}" required></div>
+        <div class="field"><label>Giá tính thưởng (PS)</label><input class="input" name="ps" type="number" min="0" step="1000" value="${p.ps ?? ''}" placeholder="để trống = bằng giá bán"><small class="muted">Hoa hồng CTV, đại lý tính trên số PS này. Nhập 0 nếu không trả hoa hồng.</small></div>
         <div class="field"><label>Giá cũ (để trống nếu không giảm)</label><input class="input" name="old" type="number" min="0" step="1000" value="${p.old || ''}"></div>
         <div class="field"><label>Hình vẽ mẫu</label><select class="input" name="art">${['bracelet', 'mala', 'necklace', 'statue', 'car', 'cone', 'box'].map(a => `<option${a === p.art ? ' selected' : ''}>${a}</option>`).join('')}</select></div>
         <div class="field full"><label>Đường dẫn ảnh thật (img/san-pham/...)</label><input class="input" name="image" value="${esc(p.image || '')}" placeholder="để trống sẽ dùng hình vẽ"></div>
         <div class="field full"><label>Mô tả</label><textarea class="input" name="desc">${esc(p.desc || '')}</textarea></div>
         <label class="check full"><input type="checkbox" name="hot"${p.hot ? ' checked' : ''}> Hiện trong mục bán chạy</label>
+        <label class="check"><input type="checkbox" name="partner"${p.partner ? ' checked' : ''}> Sản phẩm đối tác (hiện ở mục Sản phẩm đối tác)</label>
+        <div class="field"><label>Tên đối tác</label><input class="input" name="partnerName" value="${esc(p.partnerName || '')}" placeholder="ví dụ: Công ty ABC"></div>
       </div>
       <div class="row mt-3" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu</button></div></form>`);
     $('#pf', m.el).addEventListener('submit', e => {
       e.preventDefault(); const f = new FormData(e.target);
-      const np = { ...p, name: f.get('name').trim(), cat: f.get('cat'), price: +f.get('price'), old: +f.get('old') || undefined, art: f.get('art'), image: f.get('image').trim(), desc: f.get('desc'), hot: !!f.get('hot') };
+      const np = { ...p, name: f.get('name').trim(), cat: f.get('cat'), price: +f.get('price'), old: +f.get('old') || undefined, art: f.get('art'), image: f.get('image').trim(), desc: f.get('desc'), hot: !!f.get('hot'), partner: !!f.get('partner') || undefined, partnerName: f.get('partnerName').trim() || undefined };
+      const psv = String(f.get('ps') ?? '').trim(); if (psv === '') delete np.ps; else np.ps = Math.max(0, Math.round(+psv) || 0);
+      if (!np.partner) { delete np.partner; delete np.partnerName; }
       if (isNew) np.id = np.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36).slice(-4);
       PSQ.products.save(np);
       const i = PRODUCTS.findIndex(x => x.id === np.id); i >= 0 ? PRODUCTS[i] = np : PRODUCTS.push(np);

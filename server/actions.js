@@ -295,7 +295,7 @@ const ACTIONS = {
       if (!p || p.id === A.PKG_ID || p.id === A.AGENT_PKG_ID || p.active === false) return err('Có sản phẩm không còn bán, anh chị tải lại trang giúp em.');
       if (qty < 1 || qty > 999) return err('Số lượng chưa đúng.');
       const st = A.stockOf(d, p.id); if (st !== null && qty > st) return err(st ? `${p.name} chỉ còn ${st} trong kho, anh chị giảm số lượng giúp em.` : `${p.name} đã hết hàng, anh chị bỏ sản phẩm này khỏi giỏ.`);
-      const f = items.find(i => i.id === p.id); if (f) f.qty += qty; else items.push({ id: p.id, name: p.name, price: p.price, qty });
+      const f = items.find(i => i.id === p.id); if (f) f.qty += qty; else items.push(Object.assign({ id: p.id, name: p.name, price: p.price, qty }, p.ps != null && p.ps !== '' ? { ps: A.psOf(p) } : {}));
     }
     if (!items.length) return err('Giỏ hàng đang trống.');
     const name = str(info.name, 80), phone = normPhone(info.phone), email = str(info.email, 120), address = str(info.address, 300), pay = info.pay === 'wallet' ? 'wallet' : 'bank';

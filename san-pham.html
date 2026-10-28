@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028l">
-<script src="js/lang.js?v=20261028l"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028m">
+<script src="js/lang.js?v=20261028m"></script>
 <style>
   .shop-hero { min-height: 240px; }
   .shop-hero h1 { max-width: 16ch; }
@@ -85,20 +85,21 @@
   <section class="p-grid" id="grid" aria-live="polite"></section>
 </div>
 
-<script src="js/patch.js?v=20261028l"></script>
-<script src="js/api.js?v=20261028l"></script>
-<script src="js/data.js?v=20261028l"></script>
-<script src="js/app.js?v=20261028l"></script>
+<script src="js/patch.js?v=20261028m"></script>
+<script src="js/api.js?v=20261028m"></script>
+<script src="js/data.js?v=20261028m"></script>
+<script src="js/app.js?v=20261028m"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, productCard, qs } = PSQ;
+  const PARTNER = document.body.dataset.partner === '1', LIST = PSQ.shopList(PARTNER);
   const st = { cat: CATEGORIES.some(c => c.id === qs('cat')) ? qs('cat') : '', q: qs('q') || '', price: '', sort: 'hot' };
   const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
   $('#fq').value = st.q;
 
-  const chips = [{ id: '', name: 'Tất cả' }, ...CATEGORIES];
+  const chips = [{ id: '', name: 'Tất cả' }, ...CATEGORIES.filter(c => !PARTNER || LIST.some(p => p.cat === c.id))];
   $('#fcats').innerHTML = chips.map(c => {
-    const n = c.id ? PRODUCTS.filter(p => p.cat === c.id).length : PRODUCTS.length;
+    const n = c.id ? LIST.filter(p => p.cat === c.id).length : LIST.length;
     return `<button class="chip" type="button" role="tab" data-cat="${c.id}">${c.icon ? icon(c.icon) : icon('grid')}${esc(c.name)} <small>${n}</small></button>`;
   }).join('');
   $$('#fcats .chip svg').forEach(s => { s.style.width = '15px'; s.style.height = '15px'; });
@@ -114,7 +115,7 @@
     $$('#fcats .chip').forEach(b => { const on = b.dataset.cat === st.cat; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     const q = norm(st.q.trim());
     const [lo, hi] = st.price ? st.price.split('-').map(v => v === '' ? Infinity : +v) : [0, Infinity];
-    let list = PRODUCTS.filter(p => (!st.cat || p.cat === st.cat)
+    let list = LIST.filter(p => (!st.cat || p.cat === st.cat)
       && (!q || norm(p.name + ' ' + p.desc + ' ' + (CATEGORIES.find(c => c.id === p.cat) || {}).name).includes(q))
       && p.price >= (lo || 0) && p.price < hi);
     const by = { hot: (a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0), asc: (a, b) => a.price - b.price, desc: (a, b) => b.price - a.price, name: (a, b) => a.name.localeCompare(b.name, 'vi') };
@@ -123,7 +124,7 @@
     $('#count').innerHTML = `Hiển thị <b>${list.length}</b> sản phẩm${cat ? ' trong ' + esc(cat.name) : ''}${st.q ? ` cho từ khóa “${esc(st.q)}”` : ''}`;
     $('#reset').hidden = !(st.cat || st.q || st.price || st.sort !== 'hot');
     $('#grid').innerHTML = list.length ? list.map(productCard).join('')
-      : `<div class="card shop-empty empty">${icon('search')}<div style="font-size:16px;color:var(--text)">Chưa tìm thấy sản phẩm phù hợp</div><p class="mt-1">Anh chị thử từ khóa khác hoặc bỏ bớt bộ lọc nhé.</p><div class="mt-2"><button class="btn btn-outline-gold btn-sm" type="button" data-reset>Xem tất cả sản phẩm</button></div></div>`;
+      : `<div class="card shop-empty empty">${icon('search')}<div style="font-size:16px;color:var(--text)">${PARTNER && !LIST.length ? 'Sản phẩm đối tác đang được cập nhật' : 'Chưa tìm thấy sản phẩm phù hợp'}</div><p class="mt-1">${PARTNER && !LIST.length ? 'Anh chị quay lại sau hoặc xem các sản phẩm của Phúc Sinh QuanTum nhé.' : 'Anh chị thử từ khóa khác hoặc bỏ bớt bộ lọc nhé.'}</p><div class="mt-2">${PARTNER && !LIST.length ? '<a class="btn btn-outline-gold btn-sm" href="san-pham.html">Xem sản phẩm Phúc Sinh</a>' : '<button class="btn btn-outline-gold btn-sm" type="button" data-reset>Xem tất cả sản phẩm</button>'}</div></div>`;
     syncUrl();
   }
   function reset() { Object.assign(st, { cat: '', q: '', price: '', sort: 'hot' }); $('#fq').value = ''; $('#fprice').value = ''; $('#fsort').value = 'hot'; render(); }

@@ -122,6 +122,24 @@ async function flow() {
     const wantOv = Math.round(want * plan.overrideRate / 100);
     ok(aOv && aOv.amount === wantOv && aOv.status === 'paid', `A (đại lý) nhận ${plan.overrideRate}% thu nhập của B = ${wantOv}đ` + (aOv ? ` (thực tế ${aOv.amount}, ${aOv.status})` : ''));
 
+    // giá tính thưởng (PS) riêng cho hàng đối tác: hoa hồng tính trên PS, đơn giữ PS lúc đặt
+    {
+      const Q = { id: 'kt-doi-tac', cat: P.cat, name: 'Hàng đối tác thử', price: 10000000, ps: 8000000, partner: true, partnerName: 'Đối tác thử', art: 'box' };
+      ok(!(await owner.req('POST', '/api/admin/content', { key: 'psq_products_v1', value: { edits: [Q], hidden: [] } })).json.error, 'quản trị thêm hàng đối tác 10.000.000đ tính 8.000.000 PS');
+      n0 = s.log().length;
+      const oq = await C.c.act('placeOrder', { items: [{ id: Q.id, qty: 1 }], info: Object.assign({}, info, { name: 'Khách C', phone: '0987654321' }) });
+      const oqId = ((oq.result || {}).order || {}).id;
+      ok(!oq.error && oqId, 'C đặt hàng đối tác' + (oq.error ? ': ' + oq.error : ''));
+      await confirm(s, owner, n0, 'đơn hàng đối tác của C', C.c, oqId);
+      await owner.req('POST', '/api/admin/content', { key: 'psq_products_v1', value: { edits: [Object.assign({}, Q, { ps: 1000000 })], hidden: [] } });
+      db = (await owner.req('GET', '/api/admin/db')).json.db;
+      const oqo = db.orders.find(o => o.id === oqId) || {}, bq = com(B.r.me.id, 'direct').find(c => c.order === oqId), aq = com(A.r.me.id, 'override').find(c => c.order === oqId);
+      ok((oqo.items || [])[0] && oqo.items[0].ps === 8000000 && oqo.total >= 10000000, 'đơn ghi lại 8.000.000 PS lúc đặt, khách trả 10.000.000đ');
+      ok(bq && bq.amount === 800000, 'CTV B nhận 10% của 8.000.000 PS = 800.000đ' + (bq ? ` (thực tế ${bq.amount})` : ''));
+      ok(aq && aq.amount === 320000, 'đại lý A nhận 40% của 800.000đ = 320.000đ' + (aq ? ` (thực tế ${aq.amount})` : ''));
+      await owner.req('POST', '/api/admin/content', { key: 'psq_products_v1', value: null });
+    }
+
     // khách lẻ bấm link của B rồi đặt hàng không tài khoản: tính cho B; lần sau vào link của A vẫn tính cho B
     const guestInfo = { name: 'Khách lẻ thử', phone: '0909111222', address: '2 Đường Thử, Quận 3', pay: 'bank' };
     n0 = s.log().length;

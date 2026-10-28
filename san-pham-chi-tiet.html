@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028l">
-<script src="js/lang.js?v=20261028l"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028m">
+<script src="js/lang.js?v=20261028m"></script>
 <style>
   .topbar > div:nth-child(2) { min-width: 0; }
   .topbar h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -101,10 +101,10 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261028l"></script>
-<script src="js/api.js?v=20261028l"></script>
-<script src="js/data.js?v=20261028l"></script>
-<script src="js/app.js?v=20261028l"></script>
+<script src="js/patch.js?v=20261028m"></script>
+<script src="js/api.js?v=20261028m"></script>
+<script src="js/data.js?v=20261028m"></script>
+<script src="js/app.js?v=20261028m"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, productCard, qs, cart, toast } = PSQ;
@@ -115,7 +115,7 @@
   if (!p) {
     view.innerHTML = `<section class="card glow-gold empty reveal">${icon('search')}<h2 class="display" style="font-size:30px;color:var(--text)">Không tìm thấy sản phẩm</h2><p class="mt-1">Sản phẩm có thể đã ngừng bán hoặc đường dẫn chưa đúng.</p><div class="row mt-3" style="justify-content:center;flex-wrap:wrap"><a class="btn btn-gold" href="san-pham.html">Xem tất cả sản phẩm</a><a class="btn btn-ghost" href="lien-he.html">Liên hệ tư vấn</a></div></section>
       <div class="section-title"><div><span class="eyebrow">Gợi ý cho anh chị</span><h2>Sản phẩm nổi bật</h2></div></div>
-      <section class="p-grid">${PRODUCTS.filter(x => x.hot).slice(0, 4).map(productCard).join('')}</section>`;
+      <section class="p-grid">${PSQ.shopList().filter(x => x.hot).slice(0, 4).map(productCard).join('')}</section>`;
     $('.topbar h1').textContent = 'Không tìm thấy sản phẩm';
     PSQ.reveal(); return;
   }
@@ -142,7 +142,7 @@
         <div class="row wrap" style="gap:8px"><a class="badge ship" href="san-pham.html?cat=${p.cat}">${esc(cat.name)}</a>${p.hot ? '<span class="badge violet">Bán chạy</span>' : ''}${out ? '<span class="badge failed">Hết hàng</span>' : '<span class="badge ok">Còn hàng</span>'}</div>
         <h2 class="display">${esc(p.name)}</h2>
         <div class="price-row"><span class="now">${money(p.price)}</span>${p.old ? `<s class="dim">${money(p.old)}</s><span class="badge gold">Tiết kiệm ${money(p.old - p.price)}</span>` : ''}</div>
-        <div class="pts">${icon('sparkle')}<span>Thanh toán bằng ví điểm hoặc chuyển khoản. Đơn của thành viên được cộng <b id="ptsVal">${money(p.price)}</b> vào doanh số mua hàng để lên Đại lý.</span></div>
+        <div class="pts">${icon('sparkle')}<span>Thanh toán bằng ví điểm hoặc chuyển khoản. Đơn của thành viên được cộng <b id="ptsVal">${money(PSQ.psOf(p)).replace('đ', ' PS')}</b> vào doanh số mua hàng để lên Đại lý.</span></div>${p.partner ? `<div class="pts">${icon('award')}<span>Sản phẩm đối tác${p.partnerName ? ': <b>' + esc(p.partnerName) + '</b>' : ''}</span></div>` : ''}
         <p class="muted">${esc(p.desc)}</p>
         <div class="divider" style="margin:2px 0"></div>
         <div class="buy">
@@ -191,7 +191,7 @@
     <div class="section-title"><div><span class="eyebrow">Có thể anh chị thích</span><h2>Sản phẩm liên quan</h2></div><a class="card-link" href="san-pham.html?cat=${p.cat}">Xem thêm</a></div>
     <section class="p-grid" id="related"></section>`;
 
-  const others = PRODUCTS.filter(x => x.id !== p.id);
+  const others = PSQ.shopList(p.partner).filter(x => x.id !== p.id);
   const related = [...others.filter(x => x.cat === p.cat), ...others.filter(x => x.cat !== p.cat).sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0))].slice(0, 4);
   $('#related').innerHTML = related.map(productCard).join('');
 
@@ -203,7 +203,7 @@
   // số lượng
   const qi = $('#qty');
   const getQ = () => Math.max(1, Math.min(99, parseInt(qi.value, 10) || 1));
-  const upd = () => { $('#ptsVal').textContent = money(p.price * getQ()); };
+  const upd = () => { $('#ptsVal').textContent = money(PSQ.psOf(p) * getQ()).replace('đ', ' PS'); };
   $$('[data-step]').forEach(b => b.addEventListener('click', () => { qi.value = Math.max(1, Math.min(99, getQ() + +b.dataset.step)); upd(); }));
   qi.addEventListener('input', upd); qi.addEventListener('blur', () => { qi.value = getQ(); upd(); });
   $('#addBtn').addEventListener('click', () => { if (cart.add(p.id, getQ())) toast(`Đã thêm ${getQ()} sản phẩm vào giỏ`); });
