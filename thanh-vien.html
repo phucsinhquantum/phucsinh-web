@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028h">
-<script src="js/lang.js?v=20261028h"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028i">
+<script src="js/lang.js?v=20261028i"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -240,11 +240,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261028h"></script>
-<script src="js/api.js?v=20261028h"></script>
-<script src="js/data.js?v=20261028h"></script>
-<script src="js/app.js?v=20261028h"></script>
-<script src="js/psq-data.js?v=20261028h"></script>
+<script src="js/patch.js?v=20261028i"></script>
+<script src="js/api.js?v=20261028i"></script>
+<script src="js/data.js?v=20261028i"></script>
+<script src="js/app.js?v=20261028i"></script>
+<script src="js/psq-data.js?v=20261028i"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -579,19 +579,23 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   }
 
   /* ---------- ĐƠN HÀNG ---------- */
+  // đơn còn phải chuyển khoản (gói hoặc đơn hàng trả bằng chuyển khoản), chưa được công ty duyệt
+  const due = o => Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0) - (o.availPaid || 0));
+  const needPay = o => o.status === 'pending' && due(o) > 0 && (anyPkg(o) || o.pay === 'bank');
   function pOrders(box, d, me) {
     const O = d.orders.filter(o => o.userId === me.id).sort((a, b) => (b.date || '').localeCompare(a.date || '') || String(b.id).localeCompare(String(a.id)));
     box.innerHTML = ph('Đơn hàng của tôi', O.length + ' đơn') + `<div class="card glow-cyan">${head('Danh sách đơn', 'bấm vào một đơn để xem chi tiết', `<a class="btn btn-sm btn-gold" href="san-pham.html">${icon('bag')} Mua thêm</a>`)}
       ${O.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Mã đơn</th><th>Sản phẩm</th><th>Tổng</th><th>Thanh toán</th><th>Trạng thái</th><th>Ngày</th></tr></thead><tbody>
-        ${O.map(o => `<tr data-o="${esc(o.id)}" style="cursor:pointer"><td><b>#${esc(o.id)}</b></td><td class="dim">${(o.items || []).map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="gold nowrap">${money(o.total)}</td><td class="nowrap" style="font-size:13px">${esc(PAYN[o.pay] || o.pay || '')}${o.shopPaid ? `<br><span class="green">Điểm mua hàng ${ps(o.shopPaid)}</span>` : ''}${o.cashPaid ? `<br><span class="cyan">Ví tiền mặt ${money(o.cashPaid)}</span>` : ''}</td><td>${statusBadge(o.status)}</td><td class="dim nowrap">${fdate(o.date)}</td></tr>`).join('')}
+        ${O.map(o => `<tr data-o="${esc(o.id)}" style="cursor:pointer"><td><b>#${esc(o.id)}</b></td><td class="dim">${(o.items || []).map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="gold nowrap">${money(o.total)}</td><td class="nowrap" style="font-size:13px">${esc(PAYN[o.pay] || o.pay || '')}${o.shopPaid ? `<br><span class="green">Điểm mua hàng ${ps(o.shopPaid)}</span>` : ''}${o.cashPaid ? `<br><span class="cyan">Ví tiền mặt ${money(o.cashPaid)}</span>` : ''}</td><td>${needPay(o) ? `<span class="badge pending">Chờ thanh toán</span><br><button class="btn btn-sm btn-gold mt-1 nowrap" type="button" data-pay="${esc(o.id)}">${icon('upload')} ${(o.bills || []).length ? 'Gửi lại bill' : 'Thanh toán / gửi bill'}</button>` : statusBadge(o.status)}</td><td class="dim nowrap">${fdate(o.date)}</td></tr>`).join('')}
       </tbody></table></div>` : `<div class="empty">${icon('bag')}Chưa có đơn hàng.<div class="mt-2"><a class="btn btn-gold btn-sm" href="san-pham.html">Chọn sản phẩm</a></div></div>`}</div>`;
-    box.querySelectorAll('[data-o]').forEach(r => r.addEventListener('click', () => {
-      const o = O.find(x => x.id === r.dataset.o);
-      modal(`<div class="card-head"><h3>Đơn #${esc(o.id)}</h3>${statusBadge(o.status)}<button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+    box.querySelectorAll('[data-o]').forEach(r => r.addEventListener('click', e => {
+      const o = O.find(x => x.id === r.dataset.o), pay = needPay(o); if (pay && e.target.closest('[data-pay]') && !(o.bills || []).length) openBill = true;
+      const md = modal(`<div class="card-head"><h3>Đơn #${esc(o.id)}</h3>${pay && !(o.bills || []).length ? '<span class="badge pending">Chờ thanh toán</span>' : statusBadge(o.status)}<button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
         ${(o.items || []).map(x => `<div class="row between" style="padding:6px 0;gap:10px"><span>${esc(x.name)} x${x.qty}</span><b class="nowrap">${money(x.price * x.qty)}</b></div>`).join('')}
         <div class="divider"></div>${o.shopPaid ? `<div class="row between"><span class="muted">Trả bằng ví điểm mua hàng</span><b class="green">${ps(o.shopPaid)}</b></div>` : ''}${o.cashPaid ? `<div class="row between"><span class="muted">Trả bằng ví tiền mặt</span><b class="cyan">${money(o.cashPaid)}</b></div>` : ''}<div class="row between mt-1"><span class="muted">Tổng</span><b class="gold">${money(o.total)}</b></div>
         <p class="dim mt-2" style="font-size:13px">Ngày đặt ${fdate(o.date)} · ${esc(PAYN[o.pay] || o.pay || '')}</p>
-        ${anyPkg(o) && o.status === 'pending' ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(o.total, o.id)}</div>` : ''}`);
+        ${pay ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due(o), o.id)}</div>${waitBox(o)}` : ''}`);
+      if (pay) billWait('order', o, () => { md.close(); render(); }, 'Đã nhận thanh toán đơn ' + o.id, 'Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.');
     }));
   }
 

@@ -21,8 +21,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028h">
-<script src="js/lang.js?v=20261028h"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028i">
+<script src="js/lang.js?v=20261028i"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -87,6 +87,24 @@
   .success .ok-ico { width: 76px; height: 76px; margin: 0 auto 18px; border-radius: 50%; display: grid; place-items: center; color: var(--green); background: rgba(69, 224, 143, .1); border: 1px solid rgba(69, 224, 143, .45); box-shadow: 0 0 40px -6px rgba(69, 224, 143, .5); }
   .success .ok-ico svg { width: 34px; height: 34px; }
   .success .oid { font-family: var(--display); font-size: clamp(34px, 4vw, 48px); color: var(--gold); letter-spacing: .04em; line-height: 1.1; }
+  .success.unpaid .ok-ico { color: #ffb44d; background: rgba(255,180,77,.1); border-color: rgba(255,180,77,.5); box-shadow: 0 0 40px -6px rgba(255,180,77,.55); }
+  .success.unpaid .eyebrow { color: #ffb44d; }
+  .unpaid-alert { max-width: 560px; margin: 18px auto 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 16px; border-radius: 16px; text-align: left; border: 1px solid rgba(255,140,60,.6); background: linear-gradient(135deg, rgba(255,120,50,.18), rgba(255,180,77,.1)); animation: ua-pulse 2.2s ease-in-out infinite; }
+  .unpaid-alert > div { flex: 1 1 240px; min-width: 0; }
+  .unpaid-alert b { display: block; font-size: 16px; color: #ffb44d; }
+  .unpaid-alert small { display: block; font-size: 13.5px; color: var(--text-2); margin-top: 3px; }
+  .unpaid-alert .ua-ico { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #ff9a3d; color: #1a0f05; }
+  .unpaid-alert .ua-ico .i { width: 22px; height: 22px; stroke-width: 2.4; }
+  .unpaid-alert #goPay { flex: none; } .unpaid-alert #goPay .i { transform: rotate(90deg); }
+  .unpaid-alert.sent { animation: none; border-color: rgba(69,224,143,.55); background: rgba(69,224,143,.1); } .unpaid-alert.sent b { color: var(--green); } .unpaid-alert.sent .ua-ico { background: var(--green); }
+  @keyframes ua-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,140,60,0); } 50% { box-shadow: 0 0 0 4px rgba(255,140,60,.15), 0 0 26px rgba(255,140,60,.3); } }
+  html.reduce-motion .unpaid-alert { animation: none; }
+  .pay-steps { list-style: none; display: flex; justify-content: center; gap: 6px; margin: 16px auto 0; padding: 0; flex-wrap: wrap; font-size: 13px; color: var(--text-3); }
+  .pay-steps li { display: flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid var(--line); }
+  .pay-steps i { font-style: normal; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.08); font-weight: 700; font-size: 12px; }
+  .pay-steps li.on { color: #f3c76b; border-color: rgba(243,199,107,.6); } .pay-steps li.on i { background: #f3c76b; color: #1a1408; }
+  .pay-steps li.done { color: var(--green); border-color: rgba(69,224,143,.4); } .pay-steps li.done i { background: var(--green); color: #08140d; }
+  @media (max-width: 560px) { .unpaid-alert #goPay { width: 100%; } }
   .success .info { max-width: 520px; margin: 22px auto 0; text-align: left; }
   .success .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 26px; }
   .lookup-res { margin-top: 14px; }
@@ -99,6 +117,7 @@
     /* điện thoại, máy tính bảng: tóm tắt đơn (có ô mã giảm giá) lên trên, bỏ danh sách sản phẩm lặp lại */
     .co-side { display: contents !important; }
     #summary { order: -1; }
+    #summary.done { order: 1; }
     #summary .sum-items, #summary .sum-items + .divider { display: none; }
     .co-side > .card:not(#summary) { order: 2; }
     .co-side { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
@@ -143,11 +162,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261028h"></script>
-<script src="js/api.js?v=20261028h"></script>
-<script src="js/data.js?v=20261028h"></script>
-<script src="js/app.js?v=20261028h"></script>
-<script src="js/psq-data.js?v=20261028h"></script>
+<script src="js/patch.js?v=20261028i"></script>
+<script src="js/api.js?v=20261028i"></script>
+<script src="js/data.js?v=20261028i"></script>
+<script src="js/app.js?v=20261028i"></script>
+<script src="js/psq-data.js?v=20261028i"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -200,6 +219,7 @@
   function renderSummary() {
     const items = placed ? placed.items : cart.items().map(x => { const p = product(x.id); return { id: p.id, name: p.name, price: p.price, qty: x.qty, art: p.art, tone: p.tone }; });
     const sub = items.reduce((s, x) => s + x.price * x.qty, 0), n = items.reduce((s, x) => s + x.qty, 0);
+    $('#summary').classList.toggle('done', !!placed);
     $('#summary').innerHTML = `<div class="card-head"><h3>${placed ? 'Đơn vừa đặt' : 'Tóm tắt đơn hàng'}</h3><span class="badge gold" style="margin-left:auto">${n} sản phẩm</span></div>` +
       (items.length ? `<div class="sum-items">${summaryItems(items)}</div><div class="divider"></div>${placed ? '' : codeBox()}
         <div class="totals">
@@ -336,18 +356,21 @@
   }
   function viewSuccess(o) {
     const sp = o.shopPaid || 0, cp = o.cashPaid || 0, due = Math.max(0, o.total - sp - cp), bank = o.pay === 'bank' && due > 0;
-    return `<div class="card glow-mix success">
-      <div class="ok-ico">${icon('check')}</div>
-      <span class="eyebrow">Đặt hàng thành công</span>
-      <h2 class="display mt-1" style="font-size:clamp(28px,3vw,38px)">Cảm ơn ${esc(o.name)}!</h2>
+    const unpaid = bank && o.status === 'pending';
+    return `<div class="card glow-mix success${unpaid ? ' unpaid' : ''}">
+      <div class="ok-ico">${icon(unpaid ? 'clock' : 'check')}</div>
+      <span class="eyebrow">${unpaid ? 'Đã tạo đơn, chưa thanh toán' : 'Đặt hàng thành công'}</span>
+      <h2 class="display mt-1" style="font-size:clamp(28px,3vw,38px)">${unpaid ? 'Còn 1 bước nữa: thanh toán' : `Cảm ơn ${esc(o.name)}!`}</h2>
       <p class="muted mt-1">Mã đơn hàng của anh chị</p>
       <div class="oid mt-1">${esc(o.id)}</div>
-      <div class="mt-2">${statusBadge(o.status)}</div>
+      <div class="mt-2">${unpaid ? '<span class="badge pending">Chờ thanh toán</span>' : statusBadge(o.status)}</div>
+      ${unpaid ? `<div class="unpaid-alert" id="unpaid" role="alert"><span class="ua-ico">${icon('info')}</span><div><b>Đơn hàng CHƯA thanh toán</b><small>Anh chị kéo xuống, chuyển khoản theo thông tin bên dưới rồi gửi ảnh bill. Công ty nhận bill mới xử lý đơn.</small></div><button class="btn btn-gold" type="button" id="goPay">Thanh toán ngay ${icon('arrow')}</button></div>
+      <ol class="pay-steps"><li class="on"><i>1</i>Chuyển khoản</li><li><i>2</i>Gửi ảnh bill</li><li><i>3</i>Công ty xác nhận</li></ol>` : ''}
       <div class="info">
         <div class="box" style="padding:16px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--line)">
           <dl class="kv"><dt>Tổng đơn hàng</dt><dd><b class="${sp || cp ? '' : 'gold'}" style="font-size:${sp || cp ? 15 : 18}px">${money(o.total)}</b></dd>${sp ? `<dt>Đã dùng điểm</dt><dd class="green">${PS(sp)}</dd>` : ''}${cp ? `<dt>Ví tiền mặt</dt><dd class="cyan">${money(cp)}</dd>` : ''}${sp || cp ? `<dt>Còn phải trả</dt><dd><b class="gold" style="font-size:18px">${money(due)}</b></dd>` : ''}<dt>Giao đến</dt><dd>${esc(o.address)}</dd><dt>Thanh toán</dt><dd>${due === 0 ? (sp && cp ? 'Ví điểm mua hàng và ví tiền mặt' : cp ? 'Ví tiền mặt' : 'Ví điểm mua hàng') : bank ? 'Chuyển khoản ngân hàng' : 'Khi nhận hàng (COD)'}</dd></dl>
         </div>
-        ${bank ? `<div class="bank mt-2"><p style="font-size:14px;margin-bottom:10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Số tiền</dt><dd>${money(due)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due, o.id)}</div>${payWait()}`
+        ${bank ? `<div class="bank mt-2" id="bankBox"><p style="font-size:14px;margin-bottom:10px"><b>${unpaid ? 'Bước 1. ' : ''}Chuyển khoản theo thông tin này</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Số tiền</dt><dd>${money(due)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due, o.id)}</div>${payWait()}`
           : due === 0 ? `<p class="pts-note mt-2">${icon('check')}<span>Đơn đã thanh toán đủ bằng ví. ${sp ? `Ví mua hàng còn <b>${PS(shopBal())}</b>. ` : ''}${cp ? `Ví tiền mặt còn <b>${money(cashBal())}</b>. ` : ''} Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận giao hàng.</span></p>`
           : `<p class="pts-note mt-2">${icon('truck')}<span>Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận. Anh chị kiểm tra hàng rồi thanh toán ${money(due)} khi nhận.</span></p>`}
       </div>
@@ -361,11 +384,19 @@
     PSQ.payWait.start({
       send: bill => API.act('paidClaim', { id: o.id, phone: o.phone, bill }),
       check: () => { const x = API.act('trackOrder', { id: o.id, phone: o.phone }).order; return x && x.status; },
-      paidTitle: 'Đã nhận thanh toán đơn ' + o.id, paidSub: 'Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.',
-      onPaid: st => { const b = $('.success .badge'); if (b) b.outerHTML = statusBadge(st); }
+      paidTitle: 'Đã nhận thanh toán đơn ' + o.id, paidSub: 'Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.', open: true,
+      onSent: () => { billSent = true; paySteps(3); const sc = $('.success'); if (sc) { $('.eyebrow', sc).textContent = 'Đã gửi bill'; $('h2', sc).textContent = 'Chờ công ty xác nhận'; const b = $('.badge', sc); if (b) b.outerHTML = statusBadge('pending'); } const a = $('#unpaid'); if (a) { a.classList.add('sent'); a.innerHTML = `<span class="ua-ico">${icon('check')}</span><div><b>Đã gửi bill, chờ công ty xác nhận</b><small>Anh chị giữ trang này, trang tự đổi khi công ty duyệt. Có thể đóng trang, đơn vẫn được xử lý.</small></div>`; } guideStep(); },
+      onPaid: st => { billSent = true; paySteps(4); const b = $('.success .badge'); if (b) b.outerHTML = statusBadge(st); const a = $('#unpaid'); if (a) a.remove(); const sc = $('.success'); if (sc) { sc.classList.remove('unpaid'); $('.ok-ico', sc).innerHTML = icon('check'); $('.eyebrow', sc).textContent = 'Đã thanh toán'; $('h2', sc).textContent = 'Cảm ơn ' + o.name + '!'; } }
     });
   }
 
+  // bước đang làm trên dải 1-2-3 (4 = xong hết)
+  let billSent = false;
+  function paySteps(n) { $$('.pay-steps li').forEach((li, i) => { li.classList.toggle('done', i + 1 < n); li.classList.toggle('on', i + 1 === n); }); }
+  document.addEventListener('click', e => { if (!e.target.closest('#goPay')) return; const t = $('#pwBill') || $('#bankBox'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+  document.addEventListener('change', e => { if (e.target.id === 'pwFile' && e.target.files[0]) paySteps(2); });
+  // rời trang khi đơn chuyển khoản chưa gửi bill: trình duyệt hỏi lại
+  addEventListener('beforeunload', e => { if (placed && $('#unpaid') && !billSent) { e.preventDefault(); e.returnValue = ''; } });
   function render(scroll) {
     if (!placed && step > 0 && !cart.count()) step = 0;
     renderSteps(); renderSummary();
@@ -377,9 +408,10 @@
   function guideStep() {
     const G = PSQ.guide, m = $('#main'); if (!G) return;
     if (placed) {
+      if (billSent) return G.point(null);
       const pick = $('#pwBill .pw-pick'), send = $('#pwSend'), claim = $('#pwClaim');
-      if (send && !send.disabled) return G.point(send, 'Bấm Gửi bill cho công ty');
-      if (pick) return G.point(pick, 'Bấm vào đây chọn ảnh bill chuyển khoản');
+      if (send) return G.point(send, 'Bấm Gửi bill cho công ty');
+      if (pick) return G.point(pick, 'Chuyển khoản xong, bấm vào đây chọn ảnh bill');
       if (claim) return G.point(claim, 'Chuyển khoản xong, bấm nút này để gửi ảnh bill');
       return G.point(null);
     }

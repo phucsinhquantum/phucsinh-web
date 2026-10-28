@@ -198,19 +198,20 @@
   }
 
   /* ---------- chờ thanh toán + gửi ảnh bill (đơn hàng, gói CTV, gói đại lý, nạp tiền) ----------
-     payWait.html({ sent }) vẽ khung; payWait.start({ send(bill), check(), paidTitle, paidSub, onPaid, open }) gắn xử lý.
+     payWait.html({ sent }) vẽ khung; payWait.start({ send(bill), check(), paidTitle, paidSub, onPaid, onSent, open }) gắn xử lý.
      Mỗi trang chỉ có một khung #payWait. Ảnh bill thu nhỏ còn tối đa 1600px trước khi gửi. */
   const payWait = (() => {
     let cfg = null, bill = null, timer = null;
     const sentTxt = ['Đã gửi bill, chờ công ty duyệt', 'Công ty đang đối chiếu với tài khoản ngân hàng. Anh chị giữ trang này, trang tự đổi khi được duyệt.'];
     const html = (o = {}) => `<div class="pay-wait mt-2" id="payWait" role="status" aria-live="polite"><span class="pw-ring" aria-hidden="true"><i></i></span><div><b>${o.sent ? sentTxt[0] : 'Đang chờ xác nhận thanh toán'}</b><small>${o.sent ? sentTxt[1] : 'Chuyển khoản xong anh chị bấm nút bên cạnh để gửi ảnh bill. Giữ trang này, trang tự cập nhật ngay khi công ty duyệt.'}</small></div><button class="btn btn-sm btn-gold" type="button" id="pwClaim">${icon(o.sent ? 'upload' : 'check')} ${o.sent ? 'Gửi lại bill' : 'Tôi đã chuyển khoản'}</button></div>`;
-    const panel = () => `<div class="pw-bill" id="pwBill"><label class="pw-pick" for="pwFile">${bill ? `<img src="${bill}" alt="Ảnh bill đã chọn">` : `${icon('upload')}<span><b>Chọn ảnh bill chuyển khoản</b><small>Chụp màn hình giao dịch thành công trong ứng dụng ngân hàng</small></span>`}</label><input type="file" id="pwFile" accept="image/jpeg,image/png,image/webp" hidden><div class="pw-acts"><button class="btn btn-sm btn-gold" type="button" id="pwSend"${bill ? '' : ' disabled'}>${icon('check')} Gửi bill cho công ty</button><button class="btn btn-sm" type="button" id="pwCancel">Để sau</button></div></div>`;
+    // chưa chọn ảnh: chỉ có ô chọn ảnh to; chọn xong mới hiện nút Gửi (trước đây nút Gửi mờ nằm sẵn, khách tưởng đã gửi)
+    const panel = () => `<div class="pw-bill${bill ? ' has' : ''}" id="pwBill"><p class="pw-step">Bước 2. Gửi ảnh bill chuyển khoản</p><label class="pw-pick" for="pwFile">${bill ? `<img src="${bill}" alt="Ảnh bill đã chọn"><span class="pw-again">${icon('upload')} Chọn ảnh khác</span>` : `<span class="pw-cam">${icon('upload')}</span><span><b>Bấm vào đây để chọn ảnh bill</b><small>Ảnh chụp màn hình chuyển khoản thành công trong ứng dụng ngân hàng</small></span>`}</label><input type="file" id="pwFile" accept="image/*" hidden><div class="pw-acts">${bill ? `<button class="btn btn-gold pw-send" type="button" id="pwSend">${icon('check')} Gửi bill cho công ty</button>` : ''}${cfg && cfg.open ? '' : '<button class="btn btn-sm" type="button" id="pwCancel">Để sau</button>'}</div></div>`;
     const shrink = file => new Promise((ok, no) => {
       const img = new Image(), u = URL.createObjectURL(file);
       img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)), cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(u); ok(cv.toDataURL('image/jpeg', .82)); };
       img.onerror = () => { URL.revokeObjectURL(u); no(); }; img.src = u;
     });
-    const openPanel = () => { const c = $('#pwClaim'), box = $('#payWait'); if (!box || $('#pwBill')) return; if (c) c.hidden = true; box.insertAdjacentHTML('afterend', panel()); };
+    const openPanel = () => { const c = $('#pwClaim'), box = $('#payWait'); if (!box || $('#pwBill')) return; if (c) c.hidden = true; const sm = $('small', box); if (sm && !(c && c.textContent.includes('lại'))) sm.textContent = 'Chuyển khoản xong, anh chị chọn ảnh bill ở ô bên dưới rồi bấm Gửi. Trang tự cập nhật ngay khi công ty duyệt.'; box.insertAdjacentHTML('afterend', panel()); };
     function paid(st) {
       clearInterval(timer); const box = $('#payWait'); if (!box) return;
       const bp = $('#pwBill'); if (bp) bp.remove();
@@ -241,6 +242,7 @@
         if (r.status && r.status !== 'pending') return paid(r.status);
         const box = $('#payWait'); if (box) box.outerHTML = html({ sent: true });
         toast('Đã gửi bill, công ty sẽ duyệt sớm');
+        if (cfg.onSent) cfg.onSent();
       }, 30);
     });
     document.addEventListener('change', e => {
