@@ -483,6 +483,12 @@ const ACTIONS = {
     c.log({ mint: 'Tạo điểm', give: 'Cấp quỹ kế toán', back: 'Thu hồi về quỹ phát hành', burn: 'Hủy điểm' }[c.args.kind] || 'Quỹ điểm', `${money(r.entry.amount).replace('đ', ' PS')}: ${r.entry.note}`);
     return r;
   } },
+  botKeyGet: { auth: 'owner', run(c) { const k = c.store.getJSON('secret:bot') || {}; return { on: !!k.key, tail: k.key ? k.key.slice(-4) : '', at: k.at || '', used: k.used || '' }; } },
+  botKeyNew: { auth: 'owner', run(c) {
+    const key = 'psqbot_' + crypto.randomBytes(24).toString('base64url');
+    c.store.setJSON('secret:bot', { key, at: c.today() }); c.log('Tạo khóa tra cứu cho An An', 'đuôi ' + key.slice(-4)); return { key };
+  } },
+  botKeyOff: { auth: 'owner', run(c) { c.store.setJSON('secret:bot', {}); c.log('Khóa cổng tra cứu An An', ''); return { ok: true }; } },
   mailGet: { auth: 'owner', run(c) { const m = c.store.getJSON('secret:mail') || {}; return { user: m.user || '', fromName: m.fromName || '', host: m.host || 'smtp.gmail.com', configured: !!(m.user && m.pass) }; } },
   mailSet: { auth: 'owner', run(c) {
     const cur = c.store.getJSON('secret:mail') || {}, user = str(c.args.user, 120).toLowerCase(), pass = String(c.args.pass || '').replace(/\s+/g, '');
@@ -513,4 +519,37 @@ const ACTIONS = {
   } }
 };
 
-module.exports = { ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };
+/* ---------- An An (bot Zalo, Messenger qua n8n) tra cứu thành viên: chỉ đọc, khóa bí mật secret:bot ----------
+   Ai hỏi cũng biết: tên, cấp bậc, mã giới thiệu, ngày tham gia; đại lý uy tín đang hiện trên web thì kèm khu vực, SĐT, Zalo như trang Đại lý uy tín.
+   Chỉ chính chủ (asker = SĐT của người đang chat, trùng SĐT tài khoản): điểm các ví, đơn gần đây.
+   Không bao giờ trả: SĐT, email, địa chỉ, tiền của người khác. */
+const fold = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const CALL = /^(anh|chi|em|co|chu|bac|ong|ba|di|cau|thim|mo|ban|a|c|e)\s+/;
+const ORDER_ST = { pending: 'Chờ xác nhận', paid: 'Đã thanh toán', ship: 'Đang giao', done: 'Hoàn thành', failed: 'Đã hủy' };
+function botLookup(d, A, dealers, q, asker) {
+  q = str(q, 80); const me = normPhone(asker), qp = normPhone(q), qc = q.toUpperCase().replace(/\s+/g, '');
+  let qf = fold(q); while (CALL.test(qf)) qf = qf.replace(CALL, '');
+  const shown = (dealers || []).filter(x => x && !x.hidden);
+  const dealerOf = u => shown.find(x => (x.code || '').toUpperCase() === (u.code || '').toUpperCase());
+  const hit = name => { const n = ' ' + fold(name).replace(/^dai ly /, '') + ' '; return !!qf && n.includes(' ' + qf + ' '); };
+  const pub = x => ({ name: x.name, code: x.code || '', area: x.area || '', address: x.address || '', phone: x.phone || '', zalo: x.zalo || x.phone || '', note: x.note || '' });
+  if (!q) return { error: 'Thiếu nội dung cần tra (q): tên, số điện thoại hoặc mã PS.' };
+  const users = d.users.filter(u => u.role !== 'admin' && u.status !== 'locked' && u.verified !== false && u.code);
+  const found = users.filter(u => (u.code || '').toUpperCase() === qc || (qp.length >= 9 && normPhone(u.phone) === qp) || hit(u.name));
+  const results = found.slice(0, 5).map(u => {
+    const dl = dealerOf(u), r = { name: u.name, code: u.code, tier: A.tierOf(u).name, since: u.created || '', trusted: !!dl, dealer: dl ? pub(dl) : null };
+    if (me.length >= 9 && normPhone(u.phone) === me) {
+      const b = A.balances(d, u.id);
+      r.self = { phone: u.phone, email: u.email, wallets: Object.fromEntries(Object.entries(A.WALLETS).map(([k, w]) => [w.name, b[k] || 0])),
+        orders: d.orders.filter(o => o.userId === u.id).slice(-5).reverse().map(o => ({ id: o.id, date: o.date, status: ORDER_ST[o.status] || o.status, total: o.total, items: (o.items || []).map(x => x.name + ' x' + x.qty).join(', ') })),
+        directMembers: d.users.filter(x => x.sponsor === u.id).length };
+    }
+    return r;
+  });
+  const dl = shown.filter(x => !found.some(u => (u.code || '').toUpperCase() === (x.code || '').toUpperCase()) && (hit(x.name) || (qf && fold(x.area).includes(qf)) || (x.code && x.code.toUpperCase() === qc))).slice(0, 8).map(pub);
+  return { query: q, count: found.length, results, dealers: dl,
+    rule: 'Chỉ nói tên, cấp bậc, mã giới thiệu, ngày tham gia. Thông tin liên hệ chỉ nói khi có trong dealer (đại lý uy tín, đã công khai). Mục self chỉ có khi người đang chat là chính chủ. Trùng nhiều người thì hỏi thêm khu vực hoặc mã PS.' };
+}
+const botKeyOf = store => (store.getJSON('secret:bot') || {}).key || '';
+
+module.exports = { botLookup, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };

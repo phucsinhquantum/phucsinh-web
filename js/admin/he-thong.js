@@ -326,7 +326,7 @@
       const mc = $('#mcBody', el);
       if (mc) {
         const draw = () => {
-          const g = API.act('mailGet');
+          const g = API.act('mailGet'), bk = API.act('botKeyGet');
           mc.innerHTML = `<p class="${g.configured ? 'green' : 'gold'}" style="font-size:13.5px">${g.configured ? 'Đang gửi bằng ' + esc(g.user) : 'Chưa kết nối email. Thư chưa được gửi đi.'}</p>
             <ol class="dim" style="font-size:13px;padding-left:18px;line-height:1.6;margin:8px 0">
               <li>Đăng nhập Gmail dùng để gửi thư, bật <b>Xác minh 2 bước</b> (myaccount.google.com, mục Bảo mật).</li>
@@ -342,7 +342,14 @@
             <p class="dim" style="font-size:13px;margin:6px 0 10px">Đơn mới, bill chuyển khoản, yêu cầu nạp tiền, rút tiền, lời nhắn liên hệ được Trợ Lý Phúc Sinh nhắn cho anh (đăng ký thành viên không báo), kèm nút xác nhận đã nhận tiền.</p>
             <button class="btn btn-sm" type="button" id="tgT">${icon('chat')} Gửi tin thử Telegram</button> <span id="tgR" style="font-size:13px"></span>
             <p class="dim" style="font-size:13px;margin:14px 0 10px">Nhắc giao hàng: mỗi ngày từ 8h đến 18h, trợ lý nhắc các đơn Đã thanh toán mà chưa ship (đặt từ hôm trước), kèm ảnh sản phẩm và nút Đã ship, Chưa ship.</p>
-            <button class="btn btn-sm" type="button" id="tgS">${icon('truck')} Gửi nhắc giao hàng ngay</button> <span id="tgSR" style="font-size:13px"></span>`;
+            <button class="btn btn-sm" type="button" id="tgS">${icon('truck')} Gửi nhắc giao hàng ngay</button> <span id="tgSR" style="font-size:13px"></span>
+            <div class="divider"></div><h3 style="font-size:15px">An An tra cứu thành viên</h3>
+            <p class="dim" style="font-size:13px;margin:6px 0 10px">Cho bot An An (Zalo, Messenger) tra thành viên theo tên, số điện thoại, mã PS để trả lời khách. Chỉ xem, không sửa được gì. An An chỉ được biết tên, cấp bậc, mã giới thiệu; số điện thoại chỉ có ở đại lý uy tín đang công khai. Điểm, đơn hàng chỉ trả cho chính chủ.</p>
+            <p class="${bk.on ? 'green' : 'gold'}" style="font-size:13.5px;margin:0 0 10px">${bk.on ? `Đang mở, khóa đuôi …${esc(bk.tail)} (tạo ${esc(bk.at)})` : 'Đang tắt.'}</p>
+            <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-sm" type="button" id="bkN">${icon('link')} ${bk.on ? 'Đổi khóa mới' : 'Tạo khóa'}</button>${bk.on ? `<button class="btn btn-sm" type="button" id="bkO">${icon('close')} Khóa cổng tra cứu</button>` : ''}</div>
+            <div id="bkR" style="font-size:13px;margin-top:8px"></div>`;
+          $('#bkN', mc).addEventListener('click', () => { if (bk.on && !confirm('Đổi khóa mới thì khóa cũ trong n8n hết dùng được. Tiếp tục?')) return; const r = API.act('botKeyNew'); if (r.error) return toast(r.error); draw(); $('#bkR', mc).innerHTML = `<p class="gold" style="margin:0 0 6px">Khóa mới, chỉ hiện một lần. Dán vào n8n (tiêu đề x-bot-key):</p><input class="input" readonly value="${esc(r.key)}" onclick="this.select()">`; });
+          const bo = $('#bkO', mc); if (bo) bo.addEventListener('click', () => { if (!confirm('Khóa cổng tra cứu? An An sẽ không tra được thành viên nữa.')) return; API.act('botKeyOff'); toast('Đã khóa cổng tra cứu'); draw(); });
           $('#mcF', mc).addEventListener('submit', e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), r = API.act('mailSet', f); if (r.error) return $('#mcE', mc).textContent = r.error; toast('Đã lưu email gửi thư'); draw(); });
           $('#tgT', mc).addEventListener('click', e => { const b = e.currentTarget, out = $('#tgR', mc); b.disabled = true; out.textContent = 'Đang gửi...'; const r = API.act('notifyTest'); b.disabled = false; out.className = r.error ? 'red' : 'green'; out.textContent = r.error || 'Đã gửi, anh mở Telegram xem tin của Trợ Lý Phúc Sinh.'; });
           $('#tgS', mc).addEventListener('click', e => { const b = e.currentTarget, out = $('#tgSR', mc); b.disabled = true; out.textContent = 'Đang gửi...'; setTimeout(() => { const r = API.act('shipRemindNow'); b.disabled = false; out.className = r.error ? 'red' : 'green'; out.textContent = r.error || (r.orders ? `Đã nhắc ${r.orders} đơn chưa ship.` : 'Không có đơn nào đang chờ ship.'); }, 30); });

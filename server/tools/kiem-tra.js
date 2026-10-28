@@ -180,6 +180,25 @@ async function flow() {
     ok(!!(await client(s.port).act('login', { login: 'ktc@kiem-tra.vn', pass: '123456a' })).error, 'tài khoản khóa không đăng nhập được');
 
     // đường dẫn kích hoạt trong thư: sai mã thì hiện trang báo, không trơ ra
+    // An An tra cứu thành viên: có khóa mới tra được, người lạ không thấy SĐT, email, ví; chính chủ (SĐT trùng) thấy ví và đơn
+    const bot = async (q, key, asker) => { const r = await fetch(`http://127.0.0.1:${s.port}/api/bot/lookup?q=${encodeURIComponent(q)}${asker ? '&asker=' + encodeURIComponent(asker) : ''}`, { headers: key ? { 'x-bot-key': key } : {} }); return { status: r.status, j: await r.json() }; };
+    ok((await bot('CTV B')).status === 401, 'An An: chưa có khóa thì không tra được');
+    const bk = (await owner.act('botKeyNew', {})).result || {};
+    ok(/^psqbot_/.test(bk.key || ''), 'An An: chủ sở hữu tạo khóa tra cứu');
+    ok(!!(await B.c.act('botKeyNew', {})).error, 'An An: thành viên thường không tạo được khóa');
+    ok((await bot('CTV B', bk.key + 'x')).status === 401, 'An An: khóa sai bị chặn');
+    const hb = await bot('CTV B', bk.key), rb = (hb.j.results || [])[0];
+    ok(hb.status === 200 && rb && rb.code === B.r.me.code && rb.tier === 'Cộng tác viên', 'An An: tra theo tên ra đúng B, cấp Cộng tác viên');
+    ok(!/@kiem-tra\.vn|"phone"|"email"|"self"/.test(JSON.stringify(hb.j)), 'An An: người lạ hỏi không thấy email, SĐT, ví của thành viên');
+    ok(((await bot(B.r.me.code, bk.key)).j.results || []).length === 1, 'An An: tra theo mã PS được');
+    const H = client(s.port), hr = await H.act('register', { name: 'Nguyễn Văn Hà', username: 'ktha', email: 'ktha@kiem-tra.vn', phone: '0912345678', pass: '123456a', ref: A.r.me.code, agree: true });
+    ok(!hr.error, 'An An: thêm thành viên Nguyễn Văn Hà' + (hr.error ? ': ' + hr.error : ''));
+    const h1 = await bot('anh Hà', bk.key, '0900000000'), r1 = (h1.j.results || [])[0];
+    ok(r1 && r1.name === 'Nguyễn Văn Hà' && !r1.self, 'An An: "anh Hà" (có xưng hô) ra đúng người, người lạ không có mục chính chủ');
+    const r2 = ((await bot('ha', bk.key, '+84 912 345 678')).j.results || [])[0];
+    ok(r2 && r2.self && r2.self.wallets && Array.isArray(r2.self.orders), 'An An: chính chủ (SĐT trùng) xem được ví và đơn của mình');
+    await owner.act('botKeyOff', {});
+    ok((await bot('CTV B', bk.key)).status === 401, 'An An: khóa cổng xong thì khóa cũ hết dùng được');
     const vf = await guest.req('GET', '/api/verify?t=sai-ma');
     ok(vf.status === 200 && /Chưa kích hoạt được/.test(vf.text), 'đường dẫn kích hoạt sai hiện trang báo rõ ràng');
     ok(!/TypeError|ReferenceError|SyntaxError|\[lỗi/.test(s.log()), 'nhật ký máy chủ không có lỗi');
