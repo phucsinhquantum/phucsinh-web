@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261028g">
-<script src="js/lang.js?v=20261028g"></script>
+<link rel="stylesheet" href="css/app.css?v=20261028h">
+<script src="js/lang.js?v=20261028h"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -63,6 +63,10 @@
   .vrow [data-vmove$="|-1"] svg { transform: rotate(-90deg); } .vrow [data-vmove$="|1"] svg { transform: rotate(90deg); }
   @media (max-width: 699px) { .vrow { grid-template-columns: 96px minmax(0, 1fr); } .vrow img { width: 96px; } .vrow > .row { grid-column: 1 / -1; justify-content: flex-end; } }
   @media (max-width: 699px) { .toolbar .input, .toolbar select.input { max-width: none; width: 100%; } }
+  .mv-filter b { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 10px; background: rgba(243,199,107,.18); color: var(--gold); font-size: 12px; margin-left: 4px; }
+  .mv-filter.on { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 0 1px rgba(243,199,107,.35), 0 0 14px rgba(243,199,107,.25); }
+  .mv-btn { margin-top: 6px; height: 30px; padding: 0 12px; font-size: 12.5px; }
+  .mv-col input { width: 18px; height: 18px; accent-color: var(--gold); cursor: pointer; }
 </style>
 </head>
 <body data-page="admin">
@@ -135,8 +139,8 @@
     <section data-pane="members" hidden>
       <div class="grid g-4 keep-2" id="mstats"></div>
       <div class="card glow-cyan mt-2">
-        <div class="toolbar"><input class="input" id="mq" placeholder="Tìm tên, email, số điện thoại"><select class="input" id="mr"><option value="">Mọi vai trò</option><option value="member">Thành viên</option><option value="admin">Quản trị</option></select><select class="input" id="mt" aria-label="Lọc theo cấp bậc"><option value="">Mọi cấp bậc</option><option value="khach">Khách hàng</option><option value="ctv">Cộng tác viên</option><option value="daily">Đại lý</option></select><span class="dim" id="mcount" style="font-size:13px"></span></div>
-        <div class="table-wrap"><table class="tbl"><thead><tr><th>Thành viên</th><th>Tên truy cập</th><th>Điện thoại</th><th>Vai trò</th><th>Cấp bậc</th><th>Tổng mua</th><th>Tham gia</th><th>Thao tác</th></tr></thead><tbody id="mlist"></tbody></table></div>
+        <div class="toolbar"><input class="input" id="mq" placeholder="Tìm tên, email, số điện thoại"><select class="input" id="mr"><option value="">Mọi vai trò</option><option value="member">Thành viên</option><option value="admin">Quản trị</option></select><select class="input" id="mt" aria-label="Lọc theo cấp bậc"><option value="">Mọi cấp bậc</option><option value="khach">Khách hàng</option><option value="ctv">Cộng tác viên</option><option value="daily">Đại lý</option></select><button class="btn btn-sm mv-filter" type="button" id="mv" aria-pressed="false">Chưa kích hoạt <b id="mvN">0</b></button><button class="btn btn-sm btn-gold" type="button" id="mvAll" hidden>Kích hoạt <span id="mvSel">0</span> người đã chọn</button><span class="dim" id="mcount" style="font-size:13px"></span></div>
+        <div class="table-wrap"><table class="tbl"><thead><tr><th class="mv-col" style="width:34px"><input type="checkbox" id="mvChk" aria-label="Chọn tất cả tài khoản chưa kích hoạt"></th><th>Thành viên</th><th>Tên truy cập</th><th>Điện thoại</th><th>Vai trò</th><th>Cấp bậc</th><th>Tổng mua</th><th>Tham gia</th><th>Thao tác</th></tr></thead><tbody id="mlist"></tbody></table></div>
       </div>
     </section>
 
@@ -178,27 +182,27 @@
   </div>
 </div>
 
-<script src="js/patch.js?v=20261028g"></script>
-<script src="js/api.js?v=20261028g"></script>
-<script src="js/data.js?v=20261028g"></script>
-<script src="js/app.js?v=20261028g"></script>
-<script src="js/psq-data.js?v=20261028g"></script>
+<script src="js/patch.js?v=20261028h"></script>
+<script src="js/api.js?v=20261028h"></script>
+<script src="js/data.js?v=20261028h"></script>
+<script src="js/app.js?v=20261028h"></script>
+<script src="js/psq-data.js?v=20261028h"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261028g"></script>
-<script src="js/admin/nguoi-dung.js?v=20261028g"></script>
-<script src="js/admin/noi-dung.js?v=20261028g"></script>
-<script src="js/admin/kho.js?v=20261028g"></script>
-<script src="js/admin/tai-chinh.js?v=20261028g"></script>
-<script src="js/admin/he-thong.js?v=20261028g"></script>
-<script src="js/admin/vong-quay.js?v=20261028g"></script>
-<script src="js/admin/chao-mung.js?v=20261028g"></script>
-<script src="js/admin/khuyen-mai.js?v=20261028g"></script>
-<script src="js/admin/quy-diem.js?v=20261028g"></script>
-<script src="js/admin/gioi-thieu.js?v=20261028g"></script>
-<script src="js/admin/dai-ly.js?v=20261028g"></script>
-<script src="js/admin/danh-gia.js?v=20261028g"></script>
-<script src="js/admin/dieu-khoan.js?v=20261028g"></script>
-<script src="js/admin/quyen-loi.js?v=20261028g"></script>
+<script src="js/admin/pha-he.js?v=20261028h"></script>
+<script src="js/admin/nguoi-dung.js?v=20261028h"></script>
+<script src="js/admin/noi-dung.js?v=20261028h"></script>
+<script src="js/admin/kho.js?v=20261028h"></script>
+<script src="js/admin/tai-chinh.js?v=20261028h"></script>
+<script src="js/admin/he-thong.js?v=20261028h"></script>
+<script src="js/admin/vong-quay.js?v=20261028h"></script>
+<script src="js/admin/chao-mung.js?v=20261028h"></script>
+<script src="js/admin/khuyen-mai.js?v=20261028h"></script>
+<script src="js/admin/quy-diem.js?v=20261028h"></script>
+<script src="js/admin/gioi-thieu.js?v=20261028h"></script>
+<script src="js/admin/dai-ly.js?v=20261028h"></script>
+<script src="js/admin/danh-gia.js?v=20261028h"></script>
+<script src="js/admin/dieu-khoan.js?v=20261028h"></script>
+<script src="js/admin/quyen-loi.js?v=20261028h"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -485,14 +489,33 @@
     const mem = d.users.filter(u => u.role !== 'admin'), tierId = u => u.tier || 'khach';
     $('#mstats').innerHTML = [['', 'Tổng thành viên', '#e8e2d4', mem.length]].concat(Object.entries(ADB.TIERS).map(([id, k]) => [id, k.name, k.color, mem.filter(u => tierId(u) === id).length]))
       .map(([id, name, color, n], i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat"><div class="stat-top"><span class="dot" style="color:${color}"></span>${name}</div><div class="stat-val">${n.toLocaleString('vi-VN')}</div></div>`).join('');
-    const list = d.users.filter(u => (!r || (r === 'admin' ? u.role === 'admin' : u.role !== 'admin')) && (!t || (u.role !== 'admin' && tierId(u) === t)) && (!q || [u.name, u.email, u.phone, u.username, u.code].join(' ').toLowerCase().includes(q)));
+    const waitN = mem.filter(u => u.verified === false).length; $('#mvN').textContent = waitN; $('#mv').classList.toggle('on', onlyWait); $('#mv').setAttribute('aria-pressed', onlyWait); $('#mv').hidden = !waitN && !onlyWait;
+    const list = d.users.filter(u => (!onlyWait || (u.role !== 'admin' && u.verified === false)) && (!r || (r === 'admin' ? u.role === 'admin' : u.role !== 'admin')) && (!t || (u.role !== 'admin' && tierId(u) === t)) && (!q || [u.name, u.email, u.phone, u.username, u.code].join(' ').toLowerCase().includes(q)));
     $('#mcount').textContent = list.length + ' tài khoản';
-    $('#mlist').innerHTML = list.length ? list.map((u, i) => { const k = ADB.tierOf(u); return `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(u.name)}</span><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small>${u.status === 'locked' ? '<small><span class="badge failed">Đã khóa</span></small>' : ''}${u.verified === false ? `<small><span class="badge pending">Chưa kích hoạt email</span> <button class="link-btn gold" type="button" data-verify="${u.id}" style="background:none;border:0;padding:0;cursor:pointer;font:inherit">Kích hoạt giúp</button></small>` : ''}</div></div></td><td class="nowrap">${u.username ? '@' + esc(u.username) : ''}${u.code ? `<br><small class="dim">${esc(u.code)}</small>` : ''}</td><td class="nowrap">${esc(u.phone || '')}</td>
+    $('#mlist').innerHTML = list.length ? list.map((u, i) => { const k = ADB.tierOf(u); return `<tr><td class="mv-col">${u.verified === false && u.role !== 'admin' ? `<input type="checkbox" data-mvpick="${u.id}"${picked.has(u.id) ? ' checked' : ''} aria-label="Chọn ${esc(u.name)}">` : ''}</td><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(u.name)}</span><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small>${u.status === 'locked' ? '<small><span class="badge failed">Đã khóa</span></small>' : ''}${u.verified === false ? `<small><span class="badge pending">Chưa kích hoạt email</span></small><button class="btn btn-sm btn-gold mv-btn" type="button" data-verify="${u.id}" title="Kích hoạt tài khoản không cần thư">${icon('check')} Kích hoạt</button>` : ''}</div></div></td><td class="nowrap">${u.username ? '@' + esc(u.username) : ''}${u.code ? `<br><small class="dim">${esc(u.code)}</small>` : ''}</td><td class="nowrap">${esc(u.phone || '')}</td>
       <td><span class="badge ${u.role === 'admin' ? 'failed' : 'ship'}">${u.role === 'admin' ? 'Quản trị' : 'Thành viên'}</span></td>
       <td>${u.role === 'admin' ? '<span class="dim">-</span>' : `<span class="badge nowrap" style="color:${k.color};border-color:${k.color}55;background:${k.color}14">${esc(k.name)}</span>`}</td><td class="nowrap">${u.role === 'admin' ? '' : money(ADB.spent(d, u.id))}</td><td class="dim nowrap">${fdate(u.created)}</td>
       <td class="nowrap">${u.role === 'admin' ? '<span class="dim">-</span>' : `<div class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn btn-sm btn-ghost" type="button" data-medit="${u.id}" title="Sửa thông tin" aria-label="Sửa ${esc(u.name)}">${icon('edit')}</button><button class="btn btn-sm btn-ghost" type="button" data-mlock="${u.id}" title="${u.status === 'locked' ? 'Mở khóa' : 'Khóa tài khoản'}" aria-label="${u.status === 'locked' ? 'Mở khóa' : 'Khóa'} ${esc(u.name)}">${icon('lock')}</button><button class="btn btn-sm btn-ghost" type="button" data-mview="${u.id}" title="Xem như thành viên (chỉ xem)" aria-label="Xem tài khoản ${esc(u.name)}">${icon('eye')}</button></div>`}</td></tr>`; }).join('')
-      : `<tr><td colspan="8"><div class="empty">Không có thành viên phù hợp.</div></td></tr>`;
+      : `<tr><td colspan="9"><div class="empty">${onlyWait ? 'Không còn tài khoản nào chờ kích hoạt.' : 'Không có thành viên phù hợp.'}</div></td></tr>`;
+    [...picked].forEach(id => { if (!list.some(u => u.id === id && u.verified === false)) picked.delete(id); }); pickUi(list);
   }
+  let onlyWait = false; const picked = new Set();
+  function pickUi(list) {
+    const can = (list || []).filter(u => u.verified === false && u.role !== 'admin'), all = $('#mvChk');
+    $('#mvSel').textContent = picked.size; $('#mvAll').hidden = !picked.size;
+    all.disabled = !can.length; all.checked = !!can.length && can.every(u => picked.has(u.id));
+    document.querySelectorAll('.mv-col').forEach(x => { x.hidden = !onlyWait && !can.length; });
+  }
+  function verifyMany(ids) {
+    const dd = ADB.load(), names = ids.map(id => (dd.users.find(x => x.id === id) || {}).name).filter(Boolean);
+    if (!names.length || !confirm(names.length === 1 ? `Kích hoạt tài khoản ${names[0]} mà không cần thư? Người này đăng nhập được ngay và nhận thư chào mừng.` : `Kích hoạt ${names.length} tài khoản mà không cần thư?\n${names.join(', ')}`)) return;
+    const r = API.act('memberVerify', { ids }); if (r.error) return toast(r.error, 'err');
+    ids.forEach(id => picked.delete(id)); API.load(); toast(`Đã kích hoạt ${r.count} tài khoản`); membersPane();
+  }
+  $('#mv').addEventListener('click', () => { onlyWait = !onlyWait; membersPane(); });
+  $('#mvAll').addEventListener('click', () => verifyMany([...picked]));
+  $('#mvChk').addEventListener('change', e => { const d = ADB.load(); $$('#mlist [data-mvpick]').forEach(b => { b.checked = e.target.checked; e.target.checked ? picked.add(b.dataset.mvpick) : picked.delete(b.dataset.mvpick); }); pickUi(d.users.filter(u => $$('#mlist [data-mvpick]').some(b => b.dataset.mvpick === u.id))); });
+  $('#mlist').addEventListener('change', e => { const b = e.target.closest('[data-mvpick]'); if (!b) return; b.checked ? picked.add(b.dataset.mvpick) : picked.delete(b.dataset.mvpick); const d = ADB.load(); pickUi(d.users.filter(u => $$('#mlist [data-mvpick]').some(x => x.dataset.mvpick === u.id))); });
   // sửa, khóa, xem như thành viên
   $('#mlist').addEventListener('click', e => {
     const ed = e.target.closest('[data-medit]'), lk = e.target.closest('[data-mlock]'), vw = e.target.closest('[data-mview]');
@@ -532,9 +555,7 @@
       m.close(); API.load(); toast('Đã lưu thông tin ' + f.name.trim()); membersPane();
     });
   });
-  $('#mlist').addEventListener('click', e => { const b = e.target.closest('[data-verify]'); if (!b) return;
-    const dd = ADB.load(), u = dd.users.find(x => x.id === b.dataset.verify); if (!u || !confirm(`Kích hoạt tài khoản ${u.name} (${u.email}) mà không cần thư?`)) return;
-    u.verified = true; u.verifiedAt = new Date().toISOString().slice(0, 10) + ' (quản trị)'; if (ADB.save(dd)) { toast('Đã kích hoạt tài khoản ' + u.name); membersPane(); } });
+  $('#mlist').addEventListener('click', e => { const b = e.target.closest('[data-verify]'); if (b) verifyMany([b.dataset.verify]); });
   $('#mq').addEventListener('input', membersPane); $('#mr').addEventListener('change', membersPane); $('#mt').addEventListener('change', membersPane);
 
   /* ---------- tin nhắn ---------- */

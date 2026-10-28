@@ -469,6 +469,15 @@ const ACTIONS = {
     if (changes.length) c.log(status === 'locked' && changes.some(x => x[0] === 'Trạng thái') ? 'Khóa tài khoản thành viên' : 'Sửa thông tin thành viên', `${u.name} (${u.code || ''}): ` + changes.map(x => `${x[0]} ${x[1] || '(trống)'} → ${x[2] || '(trống)'}`).join('; '));
     return { ok: true, changed: changes.length };
   } },
+  // quản trị kích hoạt tay tài khoản chưa bấm thư kích hoạt (một hoặc nhiều người), gửi thư chào mừng như khi tự kích hoạt
+  memberVerify: { auth: 'admin', perm: 'members', run(c) {
+    const ids = [].concat(c.args.ids || []).slice(0, 500), done = [];
+    ids.forEach(id => { const u = c.A.user(c.d, id); if (!u || u.role === 'admin' || u.verified !== false) return;
+      u.verified = true; u.verifiedAt = c.stamp() + ' (quản trị)'; done.push(u); welcomeMail(c, u); });
+    if (!done.length) return err('Không có tài khoản nào đang chờ kích hoạt trong số đã chọn.');
+    c.log('Kích hoạt tay', done.map(u => `${u.name} (${u.code || '@' + u.username})`).join(', '));
+    return { ok: true, count: done.length };
+  } },
   adminSetPass: { auth: 'admin', perm: 'members', run(c) {
     const u = c.A.user(c.d, c.args.id), p = String(c.args.pass || '');
     if (!u) return err('Không tìm thấy tài khoản.');
