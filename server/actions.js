@@ -37,7 +37,7 @@ const clean = u => { const r = Object.assign({}, u); delete r.pass; delete r.res
 function scopeFor(d, me, A) {
   if (me && me.role === 'admin' && me.status !== 'locked') { const o = Object.assign({}, d); o.users = d.users.map(clean); return o; }
   const out = { v: d.v, settings: Object.assign({}, d.settings), stock: d.stock || {}, stockMin: d.stockMin, users: [], orders: [], commissions: [], wallet: [], topups: [], addresses: [], messages: [], logs: [], mails: [], fundbook: [], receipts: [], expenses: [], stores: d.stores || [], roles: [] };
-  delete out.settings.fundWarn;
+  delete out.settings.fundWarn; delete out.settings.codeReserve;
   // chương trình khuyến mãi đang chạy (công khai), không gửi danh sách người đã dùng
   out.promos = A.promosLive(d).map(p => pick(p, ['id', 'title', 'desc', 'start', 'end', 'code', 'type', 'value', 'maxOff', 'minOrder', 'color', 'link']));
   const users = new Map();
@@ -129,9 +129,14 @@ function welcomeMail(c, u) {
 
 // tìm người giới thiệu theo mã PS.../tên truy cập. Mã của quản trị (PS1000 của chủ sở hữu) là công ty giới thiệu:
 // hợp lệ nhưng không gắn tuyến trên, nên không phát sinh hoa hồng hay thưởng.
+// mã PS: mã hiện tại hoặc mã cũ (đổi số đẹp vẫn giữ link cũ đã gửi đi). Số đẹp giữ lại thì không cấp tự động.
+const CODE = /^PS\d{3,9}$/;
+const hasCode = (u, k) => (u.code || '').toUpperCase() === k || (u.oldCodes || []).some(x => x.toUpperCase() === k);
+const reserved = d => ((d.settings || {}).codeReserve || []).map(x => String(x.code || x).toUpperCase());
+const codeTaken = (d, k, except) => d.users.some(u => u !== except && (hasCode(u, k) || (u.username || '').toUpperCase() === k));
 const findRef = (d, ref) => {
   const k = String(ref || '').trim().toUpperCase(); if (!k) return null;
-  const u = d.users.find(x => x.status !== 'locked' && ((x.code || '').toUpperCase() === k || (x.username || '').toUpperCase() === k));
+  const u = d.users.find(x => x.status !== 'locked' && (hasCode(x, k) || (x.username || '').toUpperCase() === k));
   return u ? { user: u, company: u.role === 'admin' } : null;
 };
 
@@ -145,7 +150,7 @@ const ACTIONS = {
   checkUsername: { auth: 'guest', run(c) {
     const v = str(c.args.username, 40).toLowerCase();
     if (!UNAME.test(v)) return err('Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.');
-    if (c.d.users.some(u => u.id !== (c.me && c.me.id) && ((u.username || '').toLowerCase() === v || (u.code || '').toLowerCase() === v))) return err('Tên truy cập này đã có người dùng.');
+    if (c.d.users.some(u => u.id !== (c.me && c.me.id) && ((u.username || '').toLowerCase() === v || hasCode(u, v.toUpperCase()))) || reserved(c.d).includes(v.toUpperCase())) return err('Tên truy cập này đã có người dùng.');
     return { ok: true };
   } },
   register: { auth: 'guest', run(c) {
@@ -158,10 +163,10 @@ const ACTIONS = {
     if (pass.length < 6 || pass.length > 100) return err('Mật khẩu tối thiểu 6 ký tự.');
     if (!args.agree) return err('Anh chị cần đồng ý với điều khoản.');
     if (d.users.some(x => (x.email || '').toLowerCase() === email)) return err('Email này đã có tài khoản.');
-    const taken = n => d.users.some(u => (u.username || '').toLowerCase() === n || (u.code || '').toLowerCase() === n);
+    const taken = n => d.users.some(u => (u.username || '').toLowerCase() === n || hasCode(u, n.toUpperCase())) || reserved(d).includes(n.toUpperCase());
     if (username) { if (!UNAME.test(username)) return err('Tên truy cập dài 3 đến 30 ký tự, chỉ gồm a-z, 0-9, dấu chấm, gạch dưới.'); if (taken(username)) return err('Tên truy cập này đã có người dùng.'); }
     else { const b = email.split('@')[0].replace(/[^a-z0-9._]/g, '').slice(0, 24) || 'tv'; username = b.length < 3 ? b + 'psq' : b; let k = 1; const base = username; while (taken(username)) username = base + (++k); }
-    let k = 1001 + d.users.filter(u => u.role !== 'admin').length; while (d.users.some(x => x.code === 'PS' + k)) k++;
+    let k = 1001 + d.users.filter(u => u.role !== 'admin').length; const rs = reserved(d); while (codeTaken(d, 'PS' + k) || rs.includes('PS' + k)) k++;
     const u = { id: 'u' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'), name, email, phone, pass: hashPass(pass), role: 'member', created: c.today(), status: 'active', code: 'PS' + k, username, tier: 'khach', placed: false, parent: null };
     const ref = str(args.ref, 40).toUpperCase();
     const found = findRef(d, ref), sp = found && !found.company ? found.user : null;
@@ -183,7 +188,7 @@ const ACTIONS = {
     const k = str(c.args.login, 120).toLowerCase().replace(/^@/, ''), p = String(c.args.pass || '');
     if (!k || !p) return err('Anh chị nhập email hoặc tên truy cập và mật khẩu.');
     const ph = normPhone(k);
-    const u = c.d.users.find(x => (x.email || '').toLowerCase() === k || (x.username || '').toLowerCase() === k || (x.code || '').toLowerCase() === k || (ph.length >= 9 && normPhone(x.phone) === ph));
+    const u = c.d.users.find(x => (x.email || '').toLowerCase() === k || (x.username || '').toLowerCase() === k || hasCode(x, k.toUpperCase()) || (ph.length >= 9 && normPhone(x.phone) === ph));
     if (!u || !verifyPass(p, u.pass)) return err(u && !u.pass ? 'Tài khoản chưa đặt mật khẩu. Anh chị bấm Quên mật khẩu để đặt.' : 'Email, tên truy cập hoặc mật khẩu chưa đúng.');
     if (u.status === 'locked') return err('Tài khoản này đang bị khóa. Anh chị liên hệ ' + c.site.phone + '.');
     if (u.verified === false) return err('Tài khoản chưa kích hoạt. Anh chị mở email ' + u.email + ' (xem cả mục Thư rác) và bấm nút Kích hoạt trong thư.');
@@ -489,6 +494,32 @@ const ACTIONS = {
     if (changes.length) c.log(status === 'locked' && changes.some(x => x[0] === 'Trạng thái') ? 'Khóa tài khoản thành viên' : 'Sửa thông tin thành viên', `${u.name} (${u.code || ''}): ` + changes.map(x => `${x[0]} ${x[1] || '(trống)'} → ${x[2] || '(trống)'}`).join('; '));
     return { ok: true, changed: changes.length };
   } },
+  // đổi mã PS (chọn số đẹp). Mã cũ vẫn dùng được cho link giới thiệu, đăng nhập đã gửi trước đó.
+  memberCode: { auth: 'admin', perm: 'members', run(c) {
+    const { d } = c, u = c.A.user(d, c.args.id), k = str(c.args.code, 12).toUpperCase().replace(/\s/g, '');
+    if (!u || u.role === 'admin') return err('Chỉ đổi mã cho tài khoản thành viên.');
+    if (!CODE.test(k)) return err('Mã gồm chữ PS và 3 đến 9 chữ số, ví dụ PS8888.');
+    if ((u.code || '').toUpperCase() === k) return err('Thành viên đang dùng mã này rồi.');
+    if (codeTaken(d, k, u)) return err(k + ' đã có người dùng (hoặc là mã cũ của người khác).');
+    const old = u.code; if (old && !(u.oldCodes || []).includes(old)) u.oldCodes = [...(u.oldCodes || []), old];
+    u.oldCodes = (u.oldCodes || []).filter(x => x.toUpperCase() !== k); if (!u.oldCodes.length) delete u.oldCodes;
+    u.code = k;
+    const rs = (d.settings.codeReserve || []), i = rs.findIndex(x => String(x.code || x).toUpperCase() === k), sold = i >= 0 ? rs.splice(i, 1)[0] : null;
+    c.log('Đổi mã thành viên', `${u.name}: ${old || '(trống)'} → ${k}${sold && sold.price ? ', số đẹp giá ' + sold.price : ''}`, u);
+    return { ok: true, code: k, old };
+  } },
+  // danh sách số đẹp giữ lại (không cấp tự động khi đăng ký): thêm hoặc bỏ, kèm giá và ghi chú để sau này bán
+  codeReserve: { auth: 'admin', perm: 'members', run(c) {
+    const { d } = c, rs = d.settings.codeReserve = d.settings.codeReserve || [];
+    const list = [].concat(c.args.codes || []).map(x => str(x, 12).toUpperCase().replace(/\s/g, '')).filter(Boolean).slice(0, 200);
+    if (c.args.remove) { const n = rs.length; d.settings.codeReserve = rs.filter(x => !list.includes(String(x.code || x).toUpperCase())); c.log('Bỏ giữ số đẹp', list.join(', ')); return { ok: true, removed: n - d.settings.codeReserve.length }; }
+    const bad = list.filter(k => !CODE.test(k)); if (bad.length) return err('Mã chưa đúng: ' + bad.join(', ') + '. Mã gồm PS và 3 đến 9 chữ số.');
+    const used = list.filter(k => codeTaken(d, k)); const have = reserved(d);
+    const add = list.filter(k => !used.includes(k) && !have.includes(k)), price = Math.max(0, Math.round(+c.args.price || 0)), note = str(c.args.note, 100);
+    add.forEach(k => rs.push({ code: k, price, note, at: c.today() }));
+    if (add.length) c.log('Giữ số đẹp', add.join(', ') + (price ? ', giá ' + price : ''));
+    return { ok: true, added: add, used };
+  } },
   // quản trị kích hoạt tay tài khoản chưa bấm thư kích hoạt (một hoặc nhiều người), gửi thư chào mừng như khi tự kích hoạt
   memberVerify: { auth: 'admin', perm: 'members', run(c) {
     const ids = [].concat(c.args.ids || []).slice(0, 500), done = [];
@@ -569,7 +600,7 @@ function botLookup(d, A, dealers, q, asker, base) {
   const pub = x => ({ name: x.name, code: x.code || '', refLink: refLink(x.code), area: x.area || '', address: x.address || '', phone: x.phone || '', zalo: x.zalo || x.phone || '', note: x.note || '' });
   if (!q) return { error: 'Thiếu nội dung cần tra (q): tên, số điện thoại hoặc mã PS.' };
   const users = d.users.filter(u => u.role !== 'admin' && u.status !== 'locked' && u.verified !== false && u.code);
-  const find = () => users.filter(u => (u.code || '').toUpperCase() === qc || (qp.length >= 9 && normPhone(u.phone) === qp) || hit(u.name));
+  const find = () => users.filter(u => hasCode(u, qc) || (qp.length >= 9 && normPhone(u.phone) === qp) || hit(u.name));
   let found = find();
   if (!found.length) { const t2 = toks.filter(t => !FILLER.has(t)); if (t2.length && t2.length < toks.length) { toks = t2; found = find(); } }
   const results = found.slice(0, 5).map(u => {

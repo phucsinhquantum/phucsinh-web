@@ -239,6 +239,17 @@ async function flow() {
     ok((((await bot('bạn Hà họ Nguyễn', bk.key)).j.results || [])[0] || {}).name === 'Nguyễn Văn Hà', 'An An: nhớ họ và tên không liền nhau (bạn Hà họ Nguyễn) vẫn ra đúng người');
     const r2 = ((await bot('ha', bk.key, '+84 912 345 678')).j.results || [])[0];
     ok(r2 && r2.self && r2.self.wallets && Array.isArray(r2.self.orders), 'An An: chính chủ (SĐT trùng) xem được ví và đơn của mình');
+    // số đẹp: giữ PS8888 trong kho, cấp cho B; mã cũ của B vẫn dùng được, không ai lấy được nữa
+    const oldB = B.r.me.code;
+    ok(((await owner.act('codeReserve', { codes: ['PS8888', oldB], price: 5000000 })).result || {}).used.includes(oldB), 'kho số đẹp: không giữ được số đã có người dùng');
+    ok(!!(await B.c.act('memberCode', { id: B.r.me.id, code: 'PS9999' })).error, 'thành viên thường không tự đổi mã được');
+    ok(!!(await owner.act('memberCode', { id: B.r.me.id, code: A.r.me.code })).error, 'không đổi sang mã của người khác');
+    ok(!(await owner.act('memberCode', { id: B.r.me.id, code: 'PS8888' })).error, 'chủ sở hữu đổi mã của B sang số đẹp PS8888');
+    let dbc = (await owner.req('GET', '/api/admin/db')).json.db, Bu = dbc.users.find(u => u.id === B.r.me.id);
+    ok(Bu.code === 'PS8888' && (Bu.oldCodes || []).includes(oldB) && !(dbc.settings.codeReserve || []).some(x => x.code === 'PS8888'), 'B mang mã PS8888, giữ mã cũ ' + oldB + ', số rời khỏi kho');
+    ok(((await guest.act('checkRef', { code: oldB })).result || {}).name === 'CTV B', 'link giới thiệu bằng mã cũ vẫn ra B');
+    ok((((await bot('PS8888', bk.key)).j.results || [])[0] || {}).code === 'PS8888' && (((await bot(oldB, bk.key)).j.results || [])[0] || {}).code === 'PS8888', 'An An tra mã mới hoặc mã cũ đều ra B');
+    ok(!(await client(s.port).act('login', { login: oldB, pass: '123456a' })).error, 'B đăng nhập bằng mã cũ được');
     await owner.act('botKeyOff', {});
     ok((await bot('CTV B', bk.key)).status === 401, 'An An: khóa cổng xong thì khóa cũ hết dùng được');
     const vf = await guest.req('GET', '/api/verify?t=sai-ma');
