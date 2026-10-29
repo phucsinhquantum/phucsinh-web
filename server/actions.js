@@ -35,7 +35,8 @@ const clean = u => { const r = Object.assign({}, u); delete r.pass; delete r.res
 
 // quản trị: toàn bộ dữ liệu, bỏ mật khẩu. Thành viên: phần của mình và tuyến dưới. Khách: phần công khai.
 function scopeFor(d, me, A) {
-  if (me && me.role === 'admin' && me.status !== 'locked') { const o = Object.assign({}, d); o.users = d.users.map(clean); return o; }
+  // quản trị: không kèm nội dung thư (nặng), xem thư thì lấy riêng bằng mailHtml
+  if (me && me.role === 'admin' && me.status !== 'locked') { const o = Object.assign({}, d); o.users = d.users.map(clean); o.mails = (d.mails || []).map(m => { if (!m.html) return m; const x = Object.assign({}, m); delete x.html; x.hasHtml = true; return x; }); return o; }
   const out = { v: d.v, settings: Object.assign({}, d.settings), stock: d.stock || {}, stockMin: d.stockMin, users: [], orders: [], commissions: [], wallet: [], topups: [], addresses: [], messages: [], logs: [], mails: [], fundbook: [], receipts: [], expenses: [], stores: d.stores || [], roles: [] };
   delete out.settings.fundWarn; delete out.settings.codeReserve;
   // chương trình khuyến mãi đang chạy (công khai), không gửi danh sách người đã dùng
@@ -360,7 +361,7 @@ const ACTIONS = {
     const url = c.args.url;
     if (url == null) { delete c.me.avatar; c.log('Xóa ảnh đại diện', '@' + c.me.username); return { ok: true }; }
     if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(String(url)) || String(url).length > 400000) return err('Ảnh chưa hợp lệ, anh chị chọn ảnh khác.');
-    c.me.avatar = url; c.log('Cập nhật ảnh đại diện', '@' + c.me.username); return { ok: true };
+    c.me.avatar = c.media ? c.media(url) : url; c.log('Cập nhật ảnh đại diện', '@' + c.me.username); return { ok: true };
   } },
   changePass: { auth: 'member', run(c) {
     const o = String(c.args.old || ''), n = String(c.args.pass || '');
@@ -524,6 +525,7 @@ const ACTIONS = {
     c.log('Đổi người giới thiệu', `${u.name} (${u.code}): ${nm(old)} → ${nm(sp)}`, u);
     return { ok: true, sponsor: sp ? { id: sp.id, name: sp.name, code: sp.code } : null };
   } },
+  mailHtml: { auth: 'admin', perm: 'system', run(c) { const m = (c.d.mails || []).find(x => x.id === c.args.id); return m ? { html: m.html || '' } : err('Không tìm thấy thư.'); } },
   // danh sách số đẹp giữ lại (không cấp tự động khi đăng ký): thêm hoặc bỏ, kèm giá và ghi chú để sau này bán
   codeReserve: { auth: 'admin', perm: 'members', run(c) {
     const { d } = c, rs = d.settings.codeReserve = d.settings.codeReserve || [];

@@ -59,6 +59,7 @@
   const ms = { q: '', type: '', status: '' };
   const mailStatus = { sent: ['Đã gửi', 'ok'], failed: ['Lỗi gửi', 'failed'], queued: ['Đang chờ', 'pending'], sending: ['Đang gửi', 'pending'] };
   function mailBody(d, m) {
+    if (m.hasHtml && !m.html) m.html = (API.act('mailHtml', { id: m.id }) || {}).html || '';
     if (m.html) return `<div class="ht-mail" style="background:#fff;color:#222;padding:16px;border-radius:10px">${m.html}</div>`;
     const S = d.settings || {}, u = d.users.find(x => x.email === m.to), name = u ? u.name : 'anh chị';
     const oid = (m.subject.match(/PSQ\d+/) || [])[0], o = oid && d.orders.find(x => x.id === oid);

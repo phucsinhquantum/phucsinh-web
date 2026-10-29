@@ -69,12 +69,12 @@
       <div class="row wrap mt-2" style="gap:10px"><input class="input" id="spQ" type="search" placeholder="Tìm tên, mã, số điện thoại" style="flex:1 1 200px;height:40px"><label class="check"><input type="checkbox" id="spCtv"> Hiện cả CTV</label></div>
       <div id="spL" class="mt-2" style="max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:12px"></div>`);
     const draw = () => {
-      const L = all.filter(x => (ctv ? x.tier === 'daily' || x.tier === 'ctv' : x.tier === 'daily') && (!f || [x.name, x.code, x.phone, ...(x.oldCodes || [])].join(' ').toLowerCase().includes(f)));
+      const L = all.filter(x => (ctv || f ? x.tier === 'daily' || x.tier === 'ctv' : x.tier === 'daily') && (!f || PSQ.fold([x.name, x.code, x.phone, ...(x.oldCodes || [])].join(' ')).includes(f)));
       $('#spL', m.el).innerHTML = (u.sponsor ? `<button class="btn btn-ghost btn-block" type="button" data-sp="" style="justify-content:flex-start;border-radius:0;border-bottom:1px solid var(--line)">${icon('home')} Chuyển về Công ty (không có tuyến trên)</button>` : '')
         + (L.length ? L.map(x => `<button class="btn btn-ghost btn-block" type="button" data-sp="${esc(x.code)}" style="justify-content:flex-start;text-align:left;border-radius:0;border-bottom:1px solid var(--line);height:auto;padding:10px 12px"><span><b>${esc(x.name)}</b> <span class="cyan">${esc(x.code)}</span><br><small class="dim">${x.tier === 'daily' ? 'Đại lý' : 'CTV'}${x.phone ? ' · ' + esc(x.phone) : ''}</small></span></button>`).join('')
         : `<div class="empty" style="padding:20px">Không có ai khớp.</div>`);
     };
-    $('#spQ', m.el).addEventListener('input', e => { f = e.target.value.trim().toLowerCase(); draw(); });
+    $('#spQ', m.el).addEventListener('input', e => { f = PSQ.fold(e.target.value.trim()); draw(); });
     $('#spCtv', m.el).addEventListener('change', e => { ctv = e.target.checked; draw(); });
     $('#spL', m.el).addEventListener('click', e => {
       const b = e.target.closest('[data-sp]'); if (!b) return;

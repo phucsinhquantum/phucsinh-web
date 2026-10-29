@@ -49,7 +49,38 @@ if (!store.getJSON('mig:anan')) {
   }
   store.setJSON('mig:anan', 1);
 }
+/* ---------- ảnh tải lên trong quản trị (bài viết, đánh giá, đại lý, ảnh đại diện): lưu thành tệp, dữ liệu chỉ giữ đường dẫn.
+   Trước đây ảnh nhúng base64 vào dữ liệu nên mỗi lần mở trang phải tải hơn 1MB. ---------- */
+const MEDIA_DIR = path.join(DATA_DIR, 'media');
+const MEDIA_EXT = { jpeg: 'jpg', jpg: 'jpg', png: 'png', webp: 'webp', gif: 'gif' };
+const MEDIA_MIME = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
+const DATA_IMG = /data:image\/(jpeg|jpg|png|webp|gif);base64,([A-Za-z0-9+/=]{200,})/g;
+function mediaFile(type, b64) {
+  const buf = Buffer.from(b64, 'base64'), ext = MEDIA_EXT[type];
+  const f = require('crypto').createHash('sha256').update(buf).digest('hex').slice(0, 24) + '.' + ext;
+  fs.mkdirSync(MEDIA_DIR, { recursive: true });
+  const p = path.join(MEDIA_DIR, f); if (!fs.existsSync(p)) fs.writeFileSync(p, buf);
+  return '/api/media/' + f;
+}
+// thay mọi ảnh base64 trong chuỗi, mảng, đối tượng bằng đường dẫn tệp; trả về giá trị mới (không đổi gì thì trả lại chính nó)
+function externalize(v) {
+  if (typeof v === 'string') return v.length > 300 && v.includes('base64,') ? v.replace(DATA_IMG, (_, t, b) => mediaFile(t, b)) : v;
+  if (Array.isArray(v)) { let ch = false; const out = v.map(x => { const y = externalize(x); if (y !== x) ch = true; return y; }); return ch ? out : v; }
+  if (v && typeof v === 'object') { let ch = false; const out = {}; for (const k of Object.keys(v)) { const y = externalize(v[k]); if (y !== v[k]) ch = true; out[k] = y; } return ch ? out : v; }
+  return v;
+}
+function serveMedia(res, f) {
+  const m = /^[a-f0-9]{24}\.(jpg|png|webp|gif)$/.exec(f || ''); if (!m) return send(res, 404, { error: 'Không có ảnh.' });
+  fs.readFile(path.join(MEDIA_DIR, f), (e, buf) => {
+    if (e) return send(res, 404, { error: 'Không có ảnh.' });
+    res.writeHead(200, { 'content-type': MEDIA_MIME[m[1]], 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff' }); res.end(buf);
+  });
+}
+// chuyển ảnh base64 đang có trong nội dung trang sang tệp (chạy mỗi lần khởi động, không có gì thì bỏ qua)
+for (const k of CONTENT_KEYS) { const v = content.get(k), nv = externalize(v); if (nv !== v) { content.set(k, nv); store.setJSON(k, nv); console.log('Đã chuyển ảnh sang tệp:', k); } }
+
 let D = store.getJSON('db') || {};
+{ let n = 0; (D.users || []).forEach(u => { if (u.avatar && /^data:/.test(u.avatar)) { const a = externalize(u.avatar); if (a !== u.avatar) { u.avatar = a; n++; } } }); if (n) { store.setJSON('db', D); console.log('Đã chuyển', n, 'ảnh đại diện sang tệp'); } }
 let ACTOR = null;
 let E = null;
 const buildEngine = () => { E = createEngine({ webRoot: WEB_ROOT, content: k => content.get(k) ?? null, state: () => D, actor: () => ACTOR }); };
@@ -126,7 +157,9 @@ const cookies = req => Object.fromEntries(String(req.headers.cookie || '').split
 const ipOf = req => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 function send(res, code, body, headers = {}) {
   const json = typeof body !== 'string';
-  const buf = Buffer.from(json ? JSON.stringify(body) : body);
+  let buf = Buffer.from(json ? JSON.stringify(body) : body);
+  // nén dữ liệu trả về (trang quản trị nhận cả kho dữ liệu sau mỗi thao tác): nhỏ đi khoảng 5 đến 10 lần
+  if (buf.length > 1024 && /gzip/.test((res.req && res.req.headers['accept-encoding']) || '')) { buf = zlib.gzipSync(buf, { level: 6 }); headers = Object.assign({ 'content-encoding': 'gzip', vary: 'accept-encoding' }, headers); }
   res.writeHead(code, Object.assign({ 'content-type': json ? 'application/json; charset=utf-8' : 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }, headers));
   res.end(buf);
 }
@@ -161,7 +194,7 @@ function bootPayload(me, imp) {
 // bối cảnh chạy một thao tác (actions.js)
 function ctxFor(me, args, sid) {
   return {
-    d: D, me, args, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc,
+    d: D, me, args, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc, media: externalize,
     log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
     mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
     sendNow: (to, subject, type, html) => sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
@@ -175,6 +208,7 @@ async function api(req, res, url) {
   if (req.method === 'GET' && route === '/api/verify') return verifyPage(req, res, url);
   if (route === '/api/ship') return shipPage(req, res, url);
   if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
+  if (req.method === 'GET' && route.startsWith('/api/media/')) return serveMedia(res, route.slice(11));
   if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
   if (route === '/api/bot/lookup' || route === '/api/bot/products') return botApi(req, res, url, route.endsWith('products'));
   if (req.method !== 'POST') return send(res, 405, { error: 'Sai phương thức.' });
@@ -239,7 +273,8 @@ async function api(req, res, url) {
     }
     if (route === '/api/admin/content') {
       if (!CONTENT_KEYS.includes(body.key)) return send(res, 400, { error: 'Mục nội dung không có.' });
-      content.set(body.key, body.value ?? null); store.setJSON(body.key, body.value ?? null);
+      const val = externalize(body.value ?? null);
+      content.set(body.key, val); store.setJSON(body.key, val);
       store.history(me.email, 'content', body.key);
       if (PRODUCT_KEYS.includes(body.key)) buildEngine();
       return send(res, 200, { ok: true });

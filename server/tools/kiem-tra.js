@@ -257,6 +257,17 @@ async function flow() {
     const Cu = dbc.users.find(u => u.id === C.r.me.id);
     ok(Cu.sponsor === A.r.me.id && Cu.parent === A.r.me.id && com(B.r.me.id, 'direct').length > 0, 'C thuộc tuyến A trên cây, hoa hồng cũ của B giữ nguyên');
     await owner.act('memberSponsor', { id: C.r.me.id, code: 'PS8888' });
+    // ảnh tải lên trong quản trị lưu thành tệp, dữ liệu trang chỉ giữ đường dẫn
+    {
+      const png = 'data:image/png;base64,' + fs.readFileSync(path.join(ROOT, 'img', 'icon-32.png')).toString('base64').padEnd(0);
+      await owner.req('POST', '/api/admin/content', { key: 'psq_reviews_v1', value: [{ id: 'kt', name: 'Ảnh thử', photo: png, text: 'x <img src="' + png + '">' }] });
+      const bt = await guest.req('GET', '/api/boot'), rv = ((bt.json.content || {}).psq_reviews_v1 || [])[0] || {};
+      ok(/^\/api\/media\/[a-f0-9]{24}\.png$/.test(rv.photo || '') && !/base64/.test(JSON.stringify(bt.json)), 'ảnh base64 thành tệp /api/media, dữ liệu trang không còn base64');
+      const im = await fetch(`http://127.0.0.1:${s.port}${rv.photo}`);
+      ok(im.status === 200 && im.headers.get('content-type') === 'image/png', 'mở được ảnh đã lưu');
+      ok(/gzip/.test((await fetch(`http://127.0.0.1:${s.port}/api/boot`, { headers: { 'accept-encoding': 'gzip' } })).headers.get('content-encoding') || ''), 'dữ liệu trả về được nén');
+      await owner.req('POST', '/api/admin/content', { key: 'psq_reviews_v1', value: null });
+    }
     await owner.act('botKeyOff', {});
     ok((await bot('CTV B', bk.key)).status === 401, 'An An: khóa cổng xong thì khóa cũ hết dùng được');
     const vf = await guest.req('GET', '/api/verify?t=sai-ma');

@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261029a">
-<script src="js/lang.js?v=20261029a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261029b">
+<script src="js/lang.js?v=20261029b"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -182,28 +182,28 @@
   </div>
 </div>
 
-<script src="js/patch.js?v=20261029a"></script>
-<script src="js/api.js?v=20261029a"></script>
-<script src="js/data.js?v=20261029a"></script>
-<script src="js/app.js?v=20261029a"></script>
-<script src="js/psq-data.js?v=20261029a"></script>
+<script src="js/patch.js?v=20261029b"></script>
+<script src="js/api.js?v=20261029b"></script>
+<script src="js/data.js?v=20261029b"></script>
+<script src="js/app.js?v=20261029b"></script>
+<script src="js/psq-data.js?v=20261029b"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261029a"></script>
-<script src="js/admin/nguoi-dung.js?v=20261029a"></script>
-<script src="js/admin/noi-dung.js?v=20261029a"></script>
-<script src="js/admin/kho.js?v=20261029a"></script>
-<script src="js/admin/tai-chinh.js?v=20261029a"></script>
-<script src="js/admin/he-thong.js?v=20261029a"></script>
-<script src="js/admin/vong-quay.js?v=20261029a"></script>
-<script src="js/admin/chao-mung.js?v=20261029a"></script>
-<script src="js/admin/khuyen-mai.js?v=20261029a"></script>
-<script src="js/admin/quy-diem.js?v=20261029a"></script>
-<script src="js/admin/gioi-thieu.js?v=20261029a"></script>
-<script src="js/admin/dai-ly.js?v=20261029a"></script>
-<script src="js/admin/so-dep.js?v=20261029a"></script>
-<script src="js/admin/danh-gia.js?v=20261029a"></script>
-<script src="js/admin/dieu-khoan.js?v=20261029a"></script>
-<script src="js/admin/quyen-loi.js?v=20261029a"></script>
+<script src="js/admin/pha-he.js?v=20261029b"></script>
+<script src="js/admin/nguoi-dung.js?v=20261029b"></script>
+<script src="js/admin/noi-dung.js?v=20261029b"></script>
+<script src="js/admin/kho.js?v=20261029b"></script>
+<script src="js/admin/tai-chinh.js?v=20261029b"></script>
+<script src="js/admin/he-thong.js?v=20261029b"></script>
+<script src="js/admin/vong-quay.js?v=20261029b"></script>
+<script src="js/admin/chao-mung.js?v=20261029b"></script>
+<script src="js/admin/khuyen-mai.js?v=20261029b"></script>
+<script src="js/admin/quy-diem.js?v=20261029b"></script>
+<script src="js/admin/gioi-thieu.js?v=20261029b"></script>
+<script src="js/admin/dai-ly.js?v=20261029b"></script>
+<script src="js/admin/so-dep.js?v=20261029b"></script>
+<script src="js/admin/danh-gia.js?v=20261029b"></script>
+<script src="js/admin/dieu-khoan.js?v=20261029b"></script>
+<script src="js/admin/quyen-loi.js?v=20261029b"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -344,7 +344,7 @@
   Object.entries(statusName).forEach(([k, v]) => $('#os').insertAdjacentHTML('beforeend', `<option value="${k}">${v}</option>`));
   function orders() {
     const d = ADB.load(), q = $('#oq').value.trim().toLowerCase(), st = $('#os').value;
-    const list = d.orders.filter(o => (!st || o.status === st) && (!q || [o.id, o.name, o.phone, o.email].join(' ').toLowerCase().includes(q)));
+    const list = d.orders.filter(o => (!st || o.status === st) && (!q || PSQ.fold([o.id, o.name, o.phone, o.email].join(' ')).includes(PSQ.fold(q))));
     $('#ocount').textContent = list.length + ' đơn';
     $('#olist').innerHTML = list.length ? list.map((o, i) => `<tr><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(o.name)}</span><div><b>${esc(o.name)}</b><small>${esc(o.phone || '')}</small></div></div></td>
       <td><b>#${o.id}</b></td><td class="dim" style="max-width:220px">${isPkg(o) ? pkgBadge(o) + '<br>' : ''}${o.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="nowrap gold">${money(o.total)}${o.shopPaid ? `<br><small class="green">Điểm: ${money(o.shopPaid).replace('đ', ' PS')}</small>` : ''}${o.cashPaid ? `<br><small class="cyan">Ví tiền mặt: ${money(o.cashPaid)}</small>` : ''}${o.discount ? `<br><small class="green">Mã ${esc(o.coupon || '')}: -${money(o.discount)}</small>` : ''}${o.exchange && o.exchange.due > 0 ? `<br><small class="red">Chờ bù ${money(o.exchange.due)}</small>` : o.exchanges ? '<br><small class="dim">Đã đổi sản phẩm</small>' : ''}</td>
@@ -492,12 +492,12 @@
 
   /* ---------- thành viên ---------- */
   function membersPane() {
-    const d = ADB.load(), q = $('#mq').value.trim().toLowerCase(), r = $('#mr').value, t = $('#mt').value;
+    const d = ADB.load(), q = PSQ.fold($('#mq').value.trim()), r = $('#mr').value, t = $('#mt').value;
     const mem = d.users.filter(u => u.role !== 'admin'), tierId = u => u.tier || 'khach';
     $('#mstats').innerHTML = [['', 'Tổng thành viên', '#e8e2d4', mem.length]].concat(Object.entries(ADB.TIERS).map(([id, k]) => [id, k.name, k.color, mem.filter(u => tierId(u) === id).length]))
       .map(([id, name, color, n], i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat"><div class="stat-top"><span class="dot" style="color:${color}"></span>${name}</div><div class="stat-val">${n.toLocaleString('vi-VN')}</div></div>`).join('');
     const waitN = mem.filter(u => u.verified === false).length; $('#mvN').textContent = waitN; $('#mv').classList.toggle('on', onlyWait); $('#mv').setAttribute('aria-pressed', onlyWait); $('#mv').hidden = !waitN && !onlyWait;
-    const list = d.users.filter(u => (!onlyWait || (u.role !== 'admin' && u.verified === false)) && (!r || (r === 'admin' ? u.role === 'admin' : u.role !== 'admin')) && (!t || (u.role !== 'admin' && tierId(u) === t)) && (!q || [u.name, u.email, u.phone, u.username, u.code].join(' ').toLowerCase().includes(q)));
+    const list = d.users.filter(u => (!onlyWait || (u.role !== 'admin' && u.verified === false)) && (!r || (r === 'admin' ? u.role === 'admin' : u.role !== 'admin')) && (!t || (u.role !== 'admin' && tierId(u) === t)) && (!q || PSQ.fold([u.name, u.email, u.phone, u.username, u.code, ...(u.oldCodes || [])].join(' ')).includes(q)));
     $('#mcount').textContent = list.length + ' tài khoản';
     $('#mlist').innerHTML = list.length ? list.map((u, i) => { const k = ADB.tierOf(u); return `<tr><td class="mv-col">${u.verified === false && u.role !== 'admin' ? `<input type="checkbox" data-mvpick="${u.id}"${picked.has(u.id) ? ' checked' : ''} aria-label="Chọn ${esc(u.name)}">` : ''}</td><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(u.name)}</span><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small>${u.status === 'locked' ? '<small><span class="badge failed">Đã khóa</span></small>' : ''}${u.verified === false ? `<small><span class="badge pending">Chưa kích hoạt email</span></small><button class="btn btn-sm btn-gold mv-btn" type="button" data-verify="${u.id}" title="Kích hoạt tài khoản không cần thư">${icon('check')} Kích hoạt</button>` : ''}</div></div></td><td class="nowrap">${u.username ? '@' + esc(u.username) : ''}${u.code ? `<br><small class="dim">${esc(u.code)}</small>` : ''}${(u.oldCodes || []).length ? `<br><small class="dim" title="Mã cũ vẫn dùng được">(cũ ${u.oldCodes.map(esc).join(', ')})</small>` : ''}</td><td class="nowrap">${esc(u.phone || '')}</td>
       <td><span class="badge ${u.role === 'admin' ? 'failed' : 'ship'}">${u.role === 'admin' ? 'Quản trị' : 'Thành viên'}</span></td>

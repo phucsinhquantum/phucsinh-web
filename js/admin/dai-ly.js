@@ -36,7 +36,7 @@
 
   function render(el) {
     const edit = ADMIN.can('content'), list = D.all(), shown = list.filter(x => !x.hidden).length;
-    const f = q.toLowerCase(), rows = list.map((x, i) => ({ x, i })).filter(({ x }) => !f || [x.name, x.code, x.area, x.address, x.phone].join(' ').toLowerCase().includes(f));
+    const f = PSQ.fold(q), rows = list.map((x, i) => ({ x, i })).filter(({ x }) => !f || PSQ.fold([x.name, x.code, x.area, x.address, x.phone].join(' ')).includes(f));
     el.innerHTML = `
       <div class="card glow-gold">
         <div class="card-head"><div><h3>Đại lý uy tín</h3><div class="sub">${list.length} đại lý · ${shown} đang hiện trên web. Thứ tự ở đây là thứ tự hiện ở trang chủ.</div></div>
@@ -88,7 +88,8 @@
       <div id="dlpL" class="mt-1" style="max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:12px"></div>
       <div class="row mt-3" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="button" id="dlpGo" disabled>${icon('plus')} Thêm</button></div>`);
     const chosen = new Set();
-    const vis = () => all.filter(u => (showCtv ? u.tier === 'daily' || u.tier === 'ctv' : u.tier === 'daily') && (!f || [u.name, u.code, u.phone, u.city, u.address].join(' ').toLowerCase().includes(f)));
+    // đang tìm thì tìm cả CTV, gõ không dấu vẫn ra
+    const vis = () => all.filter(u => (showCtv || f ? u.tier === 'daily' || u.tier === 'ctv' : u.tier === 'daily') && (!f || PSQ.fold([u.name, u.code, u.phone, ...(u.oldCodes || [])].join(' ')).includes(f)));
     const draw = () => {
       const L = vis();
       $('#dlpL', m.el).innerHTML = L.length ? L.map(u => `<label class="check" style="display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer">
@@ -100,7 +101,7 @@
     };
     $('#dlpL', m.el).addEventListener('change', e => { const c = e.target.dataset.c; if (!c) return; e.target.checked ? chosen.add(c) : chosen.delete(c); draw(); });
     $('#dlpAll', m.el).addEventListener('change', e => { vis().forEach(u => e.target.checked ? chosen.add(u.code) : chosen.delete(u.code)); draw(); });
-    $('#dlpQ', m.el).addEventListener('input', e => { f = e.target.value.trim().toLowerCase(); draw(); });
+    $('#dlpQ', m.el).addEventListener('input', e => { f = PSQ.fold(e.target.value.trim()); draw(); });
     $('#dlpCtv', m.el).addEventListener('change', e => { showCtv = e.target.checked; draw(); });
     $('#dlpGo', m.el).addEventListener('click', () => {
       const cur = D.all(), add = all.filter(u => chosen.has(u.code));

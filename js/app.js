@@ -162,6 +162,8 @@
 
   /* ---------- giỏ hàng ---------- */
   const product = id => PRODUCTS.find(p => p.id === id);
+  // bỏ dấu để tìm kiếm: gõ "thuy" ra "Thủy"
+  const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
   // giá tính thưởng (PS): chưa đặt thì bằng giá bán. Hàng đối tác nằm ở trang riêng.
   const psOf = p => (p && p.ps != null && p.ps !== '' && +p.ps >= 0) ? Math.round(+p.ps) : (p ? p.price : 0);
   const shopList = partner => PRODUCTS.filter(p => !!p.partner === !!partner);
@@ -665,7 +667,7 @@
     };
   })();
 
-  window.PSQ = { guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {
