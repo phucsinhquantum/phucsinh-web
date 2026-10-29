@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261029b">
-<script src="js/lang.js?v=20261029b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030a">
+<script src="js/lang.js?v=20261030a"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -115,7 +115,8 @@
           <input class="input" id="oq" placeholder="Tìm mã đơn, tên, số điện thoại">
           <select class="input" id="os"><option value="">Mọi trạng thái</option></select>
           <span class="dim" id="ocount" style="font-size:13px"></span>
-          <button class="btn btn-sm btn-outline-gold" id="shipNow" type="button" style="margin-left:auto" title="Trợ lý nhắn Telegram các đơn đã thanh toán mà chưa ship, kèm nút Đã ship / Chưa ship">🚚 Nhắc giao hàng ngay</button>
+          <button class="btn btn-sm btn-outline-gold" id="staleBtn" type="button" style="margin-left:auto" title="Đơn đặt quá 10 phút mà chưa duyệt; bot gửi Telegram để duyệt">⏰ Kiểm tra đơn sót</button>
+          <button class="btn btn-sm btn-outline-gold" id="shipNow" type="button" title="Trợ lý nhắn Telegram các đơn đã thanh toán mà chưa ship, kèm nút Đã ship / Chưa ship">🚚 Nhắc giao hàng ngay</button>
           <button class="btn btn-sm btn-outline-gold" id="csv" type="button">Xuất CSV</button>
         </div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th>Khách hàng</th><th>Mã đơn</th><th>Sản phẩm</th><th>Tổng</th><th>Thanh toán</th><th>Trạng thái</th><th>Ngày</th><th></th></tr></thead><tbody id="olist"></tbody></table></div>
@@ -139,7 +140,7 @@
     <section data-pane="members" hidden>
       <div class="grid g-4 keep-2" id="mstats"></div>
       <div class="card glow-cyan mt-2">
-        <div class="toolbar"><input class="input" id="mq" placeholder="Tìm tên, email, số điện thoại"><select class="input" id="mr"><option value="">Mọi vai trò</option><option value="member">Thành viên</option><option value="admin">Quản trị</option></select><select class="input" id="mt" aria-label="Lọc theo cấp bậc"><option value="">Mọi cấp bậc</option><option value="khach">Khách hàng</option><option value="ctv">Cộng tác viên</option><option value="daily">Đại lý</option></select><button class="btn btn-sm mv-filter" type="button" id="mv" aria-pressed="false">Chưa kích hoạt <b id="mvN">0</b></button><button class="btn btn-sm btn-gold" type="button" id="mvAll" hidden>Kích hoạt <span id="mvSel">0</span> người đã chọn</button><button class="btn btn-sm btn-outline-gold" type="button" id="sdBtn">Kho số đẹp</button><button class="btn btn-sm btn-ghost" type="button" id="xtBtn" hidden>Xóa thành viên</button><span class="dim" id="mcount" style="font-size:13px"></span></div>
+        <div class="toolbar"><input class="input" id="mq" placeholder="Tìm tên, email, số điện thoại"><select class="input" id="mr"><option value="">Mọi vai trò</option><option value="member">Thành viên</option><option value="admin">Quản trị</option></select><select class="input" id="mt" aria-label="Lọc theo cấp bậc"><option value="">Mọi cấp bậc</option><option value="khach">Khách hàng</option><option value="ctv">Cộng tác viên</option><option value="daily">Đại lý</option></select><button class="btn btn-sm mv-filter" type="button" id="mv" aria-pressed="false">Chưa kích hoạt <b id="mvN">0</b></button><button class="btn btn-sm btn-gold" type="button" id="mvAll" hidden>Kích hoạt <span id="mvSel">0</span> người đã chọn</button><button class="btn btn-sm btn-outline-gold" type="button" id="sdBtn">Kho số đẹp</button><button class="btn btn-sm btn-outline-gold" type="button" id="fnBtn">Fanpage thành viên</button><button class="btn btn-sm btn-ghost" type="button" id="xtBtn" hidden>Xóa thành viên</button><span class="dim" id="mcount" style="font-size:13px"></span></div>
         <div class="table-wrap"><table class="tbl"><thead><tr><th class="mv-col" style="width:34px"><input type="checkbox" id="mvChk" aria-label="Chọn tất cả tài khoản chưa kích hoạt"></th><th>Thành viên</th><th>Tên truy cập</th><th>Điện thoại</th><th>Vai trò</th><th>Cấp bậc</th><th>Tổng mua</th><th>Tham gia</th><th>Thao tác</th></tr></thead><tbody id="mlist"></tbody></table></div>
       </div>
     </section>
@@ -182,29 +183,31 @@
   </div>
 </div>
 
-<script src="js/patch.js?v=20261029b"></script>
-<script src="js/api.js?v=20261029b"></script>
-<script src="js/data.js?v=20261029b"></script>
-<script src="js/app.js?v=20261029b"></script>
-<script src="js/psq-data.js?v=20261029b"></script>
+<script src="js/patch.js?v=20261030a"></script>
+<script src="js/api.js?v=20261030a"></script>
+<script src="js/data.js?v=20261030a"></script>
+<script src="js/app.js?v=20261030a"></script>
+<script src="js/psq-data.js?v=20261030a"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261029b"></script>
-<script src="js/admin/nguoi-dung.js?v=20261029b"></script>
-<script src="js/admin/noi-dung.js?v=20261029b"></script>
-<script src="js/admin/kho.js?v=20261029b"></script>
-<script src="js/admin/tai-chinh.js?v=20261029b"></script>
-<script src="js/admin/he-thong.js?v=20261029b"></script>
-<script src="js/admin/vong-quay.js?v=20261029b"></script>
-<script src="js/admin/chao-mung.js?v=20261029b"></script>
-<script src="js/admin/khuyen-mai.js?v=20261029b"></script>
-<script src="js/admin/quy-diem.js?v=20261029b"></script>
-<script src="js/admin/gioi-thieu.js?v=20261029b"></script>
-<script src="js/admin/dai-ly.js?v=20261029b"></script>
-<script src="js/admin/so-dep.js?v=20261029b"></script>
-<script src="js/admin/xoa-tv.js?v=20261029b"></script>
-<script src="js/admin/danh-gia.js?v=20261029b"></script>
-<script src="js/admin/dieu-khoan.js?v=20261029b"></script>
-<script src="js/admin/quyen-loi.js?v=20261029b"></script>
+<script src="js/admin/pha-he.js?v=20261030a"></script>
+<script src="js/admin/nguoi-dung.js?v=20261030a"></script>
+<script src="js/admin/noi-dung.js?v=20261030a"></script>
+<script src="js/admin/kho.js?v=20261030a"></script>
+<script src="js/admin/tai-chinh.js?v=20261030a"></script>
+<script src="js/admin/he-thong.js?v=20261030a"></script>
+<script src="js/admin/vong-quay.js?v=20261030a"></script>
+<script src="js/admin/chao-mung.js?v=20261030a"></script>
+<script src="js/admin/khuyen-mai.js?v=20261030a"></script>
+<script src="js/admin/quy-diem.js?v=20261030a"></script>
+<script src="js/admin/gioi-thieu.js?v=20261030a"></script>
+<script src="js/admin/dai-ly.js?v=20261030a"></script>
+<script src="js/admin/so-dep.js?v=20261030a"></script>
+<script src="js/admin/xoa-tv.js?v=20261030a"></script>
+<script src="js/admin/don-sot.js?v=20261030a"></script>
+<script src="js/admin/fanpage.js?v=20261030a"></script>
+<script src="js/admin/danh-gia.js?v=20261030a"></script>
+<script src="js/admin/dieu-khoan.js?v=20261030a"></script>
+<script src="js/admin/quyen-loi.js?v=20261030a"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -434,6 +437,7 @@
       <div class="divider"></div>${o.items.map(x => `<div class="row between" style="padding:6px 0"><span>${esc(x.name)} x${x.qty}</span><b>${money(x.price * x.qty)}</b></div>`).join('')}
       <div class="divider"></div>${o.discount ? `<div class="row between"><span class="muted">Mã giảm giá ${esc(o.coupon || '')}</span><span class="green">-${money(o.discount)}</span></div>` : ''}<div class="row between"><span class="muted">Tổng</span><b class="gold" style="font-size:18px">${money(o.total)}</b></div>`);
   });
+  $('#staleBtn').addEventListener('click', () => staleOrders());
   $('#shipNow').addEventListener('click', e => {
     const b = e.currentTarget; b.disabled = true; const t = b.textContent; b.textContent = 'Đang gửi...';
     setTimeout(() => { const r = API.act('shipRemindNow'); b.disabled = false; b.textContent = t; if (r.error) return toast(r.error, 'err'); toast(r.orders ? `Trợ lý đã nhắc ${r.orders} đơn chưa ship qua Telegram` : 'Không có đơn nào đã thanh toán mà chưa ship'); }, 30);
@@ -500,6 +504,7 @@
     const waitN = mem.filter(u => u.verified === false).length; $('#mvN').textContent = waitN; $('#mv').classList.toggle('on', onlyWait); $('#mv').setAttribute('aria-pressed', onlyWait); $('#mv').hidden = !waitN && !onlyWait;
     const list = d.users.filter(u => (!onlyWait || (u.role !== 'admin' && u.verified === false)) && (!r || (r === 'admin' ? u.role === 'admin' : u.role !== 'admin')) && (!t || (u.role !== 'admin' && tierId(u) === t)) && (!q || PSQ.fold([u.name, u.email, u.phone, u.username, u.code, ...(u.oldCodes || [])].join(' ')).includes(q)));
     const owner = ADB.isOwner(auth.user()); $('#xtBtn').hidden = !owner;
+    { const n = d.users.filter(u => u.fan && u.fan.status === 'pending' && (u.fan.links || []).length).length; $('#fnBtn').innerHTML = 'Fanpage thành viên' + (n ? ` <span class="badge gold">${n} chờ duyệt</span>` : ''); }
     $('#mcount').textContent = list.length + ' tài khoản';
     $('#mlist').innerHTML = list.length ? list.map((u, i) => { const k = ADB.tierOf(u); return `<tr><td class="mv-col">${u.verified === false && u.role !== 'admin' ? `<input type="checkbox" data-mvpick="${u.id}"${picked.has(u.id) ? ' checked' : ''} aria-label="Chọn ${esc(u.name)}">` : ''}</td><td><div class="who"><span class="avatar ${AV[i % 3]}">${initials(u.name)}</span><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small>${u.status === 'locked' ? '<small><span class="badge failed">Đã khóa</span></small>' : ''}${u.verified === false ? `<small><span class="badge pending">Chưa kích hoạt email</span></small><button class="btn btn-sm btn-gold mv-btn" type="button" data-verify="${u.id}" title="Kích hoạt tài khoản không cần thư">${icon('check')} Kích hoạt</button>` : ''}</div></div></td><td class="nowrap">${u.username ? '@' + esc(u.username) : ''}${u.code ? `<br><small class="dim">${esc(u.code)}</small>` : ''}${(u.oldCodes || []).length ? `<br><small class="dim" title="Mã cũ vẫn dùng được">(cũ ${u.oldCodes.map(esc).join(', ')})</small>` : ''}</td><td class="nowrap">${esc(u.phone || '')}</td>
       <td><span class="badge ${u.role === 'admin' ? 'failed' : 'ship'}">${u.role === 'admin' ? 'Quản trị' : 'Thành viên'}</span></td>
@@ -569,6 +574,7 @@
   $('#mlist').addEventListener('click', e => { const b = e.target.closest('[data-verify]'); if (b) verifyMany([b.dataset.verify]); });
   $('#sdBtn').addEventListener('click', () => codeStore());
   $('#xtBtn').addEventListener('click', () => memberDelete(null, membersPane));
+  $('#fnBtn').addEventListener('click', () => fanReview(membersPane));
   $('#mlist').addEventListener('click', e => { const b = e.target.closest('[data-mdel]'); if (b) memberDelete(b.dataset.mdel, membersPane); });
   $('#mq').addEventListener('input', membersPane); $('#mr').addEventListener('change', membersPane); $('#mt').addEventListener('change', membersPane);
 

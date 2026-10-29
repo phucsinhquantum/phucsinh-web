@@ -113,6 +113,31 @@
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, () => prompt('Mã số đại lý:', code));
     else prompt('Mã số đại lý:', code);
   });
+  // fanpage thành viên (đã được quản trị duyệt; máy chủ gửi kèm khi mở trang)
+  const FAN_ICO = {
+    facebook: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.5-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.8v3h2.6V21z"/></svg>',
+    tiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 3c.3 2.2 1.6 3.6 3.9 3.8v3a7 7 0 0 1-3.8-1.2v6.1A5.8 5.8 0 1 1 10.9 9v3.1a2.8 2.8 0 1 0 2.6 2.8V3z"/></svg>',
+    zalo: '<svg viewBox="0 0 24 24"><rect x="2.5" y="2.5" width="19" height="19" rx="6" fill="currentColor"/><text x="12" y="15.6" text-anchor="middle" font-size="8.5" font-weight="700" font-family="Arial,sans-serif" fill="#0e1417">Zalo</text></svg>',
+    youtube: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.8 1.8c1.6.4 7.8.4 7.8.4s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8zM10 15V9l5.2 3z"/></svg>',
+    instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>'
+  };
+  const FAN_NAME = { facebook: 'Facebook', tiktok: 'TikTok', zalo: 'Zalo', youtube: 'YouTube', instagram: 'Instagram' };
+  const fans = {
+    list() { return (window.API && API.fans) || []; },
+    ico: k => FAN_ICO[k] || '', name: k => FAN_NAME[k] || 'Trang',
+    card(x, i = 0) {
+      const a = (x.links || [])[0]; if (!a) return '';
+      const ini = initials(x.name) || 'TV', tier = x.tier === 'daily' ? '<span class="fan-tier gold">Đại lý</span>' : x.tier === 'ctv' ? '<span class="fan-tier cyan">CTV</span>' : '<span class="fan-tier">Thành viên</span>';
+      const go = (l, cls, label) => `<a class="${cls}" href="${esc(l.url)}" target="_blank" rel="nofollow noopener noreferrer" aria-label="${esc(label)}">`;
+      return `<article class="card fan-card ${['glow-gold', 'glow-cyan'][i % 2]}">
+        <div class="fan-top"><span class="fan-ph">${x.avatar ? `<img src="${esc(x.avatar)}" alt="" loading="lazy">` : esc(ini)}<span class="fan-dot fan-${esc(a.kind)}">${FAN_ICO[a.kind] || ''}</span></span>
+          <div class="fan-id"><h3>${esc(x.name)}</h3><div class="fan-meta">${tier}${x.code ? `<small>${esc(x.code)}</small>` : ''}</div></div></div>
+        ${x.title ? `<p class="fan-title">${esc(x.title)}</p>` : ''}
+        <div class="fan-links">${x.links.map(l => go(l, 'fan-ico fan-' + l.kind, FAN_NAME[l.kind] + ' của ' + x.name) + FAN_ICO[l.kind] + '</a>').join('')}</div>
+        ${go(a, 'btn btn-sm btn-gold fan-go', 'Xem fanpage ' + FAN_NAME[a.kind] + ' của ' + x.name)}${a.kind === 'zalo' ? '' : FAN_ICO[a.kind]}Xem ${a.kind === 'zalo' ? 'Zalo' : 'fanpage'}</a>
+      </article>`;
+    }
+  };
   const dealers = {
     all() { return (store.get(DL_KEY, null) || window.DEALERS || []).filter(x => x && x.name && !/^dl-mau-/.test(x.id || '')); },   // bỏ đại lý mẫu cũ còn lưu
     list() { return dealers.all().filter(x => !x.hidden); },
@@ -667,7 +692,7 @@
     };
   })();
 
-  window.PSQ = { guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { fans, guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {

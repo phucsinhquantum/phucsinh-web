@@ -18,10 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261029b">
-<script src="js/lang.js?v=20261029b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030a">
+<script src="js/lang.js?v=20261030a"></script>
 <link rel="stylesheet" href="css/intro.css">
-<script src="js/intro.js?v=20261029b"></script>
+<script src="js/intro.js?v=20261030a"></script>
 </head>
 <body data-page="home">
 <div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
@@ -47,7 +47,11 @@
     </div>
   </section>
 
-  <section class="grid g-4 keep-2 mt-3" id="stats"></section>
+  <!-- Fanpage thành viên: thành viên gửi link ở Tài khoản > Hồ sơ, quản trị duyệt ở Thành viên > Fanpage thành viên -->
+  <div class="fan-head"><div><span class="eyebrow">Cộng đồng Phúc Sinh QuanTum</span><h2>Fanpage thành viên <span class="fan-badges" id="fanBadges"></span></h2><p>Ghé trang của các thành viên để xem chia sẻ và trải nghiệm thật.</p></div>
+    <div class="cat-nav dl-nav" id="fanNav" hidden><button type="button" data-fan="-1" aria-label="Fanpage trước"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg></button><button type="button" data-fan="1" aria-label="Fanpage tiếp"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></button></div>
+    <a class="card-link" href="fanpage.html">Xem tất cả</a></div>
+  <section class="fan-row" id="fans"></section>
 
   <div class="section-title"><div><span class="eyebrow">Bộ sưu tập</span><h2>Danh mục sản phẩm</h2></div>
     <div class="cat-nav" id="catNav" hidden><button type="button" data-dir="-1" aria-label="Danh mục trước"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg></button><button type="button" data-dir="1" aria-label="Danh mục sau"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg></button></div>
@@ -98,16 +102,31 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261029b"></script>
-<script src="js/api.js?v=20261029b"></script>
-<script src="js/data.js?v=20261029b"></script>
-<script src="js/app.js?v=20261029b"></script>
-<script src="js/psq-data.js?v=20261029b"></script>
+<script src="js/patch.js?v=20261030a"></script>
+<script src="js/api.js?v=20261030a"></script>
+<script src="js/data.js?v=20261030a"></script>
+<script src="js/app.js?v=20261030a"></script>
+<script src="js/psq-data.js?v=20261030a"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, productCard, area, modal } = PSQ;
-  const ico = ['', 'gold', 'violet', 'green'];
-  $('#stats').innerHTML = STATS.map((s, i) => `<div class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} stat reveal"><div class="stat-top"><span class="stat-ico ${ico[i]}">${icon(s.icon)}</span>${esc(s.label)}</div><div class="stat-val">${esc(s.value)}</div></div>`).join('');
+  /* ---------- fanpage thành viên ---------- */
+  const FN = PSQ.fans.list(), fanRow = $('#fans');
+  $('#fanBadges').innerHTML = ['facebook', 'tiktok', 'zalo'].map(k => `<span class="fan-${k}">${PSQ.fans.ico(k)}</span>`).join('');
+  if (FN.length) {
+    fanRow.innerHTML = FN.slice(0, 20).map((x, i) => PSQ.fans.card(x, i)).join('');
+    const fanNav = $('#fanNav'), fanCheck = () => { fanNav.hidden = fanRow.scrollWidth <= fanRow.clientWidth + 4; };
+    fanCheck(); addEventListener('resize', fanCheck);
+    fanNav.addEventListener('click', e => {
+      const b = e.target.closest('[data-fan]'); if (!b) return;
+      const dir = +b.dataset.fan, max = fanRow.scrollWidth - fanRow.clientWidth - 2, c = fanRow.firstElementChild, w = (c ? c.offsetWidth : 220) + 14;
+      if (dir > 0 && fanRow.scrollLeft >= max) return fanRow.scrollTo({ left: 0, behavior: 'smooth' });
+      if (dir < 0 && fanRow.scrollLeft <= 2) return fanRow.scrollTo({ left: max + 2, behavior: 'smooth' });
+      fanRow.scrollBy({ left: dir * w, behavior: 'smooth' });
+    });
+  } else {
+    fanRow.className = ''; fanRow.innerHTML = `<div class="card glow-mix fan-empty"><p>Khu vực này giới thiệu fanpage Facebook, TikTok, Zalo của các thành viên Phúc Sinh QuanTum. Anh chị là thành viên? Gửi link fanpage trong trang Tài khoản để được hiển thị tại đây.</p><a class="btn btn-gold" href="thanh-vien.html#ho-so">Gửi fanpage của tôi</a></div>`;
+  }
   $('#cats').innerHTML = CATEGORIES.map((c, i) => {
     const n = PSQ.shopList().filter(p => p.cat === c.id).length, p = PSQ.shopList().find(x => x.cat === c.id);
     return `<a class="card ${['glow-cyan', 'glow-gold', 'glow-mix'][i % 3]} cat-item" href="san-pham.html?cat=${c.id}"><div class="p-img">${p ? PSQ.art(p) : ''}<span class="cat-go">Xem sản phẩm ${icon('arrow')}</span></div><div class="cat-name"><h3>${esc(c.name)}</h3><span>${n} sản phẩm</span></div></a>`;

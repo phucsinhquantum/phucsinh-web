@@ -17,7 +17,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { openStore } = require('./store');
 const { createEngine, esc, today } = require('./engine');
-const { ACTIONS, scopeFor, hashPass, clean, botLookup, botProducts, botKeyOf } = require('./actions');
+const { ACTIONS, scopeFor, hashPass, clean, botLookup, botProducts, botKeyOf, fanList } = require('./actions');
 const { sendMail } = require('./mail');
 const N = require('./notify'), { chatName, chatsOf } = N;
 const P = require('../js/patch.js');
@@ -188,7 +188,12 @@ const failed = ip => { const f = fails.get(ip); if (!f || Date.now() - f.at > 15
 
 function bootPayload(me, imp) {
   const c = {}; content.forEach((v, k) => { if (v != null) c[k] = v; });
-  return { me: me ? clean(me) : null, db: scopeFor(D, me, A()), content: c, at: Date.now(), ...(TEST ? { mode: 'thu' } : {}), ...(imp ? { imp: { name: imp.name } } : {}) };
+  // thẻ đại lý uy tín lấy ảnh đại diện hiện tại của tài khoản cùng mã; chỉ giữ ảnh riêng khi quản trị tự tải lên (photoOwn)
+  if (Array.isArray(c.psq_dealers_v1)) c.psq_dealers_v1 = c.psq_dealers_v1.map(x => {
+    if (!x || x.photoOwn || !x.code) return x; const k = String(x.code).toUpperCase();
+    const u = D.users.find(u => u.avatar && ((u.code || '').toUpperCase() === k || (u.oldCodes || []).some(o => String(o).toUpperCase() === k)));
+    return u ? Object.assign({}, x, { photo: u.avatar }) : x; });
+  return { me: me ? clean(me) : null, db: scopeFor(D, me, A()), content: c, fans: fanList(D), at: Date.now(), ...(TEST ? { mode: 'thu' } : {}), ...(imp ? { imp: { name: imp.name } } : {}) };
 }
 
 // bối cảnh chạy một thao tác (actions.js)
@@ -196,7 +201,7 @@ function ctxFor(me, args, sid) {
   return {
     d: D, me, args, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc, media: externalize,
     log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
-    mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+    mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, stale: { list: staleList, send: staleSend }, notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
     sendNow: (to, subject, type, html) => sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
   };
 }
@@ -466,4 +471,36 @@ const verifyTick = () => {
   } catch (e) { console.error('[nhắc kích hoạt]', e); }
 };
 setInterval(verifyTick, 10 * 6e4);
+/* ---------- đơn sót: đơn chờ thanh toán đặt quá 10 phút chưa duyệt ----------
+   Quản trị bấm "Kiểm tra đơn sót" (action staleOrders) hoặc máy tự quét 9h, 14h, 20h (tắt được: settings.staleAuto === false).
+   Bot gửi 1 tin tổng hợp + mỗi đơn đã gửi bill 1 tin kèm ảnh bill và nút duyệt; 1 đơn không gửi lại trong 1 giờ. */
+const vnStamp = ms => { const t = new Date(ms + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };
+const sinceOf = o => o.at || ((o.bills || [])[0] || {}).at || (o.date + ' 00:00');
+function staleList(min = 10) {
+  const cut = vnStamp(Date.now() - min * 6e4);
+  return D.orders.filter(o => o.status === 'pending' && sinceOf(o) <= cut)
+    .map(o => ({ id: o.id, name: o.name, phone: o.phone || '', total: o.total, due: Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0)), since: sinceOf(o), bills: (o.bills || []).map(b => b.f), sentAt: o.staleSent || 0 }))
+    .sort((a, b) => (b.bills.length > 0) - (a.bills.length > 0) || (a.since < b.since ? -1 : 1));
+}
+function staleSend(list) {
+  const now = Date.now(), fresh = list.filter(x => !x.sentAt || now - x.sentAt > 36e5);
+  if (!fresh.length) return { sent: 0, recent: list.length };
+  const fm = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ', withBill = fresh.filter(x => x.bills.length);
+  tell(`⏰ ${fresh.length} đơn đặt quá 10 phút chưa duyệt (${withBill.length} đơn đã gửi bill):\n${fresh.slice(0, 40).map(x => `• ${x.id} · ${x.name} · ${fm(x.due)} · ${x.bills.length ? 'đã gửi bill' : 'chưa gửi bill'} · ${x.since}`).join('\n')}${fresh.length > 40 ? `\n… và ${fresh.length - 40} đơn nữa` : ''}${withBill.length ? '\nĐơn đã gửi bill có tin riêng bên dưới kèm nút duyệt. Mở nút rồi bấm thêm nút vàng "Đã nhận" mới xong.' : ''}`);
+  withBill.slice(0, 15).forEach(x => {
+    let photo = null; try { const f = x.bills[x.bills.length - 1], ext = f.split('.').pop(); photo = { buf: fs.readFileSync(path.join(BILL_DIR, f)), type: BILL_MIME[ext] }; } catch (e) {}
+    tell(`🧾 Đơn sót ${x.id} · ${x.name} · ${x.phone}\nCần nhận ${fm(x.due)}, nội dung ${x.id}\nĐặt lúc ${x.since}. Anh đối chiếu tài khoản rồi bấm duyệt.`, { kind: 'order', ref: x.id, button: '✅ Duyệt đã nhận tiền' }, photo);
+  });
+  fresh.forEach(x => { const o = D.orders.find(y => y.id === x.id); if (o) o.staleSent = now; }); save();
+  return { sent: fresh.length, recent: list.length - fresh.length };
+}
+// tự quét 9h, 14h, 20h giờ VN, mỗi mốc 1 lần/ngày
+let staleSlot = '';
+setInterval(() => {
+  try {
+    const t = vnNow(), h = t.getUTCHours(), slot = t.toISOString().slice(0, 10) + ':' + h;
+    if (![9, 14, 20].includes(h) || staleSlot === slot || !env.TELEGRAM_BOT_TOKEN || (D.settings || {}).staleAuto === false) return;
+    staleSlot = slot; const L = staleList(); if (L.length) staleSend(L);
+  } catch (e) { console.error('[đơn sót]', e); }
+}, 5 * 6e4);
 process.on('SIGTERM', () => { save(); process.exit(0); });

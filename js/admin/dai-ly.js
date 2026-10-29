@@ -119,7 +119,7 @@
 
   function form(el, idx) {
     const L = D.all(), x = idx != null ? L[idx] : { name: '', area: '', address: '', phone: '', map: '', note: '', photo: '' };
-    let photo = x.photo || '';
+    let photo = x.photo || '', own = !!x.photoOwn;
     const m = modal(`<div class="row"><h3>${idx != null ? 'Sửa đại lý' : 'Thêm đại lý'}</h3>${closeBtn}</div>
       <form class="form-grid mt-2" id="dlaF" novalidate>
         <div class="field full"><label>Ảnh / logo đại lý</label><div class="dla-photo"><span class="dla-ph" id="dlaPh"></span>
@@ -149,11 +149,11 @@
     };
     codeHint(); $('#dlaC', m.el).addEventListener('input', codeHint);
     drawPh(); $('#dlaN', m.el).addEventListener('input', () => { if (!photo) drawPh(); });
-    $('#dlaNo', m.el).addEventListener('click', () => { photo = ''; drawPh(); });
+    $('#dlaNo', m.el).addEventListener('click', () => { photo = ''; own = false; drawPh(); });
     $('#dlaPick', m.el).addEventListener('click', () => {
       const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*';
       f.onchange = () => { const file = f.files && f.files[0]; if (!file) return; if (!/^image\//.test(file.type)) return toast('Hãy chọn một file ảnh');
-        squareImg(file, 320).then(src => { photo = src; drawPh(); }).catch(() => toast('Không đọc được ảnh này, thử ảnh khác (JPG hoặc PNG)')); };
+        squareImg(file, 320).then(src => { photo = src; own = true; drawPh(); }).catch(() => toast('Không đọc được ảnh này, thử ảnh khác (JPG hoặc PNG)')); };
       f.click();
     });
     $('#dlaF', m.el).addEventListener('submit', e => {
@@ -162,7 +162,7 @@
       const code = v('dlaC').toUpperCase();
       if (code && !findCode(code)) { $('#dlaE', m.el).textContent = 'Mã số đại lý chưa đúng: chưa có thành viên nào dùng mã này.'; return; }
       if (code && D.all().some((d2, j) => j !== idx && (d2.code || '').toUpperCase() === code)) { $('#dlaE', m.el).textContent = 'Mã này đã gắn với một đại lý khác trong danh sách.'; return; }
-      const it = { id: x.id || uid(), code, name: v('dlaN'), area: v('dlaA'), phone: v('dlaP'), address: v('dlaD'), map: v('dlaM'), note: v('dlaT'), photo, hidden: !$('#dlaH', m.el).checked };
+      const it = { id: x.id || uid(), code, name: v('dlaN'), area: v('dlaA'), phone: v('dlaP'), address: v('dlaD'), map: v('dlaM'), note: v('dlaT'), photo, photoOwn: own, hidden: !$('#dlaH', m.el).checked };
       if (!it.name) { $('#dlaE', m.el).textContent = 'Anh chị nhập tên đại lý.'; return; }
       if (it.phone && !/^[0-9 +.]{8,15}$/.test(it.phone)) { $('#dlaE', m.el).textContent = 'Số điện thoại chưa đúng.'; return; }
       const cur = D.all(); if (idx != null) cur[idx] = it; else cur.push(it);

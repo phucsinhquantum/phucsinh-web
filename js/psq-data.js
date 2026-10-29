@@ -160,6 +160,7 @@
   // gốc tính hoa hồng của đơn: tổng PS, giảm theo đúng tỉ lệ mã giảm giá
   const psBase = o => { const t = itemsTotal(o), ps = itemsPs(o); return t > 0 ? Math.round(ps * Math.max(0, t - (o.discount || 0)) / t) : 0; };
   const now = () => { const t = new Date(); return t.toISOString().slice(0, 10); };
+  const nowAt = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };   // giờ VN, để biết đơn đặt bao lâu rồi
 
   function credit(d, user, wallet, type, amount, note, ref, extra) {
     if (!amount) return null;
@@ -544,7 +545,7 @@
     // tạo đơn mua gói đại lý
     buyAgentPackage(d, u, pay) {
       const P = plan(d), num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
-      const o = { id: 'PSQ' + num, userId: u.id, name: u.name, phone: u.phone || '', email: u.email, address: '', pay: pay || 'bank', items: [{ id: AGENT_PKG_ID, name: 'Gói đại lý', price: P.agentPkgPrice, qty: 1 }], total: P.agentPkgPrice, status: 'pending', date: now() };
+      const o = { id: 'PSQ' + num, userId: u.id, name: u.name, phone: u.phone || '', email: u.email, address: '', pay: pay || 'bank', items: [{ id: AGENT_PKG_ID, name: 'Gói đại lý', price: P.agentPkgPrice, qty: 1 }], total: P.agentPkgPrice, status: 'pending', date: now(), at: nowAt() };
       d.orders.unshift(o); return o;
     },
     // số liệu kế hoạch để thay vào chữ {…} trong điều khoản, quyền lợi
@@ -557,7 +558,7 @@
     // tạo đơn mua gói kích hoạt cộng tác viên
     buyPackage(d, u, pay) {
       const P = plan(d), num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
-      const o = { id: 'PSQ' + num, userId: u.id, name: u.name, phone: u.phone || '', email: u.email, address: '', pay: pay || 'bank', items: [{ id: PKG_ID, name: 'Gói kích hoạt cộng tác viên', price: P.pkgPrice, qty: 1 }], total: P.pkgPrice, status: 'pending', date: now() };
+      const o = { id: 'PSQ' + num, userId: u.id, name: u.name, phone: u.phone || '', email: u.email, address: '', pay: pay || 'bank', items: [{ id: PKG_ID, name: 'Gói kích hoạt cộng tác viên', price: P.pkgPrice, qty: 1 }], total: P.pkgPrice, status: 'pending', date: now(), at: nowAt() };
       d.orders.unshift(o); return o;
     }
   });

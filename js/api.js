@@ -29,6 +29,7 @@
   function put(p) {
     API.me = p.me || null; API.db = p.db || API.db; API.at = Date.now(); API.online = true;
     if (p.mode === 'thu' && !API.test) { API.test = true; testBanner(); }
+    if (p.fans) API.fans = p.fans;
     API.imp = p.imp || null; if (API.imp) impBanner();
     if (p.content) CONTENT.forEach(k => { try { if (k in p.content) rawSet.call(localStorage, k, JSON.stringify(p.content[k])); else rawRemove.call(localStorage, k); } catch (e) {} });
   }

@@ -281,6 +281,31 @@ async function flow() {
       ok((((await owner.act('codeReserve', { codes: [gone.code] })).result || {}).used || []).includes(gone.code), 'mã của người đã xóa không cấp lại');
       ok(!(await owner.act('memberRestore', { id: xid })).error && (await owner.req('GET', '/api/admin/db')).json.db.users.some(u => u.id === xid), 'khôi phục được người đã xóa');
     }
+    // đơn sót, fanpage thành viên, ảnh đại lý uy tín theo ảnh tài khoản
+    {
+      const so = await owner.act('staleOrders', { auto: false });
+      ok(Array.isArray((so.result || {}).list) && so.result.auto === false, 'đơn sót: quản trị xem được danh sách, tắt được tự quét');
+      ok((await owner.act('staleOrders', { auto: true })).result.auto === true, 'đơn sót: bật lại tự quét');
+      ok(!!(await B.c.act('staleOrders', {})).error, 'thành viên thường không xem được đơn sót');
+      ok(/Link chưa đúng/.test((await B.c.act('fanSet', { links: ['https://trang-la.vn/abc'] })).error || ''), 'fanpage: không nhận link lạ');
+      ok(/Link chưa đúng/.test((await B.c.act('fanSet', { links: ['javascript:alert(1)'] })).error || ''), 'fanpage: không nhận link javascript');
+      ok(((await B.c.act('fanSet', { title: 'Trang B', links: ['https://www.facebook.com/trang.b', 'https://www.tiktok.com/@trangb'] })).result || {}).status === 'pending', 'fanpage: thành viên gửi link, chờ duyệt');
+      ok(!((await guest.boot()).fans || []).length, 'fanpage chưa duyệt thì chưa hiện trên trang chủ');
+      ok(!!(await B.c.act('fanReview', { id: B.r.me.id, status: 'ok' })).error, 'thành viên thường không tự duyệt fanpage');
+      ok(!(await owner.act('fanReview', { id: B.r.me.id, status: 'ok', pos: 1 })).error, 'quản trị duyệt fanpage');
+      const fb = ((await guest.boot()).fans || [])[0] || {};
+      ok(fb.name && fb.links.length === 2 && fb.links[0].kind === 'facebook' && !fb.phone && !fb.email && !fb.id, 'fanpage đã duyệt hiện trên trang chủ, không lộ SĐT, email');
+      await owner.act('fanReview', { id: B.r.me.id, status: 'off' });
+      ok(!((await guest.boot()).fans || []).length, 'fanpage bị ẩn thì không hiện');
+      const AV = 'data:image/png;base64,' + Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(300, 7)]).toString('base64');
+      await B.c.act('avatar', { url: AV });
+      const bAv = ((await B.c.boot()).me || {}).avatar, bCode = ((await B.c.boot()).me || {}).code;
+      await owner.req('POST', '/api/admin/content', { key: 'psq_dealers_v1', value: [{ id: 'dl1', code: bCode, name: 'Đại lý B', photo: '' }, { id: 'dl2', code: bCode, name: 'Ảnh riêng', photo: '/img/rieng.jpg', photoOwn: true }] });
+      const dls = (await guest.boot()).content.psq_dealers_v1 || [];
+      ok(bAv && dls[0].photo === bAv, 'đại lý uy tín chưa có ảnh lấy ảnh đại diện hiện tại của thành viên');
+      ok(dls[1].photo === '/img/rieng.jpg', 'ảnh đại lý quản trị tự tải lên được giữ');
+      await owner.req('POST', '/api/admin/content', { key: 'psq_dealers_v1', value: null });
+    }
     await owner.act('botKeyOff', {});
     ok((await bot('CTV B', bk.key)).status === 401, 'An An: khóa cổng xong thì khóa cũ hết dùng được');
     const vf = await guest.req('GET', '/api/verify?t=sai-ma');

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<style>html{background:#06080a}</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fanpage thành viên · Phúc Sinh QuanTum</title>
+<meta name="description" content="Fanpage Facebook, TikTok, Zalo của các thành viên Phúc Sinh QuanTum.">
+<meta name="theme-color" content="#06080a">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PSQ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css?v=20261030a">
+<script src="js/lang.js?v=20261030a"></script>
+<style>
+  .dl-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .dl-tools .input { height: 42px; flex: 1 1 240px; width: auto; }
+  .dl-tools select.input { flex: 0 1 200px; }
+  .dl-count { margin-left: auto; color: var(--text-3); font-size: 13px; }
+  @media (max-width: 699px) { .dl-tools select.input { flex: 1 1 100%; } .dl-count { margin-left: 0; } }
+</style>
+</head>
+<body data-page="fanpage">
+<div id="page" data-title="Fanpage thành viên" data-crumb="Fanpage thành viên">
+  <section class="hero page-hero card glow-mix reveal">
+    <div class="hero-bg" style="background-image:url(img/intro/phuc-sinh-canh-nen-ngay.jpg)"></div>
+    <span class="eyebrow">Cộng đồng Phúc Sinh QuanTum</span>
+    <h1 class="mt-2">Fanpage <em>thành viên</em></h1>
+    <p class="lead">Ghé Facebook, TikTok, Zalo của các thành viên để xem chia sẻ và trải nghiệm thật.</p>
+  </section>
+  <div class="card glow-gold mt-3">
+    <div class="dl-tools">
+      <input class="input" id="fnQ" type="search" placeholder="Tìm theo tên, mã thành viên, tên trang" aria-label="Tìm fanpage">
+      <select class="input" id="fnK" aria-label="Lọc theo mạng xã hội"><option value="">Mọi mạng xã hội</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="zalo">Zalo</option><option value="youtube">YouTube</option><option value="instagram">Instagram</option></select>
+      <select class="input" id="fnT" aria-label="Lọc theo cấp"><option value="">Mọi cấp</option><option value="daily">Đại lý</option><option value="ctv">CTV</option></select>
+      <span class="dl-count" id="fnC"></span>
+    </div>
+  </div>
+  <section class="fan-grid mt-3" id="fnGrid"></section>
+  <div class="card glow-mix fan-empty mt-3"><p>Anh chị là thành viên và có fanpage? Gửi link trong trang Tài khoản, sau khi công ty duyệt trang sẽ hiện tại đây.</p><a class="btn btn-gold" href="thanh-vien.html#ho-so">Gửi fanpage của tôi</a></div>
+</div>
+<script src="js/patch.js?v=20261030a"></script>
+<script src="js/api.js?v=20261030a"></script>
+<script src="js/data.js?v=20261030a"></script>
+<script src="js/app.js?v=20261030a"></script>
+<script>
+(function () {
+  const { $, icon } = PSQ, F = PSQ.fans, all = F.list();
+  function draw() {
+    const q = PSQ.fold($('#fnQ').value.trim()), k = $('#fnK').value, t = $('#fnT').value;
+    const rows = all.filter(x => (!k || x.links.some(l => l.kind === k)) && (!t || x.tier === t) && (!q || PSQ.fold([x.name, x.code, x.title].join(' ')).includes(q)));
+    $('#fnC').textContent = `${rows.length} / ${all.length} trang`;
+    $('#fnGrid').innerHTML = rows.length ? rows.map((x, i) => F.card(x, i)).join('') : `<div class="card empty" style="grid-column:1/-1">${icon('search')}${all.length ? 'Chưa có trang phù hợp.' : 'Chưa có fanpage nào được duyệt.'}</div>`;
+  }
+  $('#fnQ').addEventListener('input', draw); $('#fnK').addEventListener('change', draw); $('#fnT').addEventListener('change', draw);
+  draw(); PSQ.reveal();
+})();
+</script>
+</body>
+</html>

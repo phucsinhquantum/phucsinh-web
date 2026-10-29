@@ -83,6 +83,16 @@ function scopeFor(d, me, A) {
 }
 
 // nội dung đơn cho tin Telegram: người mua, người giới thiệu, sản phẩm, mã giảm giá, đã trả bằng ví, địa chỉ
+const FAN_HOSTS = [[/(^|\.)(facebook\.com|fb\.com|fb\.me|m\.me)$/, 'facebook'], [/(^|\.)tiktok\.com$/, 'tiktok'], [/(^|\.)zalo\.me$/, 'zalo'], [/(^|\.)(youtube\.com|youtu\.be)$/, 'youtube'], [/(^|\.)instagram\.com$/, 'instagram']];
+function fanKind(raw) {
+  try { const u = new URL(raw); if (u.protocol !== 'https:' || u.username || u.password) return ''; const h = u.hostname.toLowerCase(); const m = FAN_HOSTS.find(([re]) => re.test(h)); return m ? m[1] : ''; } catch (e) { return ''; }
+}
+// danh sách fanpage đã duyệt để hiện công khai
+function fanList(d) {
+  return d.users.filter(u => u.fan && u.fan.status === 'ok' && u.status !== 'locked' && u.role !== 'admin' && (u.fan.links || []).length)
+    .sort((a, b) => (a.fan.pos ?? 9999) - (b.fan.pos ?? 9999) || String(a.fan.at).localeCompare(String(b.fan.at)))
+    .map(u => ({ name: u.name, code: u.code || '', tier: u.tier || 'khach', avatar: u.avatar || '', title: u.fan.title || '', links: u.fan.links.filter(x => fanKind(x.url)) }));
+}
 function orderText(o) {
   const paid = (o.shopPaid || 0) + (o.cashPaid || 0);
   return `${o.name} · ${o.phone}\n${(o.items || []).map(x => `${x.qty} x ${x.name}`).join('\n')}\nTổng ${money(o.total)}${o.discount ? ` (đã giảm ${money(o.discount)}, mã ${o.coupon})` : ''}${paid ? `, đã trả bằng ví ${money(paid)}` : ''}${o.address ? `\nĐịa chỉ: ${o.address}` : ''}`;
@@ -309,7 +319,7 @@ const ACTIONS = {
     if (name.length < 2 || !/^0\d{9}$/.test(phone) || address.length < 5) return err('Anh chị kiểm tra lại họ tên, số điện thoại và địa chỉ nhận hàng.');
     if (email && !EMAIL.test(email)) return err('Email chưa đúng định dạng.');
     const num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
-    const o = { id: 'PSQ' + num, userId: me ? me.id : null, name, phone, email, address, note: str(info.note, 500), pay, items, total: items.reduce((s, x) => s + x.price * x.qty, 0) + (+c.site.shipFee || 0), status: 'pending', date: c.today() };
+    const o = { id: 'PSQ' + num, userId: me ? me.id : null, name, phone, email, address, note: str(info.note, 500), pay, items, total: items.reduce((s, x) => s + x.price * x.qty, 0) + (+c.site.shipFee || 0), status: 'pending', date: c.today(), at: c.stamp() };
     // khách mua không đăng nhập: tính cho người giới thiệu. Số điện thoại đã là thành viên thì theo tuyến của thành viên đó;
     // số điện thoại đã từng mua qua link thì giữ người gửi link đầu tiên; còn lại theo mã link đầu tiên trình duyệt nhớ (args.ref).
     if (!me) {
@@ -363,6 +373,23 @@ const ACTIONS = {
     if (url == null) { delete c.me.avatar; c.log('Xóa ảnh đại diện', '@' + c.me.username); return { ok: true }; }
     if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(String(url)) || String(url).length > 400000) return err('Ảnh chưa hợp lệ, anh chị chọn ảnh khác.');
     c.me.avatar = c.media ? c.media(url) : url; c.log('Cập nhật ảnh đại diện', '@' + c.me.username); return { ok: true };
+  } },
+  // fanpage thành viên: tối đa 3 link (Facebook, TikTok, Zalo, YouTube, Instagram), quản trị duyệt rồi mới hiện trên trang chủ
+  fanSet: { auth: 'member', run(c) {
+    const links = [].concat(c.args.links || []).slice(0, 3).map(x => String(x || '').trim()).filter(Boolean), out = [];
+    for (const raw of links) { const k = fanKind(raw); if (!k) return err('Link chưa đúng. Anh chị dán link trang Facebook, TikTok, Zalo, YouTube hoặc Instagram (bắt đầu bằng https://).'); out.push({ kind: k, url: raw.slice(0, 300) }); }
+    const title = str(c.args.title, 60), old = c.me.fan || {};
+    if (!out.length) { delete c.me.fan; c.log('Bỏ fanpage', '@' + c.me.username); return { ok: true }; }
+    const same = old.title === title && JSON.stringify(old.links) === JSON.stringify(out);
+    c.me.fan = Object.assign({}, old, { title, links: out, at: c.stamp(), status: same ? old.status : 'pending' });
+    if (!same) { c.log('Gửi fanpage chờ duyệt', `@${c.me.username}: ${out.map(x => x.url).join(', ')}`); c.notify(`📣 ${c.me.name} (${c.me.code || '@' + c.me.username}) gửi fanpage chờ duyệt:\n${out.map(x => x.url).join('\n')}\nAnh vào Quản trị > Thành viên > Fanpage thành viên để duyệt.`); }
+    return { ok: true, status: c.me.fan.status };
+  } },
+  fanReview: { auth: 'admin', perm: 'members', run(c) {
+    const u = c.A.user(c.d, c.args.id); if (!u || !u.fan) return err('Không tìm thấy fanpage.');
+    if (['ok', 'off', 'pending'].includes(c.args.status)) u.fan.status = c.args.status;
+    if (c.args.pos != null && isFinite(+c.args.pos)) u.fan.pos = Math.max(0, Math.min(9999, Math.round(+c.args.pos)));
+    c.log('Duyệt fanpage', `${u.name}: ${u.fan.status === 'ok' ? 'Hiện' : u.fan.status === 'off' ? 'Ẩn' : 'Chờ duyệt'}${u.fan.pos != null ? ', thứ tự ' + u.fan.pos : ''}`); return { ok: true };
   } },
   changePass: { auth: 'member', run(c) {
     const o = String(c.args.old || ''), n = String(c.args.pass || '');
@@ -526,6 +553,14 @@ const ACTIONS = {
     c.log('Đổi người giới thiệu', `${u.name} (${u.code}): ${nm(old)} → ${nm(sp)}`, u);
     return { ok: true, sponsor: sp ? { id: sp.id, name: sp.name, code: sp.code } : null };
   } },
+  // đơn sót: đơn chờ thanh toán quá 10 phút; send = bot gửi lên Telegram; auto = bật/tắt tự quét 9h, 14h, 20h
+  staleOrders: { auth: 'admin', perm: 'orders', run(c) {
+    const st = c.d.settings = c.d.settings || {};
+    if (typeof c.args.auto === 'boolean') { st.staleAuto = c.args.auto; c.log('Tự quét đơn sót', c.args.auto ? 'Bật' : 'Tắt'); }
+    const list = c.stale.list(); let sent = null;
+    if (c.args.send) { if (!c.notifyReady) return err('Chưa cấu hình Telegram nên bot chưa gửi được.'); sent = c.stale.send(list); c.log('Gửi đơn sót lên Telegram', `${sent.sent} đơn`); }
+    return { list: c.stale.list(), sent, auto: st.staleAuto !== false };
+  } },
   mailHtml: { auth: 'admin', perm: 'system', run(c) { const m = (c.d.mails || []).find(x => x.id === c.args.id); return m ? { html: m.html || '' } : err('Không tìm thấy thư.'); } },
   // xóa thành viên (chủ sở hữu, nhập lại mật khẩu): chỉ người chưa có tuyến dưới, chưa có đơn đã trả, hoa hồng, giao dịch ví.
   // Đơn chưa thanh toán của họ được hủy cùng lúc. Hồ sơ chuyển vào d.deletedUsers để khôi phục; mã PS không cấp lại cho ai.
@@ -684,4 +719,4 @@ function botProducts(d, A, products, q, base) {
 }
 const botKeyOf = store => (store.getJSON('secret:bot') || {}).key || '';
 
-module.exports = { botLookup, botProducts, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };
+module.exports = { botLookup, botProducts, fanList, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };
