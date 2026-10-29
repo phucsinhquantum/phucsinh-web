@@ -337,10 +337,11 @@ async function confirmPage(req, res, url) {
       ACTOR = owner; const r = A().setStatus(D, o, 'paid');
       if (!r.error) (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: (owner || {}).name || 'Chủ sở hữu', action: 'Cập nhật đơn hàng', detail: `${o.id}: Xác nhận đã nhận ${money(due)} (từ tin Telegram)` });
       ACTOR = null; store.useToken(t); after();
+      if (!r.error) notify(env, { text: `✅ Đã duyệt đơn ${o.id}: ${o.name}, đã nhận ${money(due)}.` }).catch(() => {});
       return page('Đã xác nhận', r.error ? `<h1>Chưa xác nhận được</h1><p>${esc(r.error)}</p>` : `<h1>✅ Đã xác nhận đơn ${esc(o.id)}</h1><p>Đơn chuyển sang ${o.status === 'done' ? 'Hoàn thành' : 'Đã thanh toán'}.</p>`);
     }
     return page('Xác nhận đơn ' + o.id, `<h1>Xác nhận đã nhận tiền</h1><dl><dt>Đơn</dt><dd><b>${esc(o.id)}</b></dd><dt>Khách</dt><dd>${esc(o.name)} · ${esc(o.phone || '')}</dd><dt>Sản phẩm</dt><dd>${o.items.map(x => esc(x.qty + ' x ' + x.name)).join('<br>')}</dd><dt>Số tiền</dt><dd><b>${money(due)}</b></dd><dt>Nội dung CK</dt><dd>${esc(o.id)}</dd></dl>${billImgs(o, t)}
-      <form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">✅ Đã nhận ${money(due)}</button></form><p style="font-size:13px">Chỉ bấm khi tiền đã vào tài khoản.</p>`);
+      <p style="background:#3a2c10;border:1px solid #f3c76b;border-radius:10px;padding:10px 12px;color:#f3c76b;font-weight:700;margin:0 0 12px">Bước cuối: bấm nút vàng bên dưới thì mới duyệt xong. Chỉ mở trang này thì đơn vẫn chờ.</p><form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">✅ Đã nhận ${money(due)}</button></form><p style="font-size:13px">Chỉ bấm khi tiền đã vào tài khoản.</p>`);
   }
   const u = A().user(D, tp.user) || {};
   if (tp.status !== 'pending') { store.useToken(t); return page('Đã xử lý', `<h1>Yêu cầu nạp tiền đã được xử lý</h1>`); }
@@ -349,10 +350,11 @@ async function confirmPage(req, res, url) {
     A().credit(D, tp.user, tw, 'topup', tp.amount, 'Nạp tiền qua ' + (tp.method || ''), tp.id);
     (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: (owner || {}).name || 'Chủ sở hữu', action: 'Duyệt nạp tiền', detail: `${u.name}: ${money(tp.amount)} (từ tin Telegram)` });
     ACTOR = null; store.useToken(t); after();
+    notify(env, { text: `✅ Đã duyệt nạp ${money(tp.amount)} vào ví của ${u.name || ''}.` }).catch(() => {});
     return page('Đã xác nhận', `<h1>✅ Đã cộng ${money(tp.amount)} vào ví của ${esc(u.name || '')}</h1>`);
   }
   return page('Xác nhận nạp tiền', `<h1>Xác nhận nạp tiền vào ví</h1><dl><dt>Thành viên</dt><dd>${esc(u.name || '')} (@${esc(u.username || '')})</dd><dt>Số tiền</dt><dd><b>${money(tp.amount)}</b></dd><dt>Hình thức</dt><dd>${esc(tp.method)}</dd><dt>Nội dung CK</dt><dd>${esc(tp.code || '')}</dd></dl>${billImgs(tp, t)}
-    <form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">✅ Đã nhận ${money(tp.amount)}</button></form><p style="font-size:13px">Chỉ bấm khi tiền đã vào tài khoản.</p>`);
+    <p style="background:#3a2c10;border:1px solid #f3c76b;border-radius:10px;padding:10px 12px;color:#f3c76b;font-weight:700;margin:0 0 12px">Bước cuối: bấm nút vàng bên dưới thì mới duyệt xong. Chỉ mở trang này thì yêu cầu vẫn chờ.</p><form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">✅ Đã nhận ${money(tp.amount)}</button></form><p style="font-size:13px">Chỉ bấm khi tiền đã vào tài khoản.</p>`);
 }
 
 /* ---------- nhắc giao hàng: đơn Đã thanh toán chưa ship, từ ngày sau ngày đặt, 8h-18h giờ VN, mỗi đơn 1 lần/ngày ----------
