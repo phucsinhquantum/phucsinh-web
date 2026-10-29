@@ -54,3 +54,35 @@
   }
   window.codeStore = store;
 })();
+
+/* Đổi người giới thiệu (tuyến trên) của thành viên: chọn từ đại lý đang có (hoặc CTV, hoặc công ty).
+   Hoa hồng đã ghi giữ nguyên; đơn sau tính cho người giới thiệu mới. */
+(function () {
+  const { $, esc, icon, toast, modal } = PSQ;
+  window.sponsorPick = function (u, done) {
+    const d = ADB.load(), cur = u.sponsor && d.users.find(x => x.id === u.sponsor);
+    const down = new Set([u.id]); let grew = true; while (grew) { grew = false; d.users.forEach(x => { if (x.sponsor && down.has(x.sponsor) && !down.has(x.id)) { down.add(x.id); grew = true; } }); }
+    const all = d.users.filter(x => x.role !== 'admin' && x.code && x.status !== 'locked' && x.verified !== false && !down.has(x.id) && x.id !== u.sponsor);
+    let ctv = false, f = '';
+    const m = modal(`<div class="row"><h3>Đổi người giới thiệu cho ${esc(u.name)}</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      <p class="mt-1">Hiện tại: <b>${cur ? esc(cur.name) + ' <span class="cyan">' + esc(cur.code) + '</span>' : 'Công ty'}</b>. Bấm chọn người mới. Hoa hồng đã ghi giữ nguyên, các đơn sau tính cho người mới.</p>
+      <div class="row wrap mt-2" style="gap:10px"><input class="input" id="spQ" type="search" placeholder="Tìm tên, mã, số điện thoại" style="flex:1 1 200px;height:40px"><label class="check"><input type="checkbox" id="spCtv"> Hiện cả CTV</label></div>
+      <div id="spL" class="mt-2" style="max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:12px"></div>`);
+    const draw = () => {
+      const L = all.filter(x => (ctv ? x.tier === 'daily' || x.tier === 'ctv' : x.tier === 'daily') && (!f || [x.name, x.code, x.phone, ...(x.oldCodes || [])].join(' ').toLowerCase().includes(f)));
+      $('#spL', m.el).innerHTML = (u.sponsor ? `<button class="btn btn-ghost btn-block" type="button" data-sp="" style="justify-content:flex-start;border-radius:0;border-bottom:1px solid var(--line)">${icon('home')} Chuyển về Công ty (không có tuyến trên)</button>` : '')
+        + (L.length ? L.map(x => `<button class="btn btn-ghost btn-block" type="button" data-sp="${esc(x.code)}" style="justify-content:flex-start;text-align:left;border-radius:0;border-bottom:1px solid var(--line);height:auto;padding:10px 12px"><span><b>${esc(x.name)}</b> <span class="cyan">${esc(x.code)}</span><br><small class="dim">${x.tier === 'daily' ? 'Đại lý' : 'CTV'}${x.phone ? ' · ' + esc(x.phone) : ''}</small></span></button>`).join('')
+        : `<div class="empty" style="padding:20px">Không có ai khớp.</div>`);
+    };
+    $('#spQ', m.el).addEventListener('input', e => { f = e.target.value.trim().toLowerCase(); draw(); });
+    $('#spCtv', m.el).addEventListener('change', e => { ctv = e.target.checked; draw(); });
+    $('#spL', m.el).addEventListener('click', e => {
+      const b = e.target.closest('[data-sp]'); if (!b) return;
+      const to = b.dataset.sp ? all.find(x => x.code === b.dataset.sp) : null;
+      if (!confirm(`Chuyển ${u.name} sang ${to ? to.name + ' (' + to.code + ')' : 'Công ty'}? Hoa hồng đã ghi giữ nguyên, các đơn sau tính cho người mới.`)) return;
+      const r = API.act('memberSponsor', { id: u.id, code: b.dataset.sp }); if (r.error) return toast(r.error, 'err');
+      API.load(); m.close(); toast(`Đã chuyển ${u.name} sang ${to ? to.name : 'Công ty'}`); done && done();
+    });
+    draw();
+  };
+})();

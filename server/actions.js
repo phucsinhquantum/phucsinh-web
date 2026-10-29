@@ -508,6 +508,22 @@ const ACTIONS = {
     c.log('Đổi mã thành viên', `${u.name}: ${old || '(trống)'} → ${k}${sold && sold.price ? ', số đẹp giá ' + sold.price : ''}`, u);
     return { ok: true, code: k, old };
   } },
+  // đổi người giới thiệu (tuyến trên) của thành viên sang đại lý/CTV khác hoặc về công ty. Hoa hồng đã ghi giữ nguyên, đơn sau tính cho người mới.
+  memberSponsor: { auth: 'admin', perm: 'members', run(c) {
+    const { d, A } = c, u = A.user(d, c.args.id), k = str(c.args.code, 40).toUpperCase();
+    if (!u || u.role === 'admin') return err('Chỉ đổi được cho tài khoản thành viên.');
+    const r = k ? findRef(d, k) : { company: true };
+    if (!r) return err('Mã giới thiệu chưa đúng.');
+    const sp = r.company ? null : r.user;
+    if (sp && sp.id === u.id) return err('Không chọn chính người này làm người giới thiệu.');
+    for (let x = sp, n = 0; x && n < 200; x = x.sponsor && A.user(d, x.sponsor), n++) if (x.sponsor === u.id) return err(`${sp.name} đang ở tuyến dưới của ${u.name}, không đổi ngược lên được.`);
+    if ((u.sponsor || null) === (sp ? sp.id : null)) return err('Người này đang thuộc tuyến đó rồi.');
+    const old = u.sponsor && A.user(d, u.sponsor), nm = x => x ? `${x.name} (${x.code})` : 'Công ty';
+    u.sponsor = sp ? sp.id : null; u.parent = sp ? sp.id : null; u.placed = true;
+    if (sp) delete u.refCode; else u.refCode = (d.users.find(x => x.role === 'admin' && x.code) || {}).code || 'PS1000';
+    c.log('Đổi người giới thiệu', `${u.name} (${u.code}): ${nm(old)} → ${nm(sp)}`, u);
+    return { ok: true, sponsor: sp ? { id: sp.id, name: sp.name, code: sp.code } : null };
+  } },
   // danh sách số đẹp giữ lại (không cấp tự động khi đăng ký): thêm hoặc bỏ, kèm giá và ghi chú để sau này bán
   codeReserve: { auth: 'admin', perm: 'members', run(c) {
     const { d } = c, rs = d.settings.codeReserve = d.settings.codeReserve || [];

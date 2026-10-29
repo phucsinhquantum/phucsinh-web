@@ -542,7 +542,7 @@
       if (r.error || x.status >= 400) return toast(r.error || 'Lỗi ' + x.status, 'err');
       location.href = 'thanh-vien.html#tong-quan'; return;
     }
-    const m = modal(`<form id="meF"><div class="card-head"><h3>Sửa thành viên ${esc(u.code || '')}</h3><button class="btn btn-sm btn-outline-gold" type="button" id="meCode" style="margin-left:auto">Đổi mã PS</button><button class="icon-btn" type="button" data-close aria-label="Đóng">${icon('close')}</button></div>
+    const m = modal(`<form id="meF"><div class="card-head"><h3>Sửa thành viên ${esc(u.code || '')}</h3><button class="btn btn-sm btn-outline-gold" type="button" id="meSp" style="margin-left:auto">Đổi người giới thiệu</button><button class="btn btn-sm btn-outline-gold" type="button" id="meCode">Đổi mã PS</button><button class="icon-btn" type="button" data-close aria-label="Đóng">${icon('close')}</button></div>
       <div class="form-grid">
         <div class="field full"><label>Họ tên</label><input class="input" name="name" value="${esc(u.name)}" required></div>
         <div class="field"><label>Email</label><input class="input" name="email" type="email" value="${esc(u.email)}" required></div>
@@ -555,6 +555,7 @@
       <p class="red mt-1" id="meErr" style="font-size:13px"></p>
       <div class="row mt-2" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu</button></div></form>`);
     $('#meCode', m.el).addEventListener('click', () => { m.close(); codeStore(u, membersPane); });
+    $('#meSp', m.el).addEventListener('click', () => { m.close(); sponsorPick(u, membersPane); });
     $('#meF', m.el).addEventListener('submit', ev => {
       ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)), er = $('#meErr', m.el);
       const r = API.act('adminEditMember', { id: u.id, name: f.name.trim(), email: f.email.trim(), phone: f.phone.trim(), username: f.username.trim(), status: f.status });

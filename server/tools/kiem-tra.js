@@ -250,6 +250,13 @@ async function flow() {
     ok(((await guest.act('checkRef', { code: oldB })).result || {}).name === 'CTV B', 'link giới thiệu bằng mã cũ vẫn ra B');
     ok((((await bot('PS8888', bk.key)).j.results || [])[0] || {}).code === 'PS8888' && (((await bot(oldB, bk.key)).j.results || [])[0] || {}).code === 'PS8888', 'An An tra mã mới hoặc mã cũ đều ra B');
     ok(!(await client(s.port).act('login', { login: oldB, pass: '123456a' })).error, 'B đăng nhập bằng mã cũ được');
+    // đổi người giới thiệu: C từ B sang A; không cho A về dưới C (vòng)
+    const cyc = await owner.act('memberSponsor', { id: A.r.me.id, code: 'PS8888' }); ok(/tuyến dưới/.test(cyc.error || ''), 'không chuyển được người lên dưới chính tuyến dưới của mình ' + JSON.stringify(cyc).slice(0, 120));
+    ok(!(await owner.act('memberSponsor', { id: C.r.me.id, code: A.r.me.code })).error, 'chuyển C sang người giới thiệu A');
+    dbc = (await owner.req('GET', '/api/admin/db')).json.db;
+    const Cu = dbc.users.find(u => u.id === C.r.me.id);
+    ok(Cu.sponsor === A.r.me.id && Cu.parent === A.r.me.id && com(B.r.me.id, 'direct').length > 0, 'C thuộc tuyến A trên cây, hoa hồng cũ của B giữ nguyên');
+    await owner.act('memberSponsor', { id: C.r.me.id, code: 'PS8888' });
     await owner.act('botKeyOff', {});
     ok((await bot('CTV B', bk.key)).status === 401, 'An An: khóa cổng xong thì khóa cũ hết dùng được');
     const vf = await guest.req('GET', '/api/verify?t=sai-ma');
