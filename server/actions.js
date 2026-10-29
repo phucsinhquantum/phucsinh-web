@@ -36,7 +36,7 @@ const clean = u => { const r = Object.assign({}, u); delete r.pass; delete r.res
 // quản trị: toàn bộ dữ liệu, bỏ mật khẩu. Thành viên: phần của mình và tuyến dưới. Khách: phần công khai.
 function scopeFor(d, me, A) {
   // quản trị: không kèm nội dung thư (nặng), xem thư thì lấy riêng bằng mailHtml
-  if (me && me.role === 'admin' && me.status !== 'locked') { const o = Object.assign({}, d); o.users = d.users.map(clean); o.mails = (d.mails || []).map(m => { if (!m.html) return m; const x = Object.assign({}, m); delete x.html; x.hasHtml = true; return x; }); return o; }
+  if (me && me.role === 'admin' && me.status !== 'locked') { const o = Object.assign({}, d); o.users = d.users.map(clean); o.deletedUsers = (d.deletedUsers || []).map(clean); o.mails = (d.mails || []).map(m => { if (!m.html) return m; const x = Object.assign({}, m); delete x.html; x.hasHtml = true; return x; }); return o; }
   const out = { v: d.v, settings: Object.assign({}, d.settings), stock: d.stock || {}, stockMin: d.stockMin, users: [], orders: [], commissions: [], wallet: [], topups: [], addresses: [], messages: [], logs: [], mails: [], fundbook: [], receipts: [], expenses: [], stores: d.stores || [], roles: [] };
   delete out.settings.fundWarn; delete out.settings.codeReserve;
   // chương trình khuyến mãi đang chạy (công khai), không gửi danh sách người đã dùng
@@ -134,7 +134,8 @@ function welcomeMail(c, u) {
 const CODE = /^PS\d{3,9}$/;
 const hasCode = (u, k) => (u.code || '').toUpperCase() === k || (u.oldCodes || []).some(x => x.toUpperCase() === k);
 const reserved = d => ((d.settings || {}).codeReserve || []).map(x => String(x.code || x).toUpperCase());
-const codeTaken = (d, k, except) => d.users.some(u => u !== except && (hasCode(u, k) || (u.username || '').toUpperCase() === k));
+// mã của người đã xóa cũng không cấp lại (link giới thiệu cũ có thể còn ngoài kia)
+const codeTaken = (d, k, except) => d.users.some(u => u !== except && (hasCode(u, k) || (u.username || '').toUpperCase() === k)) || (d.deletedUsers || []).some(u => hasCode(u, k));
 const findRef = (d, ref) => {
   const k = String(ref || '').trim().toUpperCase(); if (!k) return null;
   const u = d.users.find(x => x.status !== 'locked' && (hasCode(x, k) || (x.username || '').toUpperCase() === k));
@@ -526,6 +527,42 @@ const ACTIONS = {
     return { ok: true, sponsor: sp ? { id: sp.id, name: sp.name, code: sp.code } : null };
   } },
   mailHtml: { auth: 'admin', perm: 'system', run(c) { const m = (c.d.mails || []).find(x => x.id === c.args.id); return m ? { html: m.html || '' } : err('Không tìm thấy thư.'); } },
+  // xóa thành viên (chủ sở hữu, nhập lại mật khẩu): chỉ người chưa có tuyến dưới, chưa có đơn đã trả, hoa hồng, giao dịch ví.
+  // Đơn chưa thanh toán của họ được hủy cùng lúc. Hồ sơ chuyển vào d.deletedUsers để khôi phục; mã PS không cấp lại cho ai.
+  memberDelete: { auth: 'owner', run(c) {
+    const { d, A } = c, ids = [].concat(c.args.ids || []).slice(0, 200), done = [], skip = [];
+    if (!verifyPass(String(c.args.pass || ''), c.me.pass)) return err('Mật khẩu xác nhận chưa đúng.');
+    const PAIDST = ['paid', 'ship', 'done'];
+    const why = u => {
+      if (!u || u.role === 'admin') return 'không phải thành viên';
+      if (d.users.some(x => x.sponsor === u.id || x.parent === u.id)) return 'đã có tuyến dưới';
+      if (d.orders.some(o => (o.userId === u.id || o.refBy === u.id) && (PAIDST.includes(o.status) || o.settled))) return 'đã có đơn đã thanh toán';
+      if ((d.commissions || []).some(x => x.user === u.id || x.from === u.id)) return 'đã có hoa hồng';
+      if ((d.wallet || []).some(w => w.user === u.id) || (d.topups || []).some(t => t.user === u.id)) return 'đã có giao dịch ví';
+      return '';
+    };
+    ids.forEach(id => { const u = A.user(d, id), r = why(u); if (r) { skip.push(`${u ? u.name : id}: ${r}`); return; }
+      const cancel = d.orders.filter(o => o.userId === u.id && o.status === 'pending');
+      cancel.forEach(o => { o.status = 'failed'; o.note = ((o.note || '') + ' [Hủy do xóa tài khoản]').trim(); });
+      d.users.splice(d.users.indexOf(u), 1);
+      (d.deletedUsers = d.deletedUsers || []).push(Object.assign({}, u, { deletedAt: c.stamp(), deletedBy: c.me.name, cancelled: cancel.map(o => o.id) }));
+      Object.keys(d.guestRefs || {}).forEach(k => { if (d.guestRefs[k] === u.id) delete d.guestRefs[k]; });
+      c.store.endSessionsOf(u.id); done.push(u); });
+    if (done.length) c.log('Xóa thành viên', done.map(u => `${u.name} (${u.code || '@' + u.username})`).join(', '));
+    if (!done.length) return err('Không xóa được: ' + skip.join('; '));
+    return { ok: true, count: done.length, skipped: skip };
+  } },
+  // khôi phục thành viên đã xóa (nếu email, tên truy cập, SĐT chưa bị người khác dùng)
+  memberRestore: { auth: 'owner', run(c) {
+    const { d } = c, arr = d.deletedUsers || [], i = arr.findIndex(x => x.id === c.args.id); if (i < 0) return err('Không tìm thấy hồ sơ đã xóa.');
+    const u = arr[i], low = s => String(s || '').toLowerCase();
+    const clash = d.users.find(x => (u.email && low(x.email) === low(u.email)) || (u.username && low(x.username) === low(u.username)) || (u.phone && normPhone(x.phone) === normPhone(u.phone)));
+    if (clash) return err(`Không khôi phục được: ${clash.name} đang dùng email, tên truy cập hoặc số điện thoại này.`);
+    arr.splice(i, 1); const back = Object.assign({}, u); delete back.deletedAt; delete back.deletedBy; delete back.cancelled;
+    if (back.sponsor && !c.A.user(d, back.sponsor)) { back.sponsor = null; back.parent = null; }
+    d.users.push(back); c.log('Khôi phục thành viên', `${back.name} (${back.code || ''})`);
+    return { ok: true };
+  } },
   // danh sách số đẹp giữ lại (không cấp tự động khi đăng ký): thêm hoặc bỏ, kèm giá và ghi chú để sau này bán
   codeReserve: { auth: 'admin', perm: 'members', run(c) {
     const { d } = c, rs = d.settings.codeReserve = d.settings.codeReserve || [];

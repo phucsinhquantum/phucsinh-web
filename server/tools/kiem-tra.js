@@ -268,6 +268,19 @@ async function flow() {
       ok(/gzip/.test((await fetch(`http://127.0.0.1:${s.port}/api/boot`, { headers: { 'accept-encoding': 'gzip' } })).headers.get('content-encoding') || ''), 'dữ liệu trả về được nén');
       await owner.req('POST', '/api/admin/content', { key: 'psq_reviews_v1', value: null });
     }
+    // xóa thành viên: chỉ người chưa có tuyến dưới, chưa phát sinh tiền; mã không cấp lại; khôi phục được
+    {
+      const X = client(s.port), xr = await X.act('register', { name: 'Đăng Ký Nhầm', username: 'ktnham2', email: 'ktnham2@kiem-tra.vn', pass: '123456a', ref: A.r.me.code, agree: true });
+      const xid = (xr.me || xr.result && xr.result.user || {}).id || ((await owner.req('GET', '/api/admin/db')).json.db.users.find(u => u.username === 'ktnham2') || {}).id;
+      ok(/Mật khẩu/.test((await owner.act('memberDelete', { ids: [xid], pass: 'sai' })).error || ''), 'xóa thành viên phải nhập đúng mật khẩu chủ sở hữu');
+      ok(/tuyến dưới/.test((await owner.act('memberDelete', { ids: [A.r.me.id], pass: 'KiemTra@2026' })).error || ''), 'không xóa được người đã có tuyến dưới');
+      ok(!!(await B.c.act('memberDelete', { ids: [xid], pass: '123456a' })).error, 'thành viên thường không xóa được ai');
+      ok(!(await owner.act('memberDelete', { ids: [xid], pass: 'KiemTra@2026' })).error, 'chủ sở hữu xóa được người đăng ký nhầm');
+      let dx = (await owner.req('GET', '/api/admin/db')).json.db; const gone = (dx.deletedUsers || []).find(u => u.id === xid) || {};
+      ok(!dx.users.some(u => u.id === xid) && gone.code && !gone.pass, 'người bị xóa vào mục Đã xóa, không lộ mật khẩu');
+      ok((((await owner.act('codeReserve', { codes: [gone.code] })).result || {}).used || []).includes(gone.code), 'mã của người đã xóa không cấp lại');
+      ok(!(await owner.act('memberRestore', { id: xid })).error && (await owner.req('GET', '/api/admin/db')).json.db.users.some(u => u.id === xid), 'khôi phục được người đã xóa');
+    }
     await owner.act('botKeyOff', {});
     ok((await bot('CTV B', bk.key)).status === 401, 'An An: khóa cổng xong thì khóa cũ hết dùng được');
     const vf = await guest.req('GET', '/api/verify?t=sai-ma');
