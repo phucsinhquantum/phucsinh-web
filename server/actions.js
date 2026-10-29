@@ -560,7 +560,7 @@ function botLookup(d, A, dealers, q, asker, base) {
   const refLink = code => code ? String(base || '').replace(/\/$/, '') + '/thanh-vien.html?ref=' + encodeURIComponent(code) : '';
   q = str(q, 80); const me = normPhone(asker), qp = normPhone(q), qc = q.toUpperCase().replace(/\s+/g, '');
   let qf = fold(q); while (CALL.test(qf)) qf = qf.replace(CALL, '');
-  const shown = (dealers || []).filter(x => x && !x.hidden);
+  const shown = (dealers || []).filter(x => x && !x.hidden && !/^dl-mau-/.test(x.id || ''));
   const dealerOf = u => shown.find(x => (x.code || '').toUpperCase() === (u.code || '').toUpperCase());
   // khớp tên theo từng chữ, không cần đúng thứ tự: "Lê Nhị" ra "Lê Thị Nhị". Không ra ai thì bỏ các chữ nói thêm (họ, tên, bạn...) rồi thử lại.
   let toks = qf.split(' ').filter(Boolean);

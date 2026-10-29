@@ -153,13 +153,8 @@ window.TIMELINE = [
 
 // Đại lý uy tín hiển thị ở trang chủ và trang dai-ly.html. Thêm, sửa, xóa trong Quản trị > Trang web > Đại lý uy tín.
 // Danh sách dưới đây là mặc định khi trình duyệt chưa có danh sách lưu từ trang quản trị (psq_dealers_v1).
-window.DEALERS = [
-  { id: 'dl-mau-1', code: 'PS1012', name: 'Đại lý Phúc An (mẫu)', area: 'TP. Hồ Chí Minh', address: 'Quận 1, TP. Hồ Chí Minh', phone: '', note: 'Trưng bày đầy đủ vòng trầm và nụ trầm.', photo: '' },
-  { id: 'dl-mau-2', code: 'PS1010', name: 'Đại lý Hương Việt (mẫu)', area: 'Hà Nội', address: 'Quận Hoàn Kiếm, Hà Nội', phone: '', note: 'Tư vấn chọn vòng theo mệnh.', photo: '' },
-  { id: 'dl-mau-3', code: 'PS1006', name: 'Đại lý Trầm Sơn (mẫu)', area: 'Đà Nẵng', address: 'Quận Hải Châu, Đà Nẵng', phone: '', note: 'Nhận đặt quà tặng doanh nghiệp.', photo: '' },
-  { id: 'dl-mau-4', code: 'PS1005', name: 'Đại lý An Nhiên (mẫu)', area: 'Nghệ An', address: 'TP. Vinh, Nghệ An', phone: '', note: 'Giao nhanh khu vực Bắc Trung Bộ.', photo: '' },
-  { id: 'dl-mau-5', code: 'PS1004', name: 'Đại lý Phúc Lộc (mẫu)', area: 'Cần Thơ', address: 'Quận Ninh Kiều, Cần Thơ', phone: '', note: 'Có góc trải nghiệm hương trầm.', photo: '' }
-];
+// Không còn đại lý mẫu: mã mẫu (PS1004...) đã trùng thành viên thật. Quản trị chọn đại lý thật trong Quản trị > Đại lý uy tín.
+window.DEALERS = [];
 
 // Nội dung trang Giới thiệu. Sửa trong Quản trị > Trang web > Trang giới thiệu (lưu psq_about_v1, ghi đè lên mặc định dưới đây).
 window.ABOUT = {

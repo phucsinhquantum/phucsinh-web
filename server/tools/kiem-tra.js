@@ -276,6 +276,7 @@ async function seed() {
   const { createEngine } = require('../engine');
   const E = createEngine({ webRoot: ROOT, content: () => null, state: () => ({}), actor: () => null });
   P = E.PRODUCTS.filter(p => p.price >= 1e6 && p.active !== false && p.id !== E.ADB.PKG_ID && p.id !== E.ADB.AGENT_PKG_ID).sort((a, b) => a.price - b.price)[0];
+  ok(!(E.sandbox.DEALERS || []).length, 'không còn đại lý mẫu (mã mẫu đã trùng thành viên thật)');
   try { await flow(); await seed(); }
   catch (e) { ok(false, 'lỗi khi kiểm tra: ' + (e.stack || e.message)); }
   console.log(failed ? `\nCÓ ${failed} BƯỚC SAI, KHÔNG ĐƯA LÊN.` : '\nTẤT CẢ ĐỀU ĐÚNG.');

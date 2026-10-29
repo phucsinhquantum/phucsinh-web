@@ -43,7 +43,7 @@
           <a class="card-link" href="dai-ly.html" target="_blank" rel="noopener">Xem trang đại lý ${icon('arrow')}</a></div>
         <div class="dla-tools">
           <input class="input" id="dlaQ" type="search" placeholder="Tìm tên, khu vực, số điện thoại" value="${esc(q)}">
-          ${edit ? `<button class="btn btn-gold btn-sm" type="button" id="dlaAdd">${icon('plus')} Thêm đại lý</button>` : ''}
+          ${edit ? `<button class="btn btn-gold btn-sm" type="button" id="dlaPickM">${icon('users')} Chọn từ thành viên</button><button class="btn btn-outline-gold btn-sm" type="button" id="dlaAdd">${icon('plus')} Thêm tay</button>` : ''}
         </div>
         <div class="table-wrap mt-2"><table class="tbl"><thead><tr><th>#</th><th>Đại lý</th><th>Mã số đại lý</th><th>Điện thoại</th><th>Hiển thị</th><th></th></tr></thead><tbody>
           ${rows.length ? rows.map(({ x, i }) => `<tr class="${x.hidden ? 'dla-off' : ''}">
@@ -64,6 +64,7 @@
     $('#dlaQ').addEventListener('input', e => { q = e.target.value; const pos = e.target.selectionStart; render(el); const n = $('#dlaQ'); n.focus(); n.setSelectionRange(pos, pos); });
     if (!edit) return;
     $('#dlaAdd').addEventListener('click', () => form(el));
+    $('#dlaPickM').addEventListener('click', () => pick(el));
     el.querySelector('.tbl').addEventListener('click', e => {
       const b = e.target.closest('[data-dla]'); if (!b) return;
       const L = D.all(), i = +b.dataset.i, x = L[i], act = b.dataset.dla;
@@ -72,6 +73,47 @@
       if (act === 'toggle') { x.hidden = !x.hidden; if (persist(L)) { audit(x.hidden ? 'Ẩn đại lý uy tín' : 'Hiện đại lý uy tín', x.name); render(el); } return; }
       if (act === 'del') { if (!confirm(`Xóa ${x.name} khỏi danh sách đại lý uy tín?`)) return; L.splice(i, 1); if (persist(L)) { audit('Xóa đại lý uy tín', x.name); render(el); toast('Đã xóa đại lý'); } }
     });
+  }
+
+  // chọn nhanh: tick các thành viên đại lý (hoặc CTV) chưa có trong danh sách, bấm Thêm là xong; thông tin lấy từ tài khoản
+  function pick(el) {
+    const have = new Set(D.all().map(d => (d.code || '').toUpperCase()).filter(Boolean));
+    const all = members().filter(u => !have.has(u.code.toUpperCase()));
+    let showCtv = false, f = '';
+    const m = modal(`<div class="row"><h3>Chọn đại lý từ thành viên</h3>${closeBtn}</div>
+      <p class="dim mt-1" style="font-size:13px">Tick những người muốn đưa lên mục Đại lý uy tín rồi bấm Thêm. Tên, mã, số điện thoại, khu vực lấy từ tài khoản, anh chị sửa lại sau được.</p>
+      <div class="row wrap mt-2" style="gap:10px"><input class="input" id="dlpQ" type="search" placeholder="Tìm tên, mã, số điện thoại" style="flex:1 1 200px;height:40px">
+        <label class="check"><input type="checkbox" id="dlpCtv"> Hiện cả CTV</label></div>
+      <div class="row between mt-2"><label class="check"><input type="checkbox" id="dlpAll"> Chọn tất cả</label><span class="dim" id="dlpN" style="font-size:13px"></span></div>
+      <div id="dlpL" class="mt-1" style="max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:12px"></div>
+      <div class="row mt-3" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="button" id="dlpGo" disabled>${icon('plus')} Thêm</button></div>`);
+    const chosen = new Set();
+    const vis = () => all.filter(u => (showCtv ? u.tier === 'daily' || u.tier === 'ctv' : u.tier === 'daily') && (!f || [u.name, u.code, u.phone, u.city, u.address].join(' ').toLowerCase().includes(f)));
+    const draw = () => {
+      const L = vis();
+      $('#dlpL', m.el).innerHTML = L.length ? L.map(u => `<label class="check" style="display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer">
+        <input type="checkbox" data-c="${esc(u.code)}"${chosen.has(u.code) ? ' checked' : ''}><span style="flex:1"><b>${esc(u.name)}</b> <span class="cyan">${esc(u.code)}</span><br><small class="dim">${u.tier === 'daily' ? 'Đại lý' : 'CTV'}${u.phone ? ' · ' + esc(u.phone) : ''}${u.city ? ' · ' + esc(u.city) : ''}</small></span></label>`).join('')
+        : `<div class="empty" style="padding:24px">${icon('users')}${all.length ? 'Không có ai khớp.' : 'Tất cả đại lý đã có trong danh sách.'}</div>`;
+      $('#dlpAll', m.el).checked = L.length > 0 && L.every(u => chosen.has(u.code));
+      $('#dlpN', m.el).textContent = chosen.size ? `Đã chọn ${chosen.size}` : `${L.length} người`;
+      $('#dlpGo', m.el).disabled = !chosen.size; $('#dlpGo', m.el).innerHTML = `${icon('plus')} Thêm${chosen.size ? ' ' + chosen.size + ' đại lý' : ''}`;
+    };
+    $('#dlpL', m.el).addEventListener('change', e => { const c = e.target.dataset.c; if (!c) return; e.target.checked ? chosen.add(c) : chosen.delete(c); draw(); });
+    $('#dlpAll', m.el).addEventListener('change', e => { vis().forEach(u => e.target.checked ? chosen.add(u.code) : chosen.delete(u.code)); draw(); });
+    $('#dlpQ', m.el).addEventListener('input', e => { f = e.target.value.trim().toLowerCase(); draw(); });
+    $('#dlpCtv', m.el).addEventListener('change', e => { showCtv = e.target.checked; draw(); });
+    $('#dlpGo', m.el).addEventListener('click', () => {
+      const cur = D.all(), add = all.filter(u => chosen.has(u.code));
+      const orders = ADB.load().orders || [];
+      add.forEach(u => {   // địa chỉ, khu vực lấy từ đơn gần nhất có địa chỉ của người đó
+        const o = orders.filter(x => x.userId === u.id && x.address).pop(), addr = (o && o.address) || '', area = addr.split(',').map(t => t.trim()).filter(Boolean).pop() || '';
+        cur.push({ id: uid(), code: u.code, name: u.name, area, phone: u.phone || '', address: addr, map: '', note: '', photo: u.avatar || '', hidden: false });
+      });
+      if (!persist(cur)) return;
+      audit('Thêm đại lý uy tín', add.map(u => u.name + ' (' + u.code + ')').join(', '));
+      m.close(); render(el); toast(`Đã thêm ${add.length} đại lý`);
+    });
+    draw();
   }
 
   function form(el, idx) {
