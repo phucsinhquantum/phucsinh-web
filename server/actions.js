@@ -73,6 +73,8 @@ function scopeFor(d, me, A) {
     // khách mua qua link của mình mà chưa có tài khoản: để người giới thiệu gọi chăm sóc, mời đăng ký (không gửi địa chỉ nhà)
     out.guests = A.guests(d, me.id).map(g => ({ phone: g.phone, name: g.name, paid: g.paid, last: g.last, orders: g.orders.map(o => pick(o, ['id', 'items', 'total', 'status', 'date'])) }));
     out.coupons = (d.coupons || []).filter(x => x.user === me.id);
+    // fanpage của mình: trạng thái và lý do chưa hiện trên trang chủ
+    out.fanpages = (d.fanpages || []).filter(f => f.userId === me.id).map(f => Object.assign(pick(f, ['id', 'kind', 'url', 'title', 'status', 'stats', 'managed']), { why: fanWhy(d, f) }));
     out.topups = (d.topups || []).filter(t => t.user === me.id);
     out.addresses = (d.addresses || []).filter(a => a.user === me.id);
     out.wheel.codes = W.codes.filter(c => c.user === me.id);
@@ -87,11 +89,48 @@ const FAN_HOSTS = [[/(^|\.)(facebook\.com|fb\.com|fb\.me|m\.me)$/, 'facebook'], 
 function fanKind(raw) {
   try { const u = new URL(raw); if (u.protocol !== 'https:' || u.username || u.password) return ''; const h = u.hostname.toLowerCase(); const m = FAN_HOSTS.find(([re]) => re.test(h)); return m ? m[1] : ''; } catch (e) { return ''; }
 }
-// danh sách fanpage đã duyệt để hiện công khai
+const fanKey = url => { try { const u = new URL(url); return (u.hostname.replace(/^(www|m|web)\./, '') + u.pathname.replace(/\/+$/, '') + (/profile\.php/.test(u.pathname) ? '?' + u.searchParams.get('id') : '')).toLowerCase(); } catch (e) { return String(url || '').toLowerCase(); } };
+// điều kiện hiện fanpage: anh cài ở Quản trị fanpage. managed = phải có trong danh sách An An gửi; posts/days = số bài tối thiểu trong 1 hoặc 7 ngày
+const FAN_RULE = { managed: true, posts: 5, days: 7 };
+const fanRule = d => Object.assign({}, FAN_RULE, (d.settings || {}).fanRule || {});
+// lý do chưa hiện (trống = đang hiện); An An gửi số liệu quá 2 ngày coi như chưa có
+function fanWhy(d, f, now = Date.now()) {
+  const u = f.userId && d.users.find(x => x.id === f.userId), R = fanRule(d);
+  if (f.status === 'pending') return 'Chờ duyệt';
+  if (f.status === 'off') return 'Đang ẩn';
+  if (!u) return 'Chưa gắn thành viên';
+  if (u.status === 'locked') return 'Thành viên bị khóa';
+  if (f.always) return '';
+  const fresh = f.stats && f.stats.at && now - f.stats.at < 2 * 864e5;
+  if (R.managed && !(f.managed && fresh)) return 'Chưa có trong danh sách An An quản lý';
+  if (R.posts > 0) { if (!fresh) return 'Chưa có số bài đăng từ An An'; const n = R.days === 1 ? (f.stats.today || 0) : (f.stats.d7 || 0); if (n < R.posts) return `Mới ${n}/${R.posts} bài trong ${R.days === 1 ? 'hôm nay' : '7 ngày'}`; }
+  return '';
+}
+// danh sách fanpage hiện công khai: trang đăng nhiều xếp trước, rồi theo thứ tự anh đặt
 function fanList(d) {
-  return d.users.filter(u => u.fan && u.fan.status === 'ok' && u.status !== 'locked' && u.role !== 'admin' && (u.fan.links || []).length)
-    .sort((a, b) => (a.fan.pos ?? 9999) - (b.fan.pos ?? 9999) || String(a.fan.at).localeCompare(String(b.fan.at)))
-    .map(u => ({ name: u.name, code: u.code || '', tier: u.tier || 'khach', avatar: u.avatar || '', title: u.fan.title || '', links: u.fan.links.filter(x => fanKind(x.url)) }));
+  const now = Date.now(), act = f => (f.stats && f.stats.at && now - f.stats.at < 2 * 864e5) ? (f.stats.d7 || 0) : 0;
+  return (d.fanpages || []).filter(f => !fanWhy(d, f, now) && fanKind(f.url))
+    .sort((a, b) => (a.pos ?? 9999) - (b.pos ?? 9999) || act(b) - act(a) || String(a.at).localeCompare(String(b.at)))
+    .map(f => { const u = d.users.find(x => x.id === f.userId); return { name: u.name, code: u.code || '', tier: u.tier || 'khach', avatar: u.avatar || '', title: f.title || '', kind: f.kind, url: f.url, today: act(f) ? (f.stats.today || 0) : 0, d7: act(f) }; })
+    .reduce((L, f) => { const g = L.find(x => x.code === f.code && x.name === f.name); const l = { kind: f.kind, url: f.url };
+      if (g) { g.links.push(l); g.today += f.today; g.d7 += f.d7; if (!g.title) g.title = f.title; } else L.push({ name: f.name, code: f.code, tier: f.tier, avatar: f.avatar, title: f.title, today: f.today, d7: f.d7, links: [l] }); return L; }, []);
+}
+// An An (n8n) gửi danh sách trang nó quản lý + số bài: [{ pageId, name, url, code, today, d7, lastPost }]
+function botFanpages(d, A, body, stamp) {
+  const pages = [].concat(body.pages || []).slice(0, 500), F = d.fanpages = d.fanpages || [], now = Date.now(), seen = new Set();
+  let added = 0, updated = 0; const bad = [];
+  for (const p of pages) {
+    const url = String(p.url || (p.pageId ? 'https://www.facebook.com/' + String(p.pageId).replace(/\D/g, '') : '')).trim();
+    if (!fanKind(url)) { bad.push(p.name || p.url || p.pageId || '?'); continue; }
+    const pid = String(p.pageId || '').replace(/\D/g, ''), key = fanKey(url);
+    let f = F.find(x => (pid && x.pageId === pid) || fanKey(x.url) === key);
+    const code = String(p.code || '').trim().toUpperCase(), u = code && d.users.find(x => x.role !== 'admin' && ((x.code || '').toUpperCase() === code || (x.oldCodes || []).some(o => o.toUpperCase() === code)));
+    if (!f) { f = { id: A.uid('fp'), url, kind: fanKind(url), source: 'anan', status: 'ok', at: stamp() }; F.push(f); added++; } else updated++;
+    if (pid) f.pageId = pid; if (!f.title && p.name) f.title = String(p.name).slice(0, 60); if (u && !f.userId) f.userId = u.id;
+    f.managed = true; f.stats = { today: Math.max(0, +p.today || 0), d7: Math.max(0, +p.d7 || 0), lastPost: String(p.lastPost || '').slice(0, 30), at: now }; seen.add(f.id);
+  }
+  if (body.full !== false) F.forEach(f => { if (f.managed && !seen.has(f.id)) f.managed = false; });
+  return { ok: true, added, updated, bad, showing: fanList(d).length };
 }
 function orderText(o) {
   const paid = (o.shopPaid || 0) + (o.cashPaid || 0);
@@ -374,22 +413,45 @@ const ACTIONS = {
     if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(String(url)) || String(url).length > 400000) return err('Ảnh chưa hợp lệ, anh chị chọn ảnh khác.');
     c.me.avatar = c.media ? c.media(url) : url; c.log('Cập nhật ảnh đại diện', '@' + c.me.username); return { ok: true };
   } },
-  // fanpage thành viên: tối đa 3 link (Facebook, TikTok, Zalo, YouTube, Instagram), quản trị duyệt rồi mới hiện trên trang chủ
+  // fanpage thành viên tự gửi (tối đa 3 link), vào d.fanpages chờ quản trị duyệt
   fanSet: { auth: 'member', run(c) {
-    const links = [].concat(c.args.links || []).slice(0, 3).map(x => String(x || '').trim()).filter(Boolean), out = [];
-    for (const raw of links) { const k = fanKind(raw); if (!k) return err('Link chưa đúng. Anh chị dán link trang Facebook, TikTok, Zalo, YouTube hoặc Instagram (bắt đầu bằng https://).'); out.push({ kind: k, url: raw.slice(0, 300) }); }
-    const title = str(c.args.title, 60), old = c.me.fan || {};
-    if (!out.length) { delete c.me.fan; c.log('Bỏ fanpage', '@' + c.me.username); return { ok: true }; }
-    const same = old.title === title && JSON.stringify(old.links) === JSON.stringify(out);
-    c.me.fan = Object.assign({}, old, { title, links: out, at: c.stamp(), status: same ? old.status : 'pending' });
-    if (!same) { c.log('Gửi fanpage chờ duyệt', `@${c.me.username}: ${out.map(x => x.url).join(', ')}`); c.notify(`📣 ${c.me.name} (${c.me.code || '@' + c.me.username}) gửi fanpage chờ duyệt:\n${out.map(x => x.url).join('\n')}\nAnh vào Quản trị > Thành viên > Fanpage thành viên để duyệt.`); }
-    return { ok: true, status: c.me.fan.status };
+    const links = [].concat(c.args.links || []).slice(0, 3).map(x => String(x || '').trim()).filter(Boolean), title = str(c.args.title, 60), out = [];
+    for (const raw of links) { const k = fanKind(raw); if (!k) return err('Link chưa đúng. Anh chị dán link trang Facebook, TikTok, Zalo, YouTube hoặc Instagram (bắt đầu bằng https://).'); out.push({ kind: k, url: raw.slice(0, 300), key: fanKey(raw) }); }
+    const F = c.d.fanpages = c.d.fanpages || [], me = c.me, added = [];
+    for (let i = F.length - 1; i >= 0; i--) { const f = F[i]; if (f.userId === me.id && f.source === 'member' && !out.some(o => o.key === fanKey(f.url))) F.splice(i, 1); }
+    out.forEach(o => {
+      const f = F.find(x => fanKey(x.url) === o.key);
+      if (f && f.userId && f.userId !== me.id) return;
+      if (f) { f.userId = me.id; if (title) f.title = title; return; }
+      F.push({ id: c.A.uid('fp'), userId: me.id, kind: o.kind, url: o.url, title, source: 'member', status: 'pending', at: c.stamp() }); added.push(o.url);
+    });
+    if (added.length) { c.log('Gửi fanpage chờ duyệt', `@${me.username}: ${added.join(', ')}`); c.notify(`📣 ${me.name} (${me.code || '@' + me.username}) gửi fanpage chờ duyệt:\n${added.join('\n')}\nAnh vào Quản trị > Quản trị fanpage để duyệt.`); }
+    return { ok: true, pages: F.filter(f => f.userId === me.id).map(f => ({ url: f.url, kind: f.kind, status: f.status })) };
   } },
-  fanReview: { auth: 'admin', perm: 'members', run(c) {
-    const u = c.A.user(c.d, c.args.id); if (!u || !u.fan) return err('Không tìm thấy fanpage.');
-    if (['ok', 'off', 'pending'].includes(c.args.status)) u.fan.status = c.args.status;
-    if (c.args.pos != null && isFinite(+c.args.pos)) u.fan.pos = Math.max(0, Math.min(9999, Math.round(+c.args.pos)));
-    c.log('Duyệt fanpage', `${u.name}: ${u.fan.status === 'ok' ? 'Hiện' : u.fan.status === 'off' ? 'Ẩn' : 'Chờ duyệt'}${u.fan.pos != null ? ', thứ tự ' + u.fan.pos : ''}`); return { ok: true };
+  // quản trị fanpage: thêm, sửa, xóa, ẩn hiện, sắp thứ tự, cài điều kiện hiển thị
+  fanAdmin: { auth: 'admin', perm: 'content', run(c) {
+    const { d, args: a } = c, F = d.fanpages = d.fanpages || [];
+    if (a.op === 'list') return { rule: fanRule(d), pages: F.map(f => { const u = f.userId && d.users.find(x => x.id === f.userId); return Object.assign({}, f, { why: fanWhy(d, f), owner: u ? { name: u.name, code: u.code || '', tier: u.tier || 'khach', avatar: u.avatar || '' } : null }); }), botOn: !!c.botOn };
+    if (a.op === 'rule') {
+      const st = d.settings = d.settings || {};
+      st.fanRule = { managed: !!a.managed, posts: Math.max(0, Math.min(99, Math.round(+a.posts || 0))), days: [1, 7].includes(+a.days) ? +a.days : 7 };
+      c.log('Điều kiện hiện fanpage', JSON.stringify(st.fanRule)); return { ok: true, rule: st.fanRule };
+    }
+    if (a.op === 'del') { const i = F.findIndex(f => f.id === a.id); if (i < 0) return err('Không tìm thấy fanpage.'); const f = F.splice(i, 1)[0]; c.log('Xóa fanpage', f.url); return { ok: true }; }
+    let f = a.id ? F.find(x => x.id === a.id) : null; if (a.id && !f) return err('Không tìm thấy fanpage.');
+    if (a.url != null || !f) {
+      const url = String(a.url || '').trim(), k = fanKind(url); if (!k) return err('Link chưa đúng. Dán link Facebook, TikTok, Zalo, YouTube hoặc Instagram (bắt đầu bằng https://).');
+      const dup = F.find(x => x !== f && fanKey(x.url) === fanKey(url)); if (dup) return err('Fanpage này đã có trong danh sách.');
+      if (!f) { f = { id: c.A.uid('fp'), source: 'admin', status: 'ok', at: c.stamp() }; F.push(f); }
+      Object.assign(f, { url: url.slice(0, 300), kind: k });
+    }
+    if (a.code !== undefined) { const code = String(a.code || '').trim().toUpperCase(); if (code) { const u = c.d.users.find(x => x.role !== 'admin' && ((x.code || '').toUpperCase() === code || (x.oldCodes || []).some(o => o.toUpperCase() === code))); if (!u) return err('Không có thành viên mã ' + code + '.'); f.userId = u.id; } else f.userId = null; }
+    if (a.title !== undefined) f.title = str(a.title, 60);
+    if (['ok', 'off', 'pending'].includes(a.status)) f.status = a.status;
+    if (a.pos !== undefined) f.pos = a.pos === '' || a.pos == null ? null : Math.max(0, Math.min(9999, Math.round(+a.pos) || 0));
+    if (a.always !== undefined) f.always = !!a.always;
+    c.log('Quản trị fanpage', `${f.url}: ${f.status === 'ok' ? 'Hiện' : f.status === 'off' ? 'Ẩn' : 'Chờ duyệt'}${f.always ? ', luôn hiện' : ''}`);
+    return { ok: true, id: f.id };
   } },
   changePass: { auth: 'member', run(c) {
     const o = String(c.args.old || ''), n = String(c.args.pass || '');
@@ -719,4 +781,4 @@ function botProducts(d, A, products, q, base) {
 }
 const botKeyOf = store => (store.getJSON('secret:bot') || {}).key || '';
 
-module.exports = { botLookup, botProducts, fanList, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };
+module.exports = { botLookup, botProducts, fanList, fanWhy, fanRule, botFanpages, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };

@@ -36,3 +36,22 @@ x-bot-key: <cùng khóa>
 ```
 Trả `products[]`: `name`, `price`, `old`, `partner`, `partnerName`, `inStock`, `stock`, `spec`, `warranty` (bảo hành riêng, trống = chính sách chung), `link`.
 Sản phẩm không có trong danh sách là đã gỡ khỏi web: An An báo hết hàng hoặc ngừng bán, gợi ý mẫu tương tự. Không trả giá tính thưởng PS (nội bộ). Hàng đối tác do công ty giao.
+
+## Fanpage thành viên: An An gửi số bài đăng (POST /api/bot/fanpages)
+
+Cùng khóa x-bot-key. Mỗi ngày (ví dụ 22h) n8n đọc từng fanpage An An quản lý qua Facebook Graph API
+(`GET /{page-id}/posts?since=<7 ngày trước>&fields=created_time&limit=100` bằng page token), đếm bài rồi gửi:
+
+```json
+{ "pages": [
+  { "pageId": "1234567890", "name": "Trầm hương Lê Nhị", "url": "https://www.facebook.com/tramhuonglenhi",
+    "code": "PS1319", "today": 1, "d7": 6, "lastPost": "2026-10-30T08:12:00+0700" }
+] }
+```
+
+- `code`: mã PS của thành viên chủ trang (bỏ trống thì quản trị gắn tay trong Quản trị fanpage).
+- `today`: số bài hôm nay; `d7`: số bài 7 ngày gần nhất (tính cả bài thành viên tự đăng tay).
+- Gửi đủ danh sách mỗi lần: trang không có trong lần gửi sẽ bị coi là An An không còn quản lý (gửi `"full": false` nếu chỉ gửi một phần).
+- Số liệu quá 2 ngày không gửi lại thì trang coi như chưa có số bài.
+- Trả về `{ ok, added, updated, bad, showing }`. Web tự báo Telegram trang nào vừa hiện lại hoặc tạm ẩn.
+- Điều kiện hiện (mặc định: An An quản lý + ít nhất 5 bài trong 7 ngày) anh chỉnh ở Quản trị > Quản trị fanpage. Trang không phải Facebook (TikTok, Zalo) thì bật "Luôn hiện" để bỏ qua điều kiện.

@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030a">
-<script src="js/lang.js?v=20261030a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030b">
+<script src="js/lang.js?v=20261030b"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -240,11 +240,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261030a"></script>
-<script src="js/api.js?v=20261030a"></script>
-<script src="js/data.js?v=20261030a"></script>
-<script src="js/app.js?v=20261030a"></script>
-<script src="js/psq-data.js?v=20261030a"></script>
+<script src="js/patch.js?v=20261030b"></script>
+<script src="js/api.js?v=20261030b"></script>
+<script src="js/data.js?v=20261030b"></script>
+<script src="js/app.js?v=20261030b"></script>
+<script src="js/psq-data.js?v=20261030b"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -741,11 +741,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
         <input type="file" id="pfAv" accept="image/*" class="sr-only">
         <p class="dim mt-1" style="font-size:12px">JPG, PNG hoặc WebP, tối đa 8MB. Ảnh được cắt vuông ở giữa.</p>
         <p class="red" id="pfAvE" style="font-size:13px;min-height:18px;margin:0"></p></div>
-      <div class="card glow-mix" id="ho-so-fanpage">${head('Fanpage của tôi', 'hiện ở mục Fanpage thành viên trên trang chủ sau khi công ty duyệt')}
-        ${me.fan ? `<p class="mt-1" style="font-size:13px">${me.fan.status === 'ok' ? '<span class="badge green">Đang hiện trên trang chủ</span>' : me.fan.status === 'off' ? '<span class="badge">Công ty đang ẩn</span>' : '<span class="badge gold">Đang chờ công ty duyệt</span>'}</p>` : ''}
-        <form id="fnF" class="form-grid mt-2"><div class="field full"><label for="fnT">Tên trang (không bắt buộc)</label><input class="input" id="fnT" maxlength="60" value="${esc((me.fan || {}).title || '')}" placeholder="Ví dụ: Trầm hương Lan Anh"></div>
-          ${[0, 1, 2].map(i => `<div class="field full"><label for="fnL${i}">Link ${i ? 'thêm ' + i : 'chính'}</label><input class="input" id="fnL${i}" type="url" inputmode="url" value="${esc((((me.fan || {}).links || [])[i] || {}).url || '')}" placeholder="${['https://facebook.com/trang-cua-ban', 'https://tiktok.com/@ten-cua-ban', 'https://zalo.me/...'][i]}"></div>`).join('')}
-          <p class="dim full" style="font-size:12px;margin:0">Nhận link Facebook, TikTok, Zalo, YouTube, Instagram. Đổi link thì trang chờ duyệt lại.</p>
+      <div class="card glow-mix" id="ho-so-fanpage">${head('Fanpage của tôi', 'hiện ở mục Fanpage thành viên trên trang chủ')}
+        ${(() => { const F = (API.db.fanpages || []); return F.length ? `<div class="mt-1" style="display:grid;gap:6px;font-size:13px">${F.map(f => `<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><span class="fan-ico fan-${esc(f.kind)}" style="width:22px;height:22px;border-radius:6px">${PSQ.fans.ico(f.kind)}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.title || f.url)}</span>${f.why ? `<span class="badge gold">${esc(f.why)}</span>` : '<span class="badge green">Đang hiện trên trang chủ</span>'}</div>`).join('')}</div>` : ''; })()}
+        <form id="fnF" class="form-grid mt-2"><div class="field full"><label for="fnT">Tên trang (không bắt buộc)</label><input class="input" id="fnT" maxlength="60" value="${esc(((API.db.fanpages || [])[0] || {}).title || '')}" placeholder="Ví dụ: Trầm hương Lan Anh"></div>
+          ${[0, 1, 2].map(i => `<div class="field full"><label for="fnL${i}">Link ${i ? 'thêm ' + i : 'chính'}</label><input class="input" id="fnL${i}" type="url" inputmode="url" value="${esc(((API.db.fanpages || [])[i] || {}).url || '')}" placeholder="${['https://facebook.com/trang-cua-ban', 'https://tiktok.com/@ten-cua-ban', 'https://zalo.me/...'][i]}"></div>`).join('')}
+          <p class="dim full" style="font-size:12px;margin:0">Nhận link Facebook, TikTok, Zalo, YouTube, Instagram. Trang hiện trên trang chủ khi công ty duyệt và anh chị đăng bài đều đặn.</p>
           <p class="red full" id="fnE" style="font-size:13px;min-height:18px;margin:0"></p>
           <div class="field full"><button class="btn btn-gold" type="submit">${icon('check')} Gửi fanpage</button></div></form></div>
       <div class="card glow-cyan">${head('Tài khoản')}<dl class="kv"><dt>Cấp bậc</dt><dd>${tierB(me)}</dd><dt>Tham gia</dt><dd>${fdate(me.created)}</dd><dt>Người giới thiệu</dt><dd>${sp ? esc(sp.name) : '<span class="dim">Không có</span>'}</dd><dt>Trên cây</dt><dd>${me.placed === false ? '<span class="badge pending">Chờ lên cây</span>' : '<span class="badge ok">Đã xếp</span>'}</dd></dl>
@@ -761,7 +761,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     const ax = $('#pfAvX', box); if (ax) ax.addEventListener('click', () => { if (confirm('Xóa ảnh đại diện?')) setAv(null, 'Đã xóa ảnh đại diện'); });
     $('#fnF', box).addEventListener('submit', e => {
       e.preventDefault(); const links = [0, 1, 2].map(i => $('#fnL' + i, box).value.trim()).filter(Boolean);
-      if (act('fanSet', { title: $('#fnT', box).value.trim(), links }, links.length ? 'Đã gửi, trang sẽ hiện sau khi công ty duyệt' : 'Đã bỏ fanpage', $('#fnE', box))) redo();
+      if (act('fanSet', { title: $('#fnT', box).value.trim(), links }, links.length ? 'Đã gửi fanpage cho công ty duyệt' : 'Đã bỏ fanpage', $('#fnE', box))) redo();
     });
     $('#pfF', box).addEventListener('submit', e => {
       e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), name = f.name.trim(), phone = f.phone.trim();

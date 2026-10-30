@@ -133,6 +133,7 @@
         <div class="fan-top"><span class="fan-ph">${x.avatar ? `<img src="${esc(x.avatar)}" alt="" loading="lazy">` : esc(ini)}<span class="fan-dot fan-${esc(a.kind)}">${FAN_ICO[a.kind] || ''}</span></span>
           <div class="fan-id"><h3>${esc(x.name)}</h3><div class="fan-meta">${tier}${x.code ? `<small>${esc(x.code)}</small>` : ''}</div></div></div>
         ${x.title ? `<p class="fan-title">${esc(x.title)}</p>` : ''}
+        ${x.d7 ? `<p class="fan-act">🔥 ${x.d7} bài trong 7 ngày${x.today ? '<span>Hôm nay có bài</span>' : ''}</p>` : ''}
         <div class="fan-links">${x.links.map(l => go(l, 'fan-ico fan-' + l.kind, FAN_NAME[l.kind] + ' của ' + x.name) + FAN_ICO[l.kind] + '</a>').join('')}</div>
         ${go(a, 'btn btn-sm btn-gold fan-go', 'Xem fanpage ' + FAN_NAME[a.kind] + ' của ' + x.name)}${a.kind === 'zalo' ? '' : FAN_ICO[a.kind]}Xem ${a.kind === 'zalo' ? 'Zalo' : 'fanpage'}</a>
       </article>`;

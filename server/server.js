@@ -17,7 +17,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { openStore } = require('./store');
 const { createEngine, esc, today } = require('./engine');
-const { ACTIONS, scopeFor, hashPass, clean, botLookup, botProducts, botKeyOf, fanList } = require('./actions');
+const { ACTIONS, scopeFor, hashPass, clean, botLookup, botProducts, botKeyOf, fanList, botFanpages } = require('./actions');
 const { sendMail } = require('./mail');
 const N = require('./notify'), { chatName, chatsOf } = N;
 const P = require('../js/patch.js');
@@ -94,6 +94,8 @@ if (env.OWNER_EMAIL && !D.users.some(u => (u.email || '').toLowerCase() === env.
   console.log('Đã tạo tài khoản chủ sở hữu', env.OWNER_EMAIL);
 }
 A().wheel(D);
+// fanpage thành viên bản cũ (u.fan) chuyển sang danh sách chung d.fanpages
+{ let n = 0; (D.users || []).forEach(u => { if (!u.fan) return; (u.fan.links || []).forEach(l => { (D.fanpages = D.fanpages || []).push({ id: 'fp' + u.id.slice(-6) + n++, userId: u.id, kind: l.kind, url: l.url, title: u.fan.title || '', source: 'member', status: u.fan.status || 'pending', pos: u.fan.pos, at: u.fan.at }); }); delete u.fan; }); if (n) { console.log('Chuyển fanpage thành viên sang danh sách chung:', n); } }
 if (A().placeAll(D)) console.log('Đã xếp thành viên chờ lên cây vào dưới người giới thiệu');
 // gắn đơn khách lẻ vào tài khoản trùng SĐT; lên đại lý trước rồi mới tính hoa hồng các đơn gắn lại, để người giới thiệu đã đủ mốc được hưởng đúng mức đại lý
 if (A().linkGuests(D)) { console.log('Đã ghi đơn khách lẻ vào tài khoản trùng số điện thoại'); A().agentSync(D); }
@@ -201,7 +203,7 @@ function ctxFor(me, args, sid) {
   return {
     d: D, me, args, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc, media: externalize,
     log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
-    mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, stale: { list: staleList, send: staleSend }, notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+    mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, stale: { list: staleList, send: staleSend }, botOn: !!botKeyOf(store), notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
     sendNow: (to, subject, type, html) => sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
   };
 }
@@ -215,7 +217,7 @@ async function api(req, res, url) {
   if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
   if (req.method === 'GET' && route.startsWith('/api/media/')) return serveMedia(res, route.slice(11));
   if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
-  if (route === '/api/bot/lookup' || route === '/api/bot/products') return botApi(req, res, url, route.endsWith('products'));
+  if (route === '/api/bot/lookup' || route === '/api/bot/products' || route === '/api/bot/fanpages') return botApi(req, res, url, route.split('/').pop());
   if (req.method !== 'POST') return send(res, 405, { error: 'Sai phương thức.' });
   // chống gửi giả từ trang khác: trình duyệt chỉ gửi được tiêu đề này khi cùng tên miền
   if (req.headers['x-psq'] !== '1') return send(res, 403, { error: 'Yêu cầu không hợp lệ.' });
@@ -295,7 +297,17 @@ async function botApi(req, res, url, prod) {
   const ok = key && got.length === key.length && require('crypto').timingSafeEqual(Buffer.from(got), Buffer.from(key));
   if (!ok) { failed(ip); return send(res, 401, { error: key ? 'Khóa tra cứu chưa đúng.' : 'Cổng tra cứu đang tắt. Chủ sở hữu tạo khóa trong Quản trị > Thiết lập.' }); }
   let a = Object.fromEntries(url.searchParams);
-  if (req.method === 'POST') { try { const raw = await readBody(req, 4096); Object.assign(a, raw ? JSON.parse(raw) : {}); } catch (e) { return send(res, 400, { error: 'Dữ liệu không đọc được.' }); } }
+  if (req.method === 'POST') { try { const raw = await readBody(req, prod === 'fanpages' ? 256 * 1024 : 4096); Object.assign(a, raw ? JSON.parse(raw) : {}); } catch (e) { return send(res, 400, { error: 'Dữ liệu không đọc được.' }); } }
+  if (prod === 'fanpages') {
+    // An An gửi danh sách fanpage nó quản lý + số bài; báo Telegram trang nào vừa hiện hoặc vừa ẩn trên trang chủ
+    if (req.method !== 'POST') return send(res, 405, { error: 'Dùng POST.' });
+    const vis = () => new Map(fanList(D).flatMap(x => x.links.map(l => [l.url, x.name])));
+    const before = vis(), r = botFanpages(D, A(), a, stamp), after = vis(); save();
+    const on = [...after].filter(([k]) => !before.has(k)), off = [...before].filter(([k]) => !after.has(k));
+    if (on.length || off.length) tell(`📣 Fanpage thành viên trên trang chủ thay đổi:${on.length ? '\n✅ Hiện lại: ' + on.map(([, n]) => n).join(', ') : ''}${off.length ? '\n⏸ Tạm ẩn (chưa đủ bài): ' + off.map(([, n]) => n).join(', ') : ''}`);
+    return send(res, 200, r, { 'cache-control': 'no-store' });
+  }
+  prod = prod === 'products';
   const r = prod ? botProducts(D, A(), E.PRODUCTS, a.q, BASE) : botLookup(D, A(), content.get('psq_dealers_v1') ?? E.sandbox.DEALERS, a.q, a.asker, BASE);
   return send(res, r.error ? 400 : 200, r, { 'cache-control': 'no-store' });
 }
