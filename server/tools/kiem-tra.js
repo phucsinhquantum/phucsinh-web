@@ -313,6 +313,7 @@ async function flow() {
       ok(!!(await owner.act('fanAdmin', { url: 'https://trang-la.vn/x', code: bCode2 })).error, 'quản trị thêm tay: không nhận link lạ');
       ok(!(await owner.act('fanAdmin', { url: 'https://www.tiktok.com/@congty', code: bCode2, always: true })).error, 'quản trị thêm tay fanpage, gắn thành viên');
       ok(((await (await fetch(`http://127.0.0.1:${s.port}/api/bot/fanpages`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-bot-key': 'sai' }, body: '{}' })).status)) === 401, 'cổng fanpage An An: khóa sai bị chặn');
+      ok(!(await owner.act('fanAdmin', { url: 'https://www.facebook.com/phucsinhcongty', title: 'Phúc Sinh QuanTum', always: true })).error && ((await guest.boot()).fans || []).some(x => x.tier === 'company'), 'trang công ty bật Luôn hiện thì hiện, không cần gắn thành viên');
       await owner.act('fanAdmin', { id: fpB.id, status: 'off' });
       ok(!((await guest.boot()).fans || []).some(x => x.links.some(l => l.url === fpB.url)), 'fanpage bị ẩn thì không hiện');
       const myF = (await B.c.boot()).db.fanpages || []; ok(myF.length === 4 && myF.every(f => typeof f.why === 'string'), 'thành viên xem được fanpage của mình và lý do' + (myF.length === 4 ? '' : ' (' + myF.length + ')'));

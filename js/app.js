@@ -127,7 +127,7 @@
     ico: k => FAN_ICO[k] || '', name: k => FAN_NAME[k] || 'Trang',
     card(x, i = 0) {
       const a = (x.links || [])[0]; if (!a) return '';
-      const ini = initials(x.name) || 'TV', tier = x.tier === 'daily' ? '<span class="fan-tier gold">Đại lý</span>' : x.tier === 'ctv' ? '<span class="fan-tier cyan">CTV</span>' : '<span class="fan-tier">Thành viên</span>';
+      const ini = initials(x.name) || 'TV', tier = x.tier === 'company' ? '<span class="fan-tier gold">Trang công ty</span>' : x.tier === 'daily' ? '<span class="fan-tier gold">Đại lý</span>' : x.tier === 'ctv' ? '<span class="fan-tier cyan">CTV</span>' : '<span class="fan-tier">Thành viên</span>';
       const go = (l, cls, label) => `<a class="${cls}" href="${esc(l.url)}" target="_blank" rel="nofollow noopener noreferrer" aria-label="${esc(label)}">`;
       return `<article class="card fan-card ${['glow-gold', 'glow-cyan'][i % 2]}">
         <div class="fan-top"><span class="fan-ph">${x.avatar ? `<img src="${esc(x.avatar)}" alt="" loading="lazy">` : esc(ini)}<span class="fan-dot fan-${esc(a.kind)}">${FAN_ICO[a.kind] || ''}</span></span>

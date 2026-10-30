@@ -98,8 +98,8 @@ function fanWhy(d, f, now = Date.now()) {
   const u = f.userId && d.users.find(x => x.id === f.userId), R = fanRule(d);
   if (f.status === 'pending') return 'Chờ duyệt';
   if (f.status === 'off') return 'Đang ẩn';
-  if (!u) return 'Chưa gắn thành viên';
-  if (u.status === 'locked') return 'Thành viên bị khóa';
+  if (!u && !f.always) return 'Chưa gắn thành viên';
+  if (u && u.status === 'locked') return 'Thành viên bị khóa';
   if (f.always) return '';
   const fresh = f.stats && f.stats.at && now - f.stats.at < 2 * 864e5;
   if (R.managed && !(f.managed && fresh)) return 'Chưa có trong danh sách An An quản lý';
@@ -111,7 +111,7 @@ function fanList(d) {
   const now = Date.now(), act = f => (f.stats && f.stats.at && now - f.stats.at < 2 * 864e5) ? (f.stats.d7 || 0) : 0;
   return (d.fanpages || []).filter(f => !fanWhy(d, f, now) && fanKind(f.url))
     .sort((a, b) => (a.pos ?? 9999) - (b.pos ?? 9999) || act(b) - act(a) || String(a.at).localeCompare(String(b.at)))
-    .map(f => { const u = d.users.find(x => x.id === f.userId); return { name: u.name, code: u.code || '', tier: u.tier || 'khach', avatar: u.avatar || '', title: f.title || '', kind: f.kind, url: f.url, today: act(f) ? (f.stats.today || 0) : 0, d7: act(f) }; })
+    .map(f => { const u = d.users.find(x => x.id === f.userId) || { name: f.title || 'Phúc Sinh QuanTum', code: '', tier: 'company', avatar: 'img/icon-192.png' }; return { name: u.name, code: u.code || '', tier: u.tier || 'khach', avatar: u.avatar || '', title: f.title || '', kind: f.kind, url: f.url, today: act(f) ? (f.stats.today || 0) : 0, d7: act(f) }; })
     .reduce((L, f) => { const g = L.find(x => x.code === f.code && x.name === f.name); const l = { kind: f.kind, url: f.url };
       if (g) { g.links.push(l); g.today += f.today; g.d7 += f.d7; if (!g.title) g.title = f.title; } else L.push({ name: f.name, code: f.code, tier: f.tier, avatar: f.avatar, title: f.title, today: f.today, d7: f.d7, links: [l] }); return L; }, []);
 }
