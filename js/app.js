@@ -483,7 +483,7 @@
           <div class="top-actions">
             ${ctvCta()}
             <form class="search" action="san-pham.html" role="search">${icon('search')}<input name="q" placeholder="Tìm sản phẩm, bài viết..." aria-label="Tìm kiếm"></form>
-            ${window.PSQLang ? `<button class="icon-btn lang-btn notranslate" type="button" translate="no" aria-label="Chọn ngôn ngữ" aria-haspopup="dialog" data-lang-open>${icon('globe')}<b>${esc(PSQLang.info.tag)}</b></button>` : ''}
+            ${window.PSQLang ? `<button class="icon-btn lang-btn notranslate" type="button" translate="no" aria-label="Chọn ngôn ngữ" aria-haspopup="dialog" data-lang-open>${PSQLang.flag ? PSQLang.flag() : icon('globe')}<b>${esc(PSQLang.info.tag)}</b></button>` : ''}
             <a class="icon-btn gift-btn gift-blink" href="vong-quay.html" aria-label="Vòng quay may mắn">${icon('gift')}</a>
             <button class="icon-btn" type="button" aria-label="Giỏ hàng" data-cart-open>${icon('cart')}<span class="count" data-cart-count hidden>0</span></button>
             <button class="icon-btn user-btn${u ? ' on' : ''}" type="button" aria-label="Tài khoản" aria-haspopup="menu" aria-expanded="false" data-user-open>${u ? `<span class="avatar">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials(u.name))}</span>` : icon('user')}</button>

@@ -30,7 +30,7 @@
     respectReducedMotion: false,
     // Trình duyệt chỉ cho phát nhạc sau khi khách chạm. Bật màn hình "Chạm để bắt đầu" để intro luôn chạy kèm nhạc từ giây đầu.
     tapToStart: true,
-    tapText: 'Chạm để bắt đầu'
+    tapText: 'START'
   };
 
   // Ảnh từng cảnh và các điểm quan trọng trên ảnh gốc (toạ độ theo khổ 1672 × 941)
@@ -83,7 +83,7 @@
     </div>
     <canvas aria-hidden="true"></canvas>
     <button class="intro-skip" type="button" data-at="1">Bỏ qua</button>
-    ${INTRO.tapToStart ? `<div class="intro-gate" role="button" tabindex="-1"><img src="${INTRO.logo}" alt=""><div class="intro-gate-row"><button class="intro-tap" type="button">${INTRO.tapText}</button>${window.PSQLang ? `<button class="intro-lang" type="button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/></svg><span>${PSQLang.current === 'vi' ? 'Chọn ngôn ngữ' : PSQLang.info.name}</span></button>` : ''}</div></div>` : ''}
+    ${INTRO.tapToStart ? `<div class="intro-gate" role="button" tabindex="-1"><img src="${INTRO.logo}" alt=""><div class="intro-gate-row"><button class="intro-tap" type="button" aria-label="Bắt đầu"><span class="intro-hand" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 2.5a1.6 1.6 0 0 1 1.6 1.6v6.2l.6-.1V8.6a1.5 1.5 0 0 1 3 0v1.8l.5-.1v-.9a1.5 1.5 0 0 1 3 0v1.2l.3-.1a1.4 1.4 0 0 1 1.7 1.4v3.7c0 3.6-2.6 6.4-6.2 6.4h-1.4c-2 0-3.5-.9-4.6-2.4l-3.1-4.4a1.5 1.5 0 0 1 2.3-1.9l1.7 1.7V4.1A1.6 1.6 0 0 1 10 2.5z"/></svg></span><span class="intro-tap-t">${INTRO.tapText}</span></button>${window.PSQLang ? `<button class="intro-lang" type="button" aria-haspopup="dialog" aria-label="Language / Chọn ngôn ngữ"><span>Language</span>${PSQLang.flag()}<svg class="intro-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>` : ''}</div></div>` : ''}
     <button class="intro-sound" type="button" data-at="1" aria-label="Bật/tắt nhạc" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="w" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M16 9l6 6M22 9l-6 6"/></svg>
     </button>
