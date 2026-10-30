@@ -357,7 +357,7 @@ const ACTIONS = {
     const name = str(info.name, 80), phone = normPhone(info.phone), email = str(info.email, 120), address = str(info.address, 300), pay = info.pay === 'wallet' ? 'wallet' : 'bank';
     if (name.length < 2 || !/^0\d{9}$/.test(phone) || address.length < 5) return err('Anh chị kiểm tra lại họ tên, số điện thoại và địa chỉ nhận hàng.');
     if (email && !EMAIL.test(email)) return err('Email chưa đúng định dạng.');
-    const num = Math.max(1100, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
+    const num = Math.max(1100, +d.orderSeq || 0, ...d.orders.map(o => +String(o.id).replace(/\D/g, '') || 0)) + 1;
     const o = { id: 'PSQ' + num, userId: me ? me.id : null, name, phone, email, address, note: str(info.note, 500), pay, items, total: items.reduce((s, x) => s + x.price * x.qty, 0) + (+c.site.shipFee || 0), status: 'pending', date: c.today(), at: c.stamp() };
     // khách mua không đăng nhập: tính cho người giới thiệu. Số điện thoại đã là thành viên thì theo tuyến của thành viên đó;
     // số điện thoại đã từng mua qua link thì giữ người gửi link đầu tiên; còn lại theo mã link đầu tiên trình duyệt nhớ (args.ref).

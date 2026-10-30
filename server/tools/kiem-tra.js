@@ -391,6 +391,22 @@ async function flow() {
     const vf = await guest.req('GET', '/api/verify?t=sai-ma');
     ok(vf.status === 200 && /Chưa kích hoạt được/.test(vf.text), 'đường dẫn kích hoạt sai hiện trang báo rõ ràng');
     ok(!/TypeError|ReferenceError|SyntaxError|\[lỗi/.test(s.log()), 'nhật ký máy chủ không có lỗi');
+    // công cụ làm mới dữ liệu: dừng máy chủ, chạy, khởi động lại
+    const maxOld = Math.max(...((await owner.boot()).db.orders || []).map(o => +String(o.id).replace(/\D/g, '') || 0));
+    s.stop(); await new Promise(r => setTimeout(r, 500));
+    const lm = require('child_process').spawnSync(process.execPath, ['--no-warnings', path.join(ROOT, 'server', 'tools', 'lam-moi.js'), dir, '--chay'], { encoding: 'utf8' });
+    ok(lm.status === 0 && fs.readdirSync(path.join(dir, 'backups')).some(f => /^so-du-truoc-lam-moi-.*\.csv$/.test(f)), 'làm mới dữ liệu: chạy xong, có sao lưu và bảng số dư' + (lm.status ? ': ' + lm.stderr : ''));
+    const s2 = await startServer(dir, false);
+    try {
+      const own2 = client(s2.port);
+      ok(!(await own2.act('login', { login: 'chu@kiem-tra.vn', pass: 'KiemTra@2026' })).error, 'làm mới: chủ sở hữu vẫn đăng nhập được');
+      const d2 = (await own2.boot()).db, mem = (d2.users || []).filter(u => u.role !== 'admin' && !u.deleted);
+      ok(mem.length && mem.every(u => u.tier === 'daily'), 'làm mới: mọi thành viên lên Đại lý');
+      ok(!(d2.orders || []).length && !(d2.commissions || []).length && !(d2.wallet || []).length && !(d2.fundbook || []).length, 'làm mới: không còn đơn, hoa hồng, giao dịch ví, sổ quỹ');
+      const on = await client(s2.port).act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'Khách mới', phone: '0987650099' }) });
+      ok(on.result && on.result.order && +String(on.result.order.id).replace(/\D/g, '') > maxOld, 'làm mới: số đơn mới tiếp nối số cũ, không cấp lại' + (on.result ? ' (' + on.result.order.id + ' / ' + maxOld + ')' : ': ' + JSON.stringify(on).slice(0, 200)));
+      ok(!/TypeError|ReferenceError|SyntaxError|\[lỗi/.test(s2.log()), 'làm mới: nhật ký máy chủ không có lỗi');
+    } finally { s2.stop(); }
   } finally { s.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
