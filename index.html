@@ -18,10 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030f">
-<script src="js/lang.js?v=20261030f"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030g">
+<script src="js/lang.js?v=20261030g"></script>
 <link rel="stylesheet" href="css/intro.css">
-<script src="js/intro.js?v=20261030f"></script>
+<script src="js/intro.js?v=20261030g"></script>
 </head>
 <body data-page="home">
 <div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
@@ -102,11 +102,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261030f"></script>
-<script src="js/api.js?v=20261030f"></script>
-<script src="js/data.js?v=20261030f"></script>
-<script src="js/app.js?v=20261030f"></script>
-<script src="js/psq-data.js?v=20261030f"></script>
+<script src="js/patch.js?v=20261030g"></script>
+<script src="js/api.js?v=20261030g"></script>
+<script src="js/data.js?v=20261030g"></script>
+<script src="js/app.js?v=20261030g"></script>
+<script src="js/psq-data.js?v=20261030g"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, productCard, area, modal } = PSQ;
@@ -122,14 +122,14 @@
     ['pointerenter', 'touchstart', 'focusin', 'wheel'].forEach(ev => row.addEventListener(ev, pause, { passive: true })); if (nav) nav.addEventListener('click', pause);
     row.addEventListener('pointerleave', () => { hold = Date.now() + 1500; });
     if (row.children.length < 2) return;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return shuffle(row);
+    if (document.documentElement.classList.contains('reduce-motion')) return shuffle(row);   // không dùng prefers-reduced-motion: Windows tắt hiệu ứng là trình duyệt báo cờ này (giống phần intro)
     shuffle(row); setInterval(() => { if (!document.hidden && Date.now() >= hold) shuffle(row); }, 3 * 6e4);
     setInterval(() => {
       if (document.hidden || Date.now() < hold) return;
       const c = row.firstElementChild, w = c.offsetWidth + 14;
       if (row.scrollWidth > row.clientWidth + 4) {
         if (row.scrollLeft >= row.scrollWidth - row.clientWidth - 2) row.scrollTo({ left: 0, behavior: 'smooth' }); else row.scrollBy({ left: w, behavior: 'smooth' });
-      } else { c.style.opacity = '0'; setTimeout(() => { row.appendChild(c); c.style.opacity = ''; }, 300); }
+      } else { const m = [...row.children].find(x => !x.dataset.pin); if (!m) return; m.style.opacity = '0'; setTimeout(() => { row.appendChild(m); m.style.opacity = ''; }, 300); }   // thẻ ghim (trang công ty) giữ đầu
     }, 4000);
   }
   /* ---------- fanpage thành viên ---------- */
