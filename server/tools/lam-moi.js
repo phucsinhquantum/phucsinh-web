@@ -1,8 +1,10 @@
 /* Làm mới dữ liệu kinh doanh (anh Tuân chốt 30/10/2026):
    1. Mọi thành viên (Khách hàng, CTV) lên Đại lý từ hôm nay. Không cộng điểm, không hoa hồng.
    2. Xóa toàn bộ đơn hàng (kể cả đơn khách chưa có tài khoản), hoa hồng, giao dịch 5 ví, lệnh nạp/rút,
-      sổ quỹ điểm, mã giảm giá, lượt quay, lượt dùng mã khuyến mãi, khách nhớ link giới thiệu.
-   Giữ nguyên: tài khoản, mã PS, tuyến giới thiệu, sản phẩm, kho, bài viết, thiết lập, fanpage, tin nhắn, nhật ký.
+      sổ quỹ điểm, voucher và mã giảm giá đã cấp, mã quay và lượt quay, quà đã trúng, mọi chương trình khuyến mãi
+      (kể cả mã), khách nhớ link giới thiệu.
+   Giữ nguyên: tài khoản, mã PS, tuyến giới thiệu, sản phẩm, kho, bài viết, thiết lập (cả danh sách quà của vòng quay),
+   fanpage, tin nhắn, nhật ký. Ai đã quay vòng chào mừng thì không được quay lại.
    Số đơn mới tiếp nối số cũ (không cấp lại mã PSQ đã dùng). Mã xác nhận đơn cũ trong Telegram bị hủy.
 
    Chạy KHI MÁY CHỦ ĐÃ DỪNG (máy chủ đang chạy sẽ ghi đè lại dữ liệu cũ):
@@ -36,7 +38,7 @@ const guestOrders = (D.orders || []).filter(o => !o.userId);
 const n = k => (D[k] || []).length;
 
 console.log(`Lên Đại lý: ${up.length} người (${up.filter(u => (u.tier || 'khach') === 'khach').length} Khách hàng, ${up.filter(u => u.tier === 'ctv').length} CTV)`);
-console.log(`Xóa: ${n('orders')} đơn hàng (${guestOrders.length} đơn khách chưa có tài khoản), ${n('commissions')} dòng hoa hồng, ${n('wallet')} giao dịch ví, ${n('topups')} lệnh nạp, ${n('fundbook')} dòng sổ quỹ, ${n('coupons')} mã giảm giá, ${((D.wheel || {}).spins || []).length} lượt quay`);
+console.log(`Xóa: ${n('orders')} đơn hàng (${guestOrders.length} đơn khách chưa có tài khoản), ${n('commissions')} dòng hoa hồng, ${n('wallet')} giao dịch ví, ${n('topups')} lệnh nạp, ${n('fundbook')} dòng sổ quỹ, ${n('coupons')} mã giảm giá, ${((D.wheel || {}).spins || []).length} lượt quay, ${((D.wheel || {}).codes || []).length} mã quay, ${n('promos')} chương trình khuyến mãi`);
 console.log('Số dư đang có: ' + WK.map(k => `${A.WALLETS[k].short} ${sum(k).toLocaleString('vi-VN')}`).join(', ') + ` · tổng ${WK.reduce((s, k) => s + sum(k), 0).toLocaleString('vi-VN')}`);
 if (!run) { console.log('\nChưa đổi gì. Thêm --chay để làm (dừng máy chủ trước).'); process.exit(0); }
 
@@ -58,8 +60,8 @@ D.orderSeq = Math.max(+D.orderSeq || 0, ...(D.orders || []).map(o => +String(o.i
 for (const k of ['orders', 'commissions', 'wallet', 'topups', 'fund', 'fundbook', 'coupons']) D[k] = [];
 D.guestRefs = {};
 if (D.wheel) { D.wheel.spins = []; D.wheel.codes = []; D.wheel.forced = {}; D.wheel.events = []; }
-for (const p of D.promos || []) { p.used = 0; p.uses = []; }
-(D.logs = D.logs || []).unshift({ id: 'nk' + Date.now().toString(36), date: today, actor: 'Hệ thống', action: 'Làm mới dữ liệu', detail: `${up.length} thành viên lên Đại lý; xóa đơn hàng, hoa hồng, ví, quỹ điểm. Sao lưu ${path.basename(bak)}` });
+D.promos = [];
+(D.logs = D.logs || []).unshift({ id: 'nk' + Date.now().toString(36), date: today, actor: 'Hệ thống', action: 'Làm mới dữ liệu', detail: `${up.length} thành viên lên Đại lý; xóa đơn hàng, hoa hồng, ví, quỹ điểm, voucher, mã quay, khuyến mãi. Sao lưu ${path.basename(bak)}` });
 
 sql.prepare("UPDATE kv SET v = ?, at = ? WHERE k = 'db'").run(JSON.stringify(D), Date.now());
 sql.prepare("DELETE FROM tokens WHERE kind IN ('confirm', 'ship')").run();
