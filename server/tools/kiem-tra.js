@@ -128,6 +128,16 @@ async function flow() {
     const sl = async c => { const r = await c.req('GET', '/api/tai-lieu/slide'); return r.status === 200 && /SLIDE-KT/.test(r.text); };
     ok(!(await sl(guest)) && !(await sl(kl)), 'slide thuyết trình: chưa đăng nhập và khách không mở được');
     ok(await sl(A.c) && await sl(B.c) && await sl(owner), 'slide thuyết trình: đại lý, CTV, quản trị mở được');
+    // sửa chữ trên slide: quản trị lưu, CTV mở thấy bản mới; CTV không lưu được, không thấy nút sửa
+    fs.writeFileSync(path.join(dir, 'tai-lieu', 'slide-thuyet-trinh.html'), '<title>SLIDE-KT</title><script type="application/json" id="psq-edits">{}</script>');
+    const sv = (c, body) => c.req('POST', '/api/admin/slide', body);
+    ok((await sv(B.c, { edits: { 3: 'x' } })).status === 403, 'slide: CTV không lưu được chữ');
+    ok((await sv(owner, { edits: { 3: 'Chữ <em>mới</em><img src=x onerror=alert(1)>' } })).status === 200, 'slide: quản trị lưu được chữ');
+    const sB = (await B.c.req('GET', '/api/tai-lieu/slide')).text, sO = (await owner.req('GET', '/api/tai-lieu/slide')).text;
+    ok(sB.includes('{"3":"Chữ \\u003cem>mới\\u003c/em>"}') && !/onerror/.test(sB), 'slide: CTV thấy chữ đã sửa, thẻ lạ bị bỏ');
+    ok(!sB.includes('PSQ_SLIDE') && sO.includes('PSQ_SLIDE'), 'slide: chỉ quản trị thấy chế độ sửa');
+    ok((await sv(owner, { html: '<title>SLIDE-MOI</title>' })).status === 400, 'slide: không nhận tệp không phải slide');
+    ok((await sv(owner, { html: '<title>SLIDE-MOI</title><script type="application/json" id="psq-edits">{}</script>' })).status === 200 && /SLIDE-MOI/.test((await B.c.req('GET', '/api/tai-lieu/slide')).text), 'slide: chủ sở hữu thay được tệp slide');
 
     // C mua qua CTV B: B 10%, A (đại lý tuyển B) 40% thu nhập của B
     n0 = s.log().length;
