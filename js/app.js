@@ -37,6 +37,7 @@
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
     pin: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    slide: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M12 16v4M8 20h8M10 8.5v4l3.5-2z"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
     shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
@@ -545,7 +546,7 @@
       const u = auth.user(), pop = document.createElement('div'); pop.className = 'user-pop'; pop.setAttribute('role', 'menu');
       const it = (href, ic, label, act) => `<a role="menuitem" href="${href}"${act ? ` data-user-act="${act}"` : ''}>${icon(ic)}<span>${label}</span></a>`;
       pop.innerHTML = u ? `<div class="up-head"><span class="avatar">${u.avatar ? `<img src="${esc(u.avatar)}" alt="">` : esc(initials(u.name))}</span><div><b>${esc(u.name)}</b><small>${esc(u.email || '')}</small></div></div>
-        ${it('thanh-vien.html#tong-quan', 'home', 'Vào trang thành viên')}${u.role === 'admin' ? it('quan-tri.html', 'grid', 'Vào trang quản trị') : ''}${it('thanh-vien.html#ho-so', 'user', 'Hồ sơ của tôi')}${it('thanh-vien.html#vi', 'wallet', 'Ví của tôi')}${it('#', 'lock', 'Đổi mật khẩu', 'pass')}${pwa.can() ? it('#', 'download', 'Cài ứng dụng PSQ', 'install') : ''}<div class="up-sep"></div>${it('#', 'logout', 'Đăng xuất', 'logout')}`
+        ${u.role === 'admin' || u.tier === 'ctv' || u.tier === 'daily' ? `<a role="menuitem" href="/api/tai-lieu/slide" target="_blank" rel="noopener" class="up-slide">${icon('slide')}<span>Slide thuyết trình</span></a>` : ''}${it('thanh-vien.html#tong-quan', 'home', 'Vào trang thành viên')}${u.role === 'admin' ? it('quan-tri.html', 'grid', 'Vào trang quản trị') : ''}${it('thanh-vien.html#ho-so', 'user', 'Hồ sơ của tôi')}${it('thanh-vien.html#vi', 'wallet', 'Ví của tôi')}${it('#', 'lock', 'Đổi mật khẩu', 'pass')}${pwa.can() ? it('#', 'download', 'Cài ứng dụng PSQ', 'install') : ''}<div class="up-sep"></div>${it('#', 'logout', 'Đăng xuất', 'logout')}`
         : `<div class="up-head"><span class="avatar">${icon('user')}</span><div><b>Khách</b><small>Đăng nhập để xem ví, đơn hàng</small></div></div>${it('thanh-vien.html', 'user', 'Đăng nhập')}${it('thanh-vien.html?dang-ky=1', 'plus', 'Đăng ký thành viên')}${pwa.can() ? '<div class="up-sep"></div>' + it('#', 'download', 'Cài ứng dụng PSQ', 'install') : ''}`;
       document.body.appendChild(pop);
       const r = btn.getBoundingClientRect(); pop.style.top = (r.bottom + 8) + 'px'; pop.style.left = Math.max(12, Math.min(innerWidth - pop.offsetWidth - 12, r.right - pop.offsetWidth)) + 'px';

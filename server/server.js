@@ -214,6 +214,7 @@ async function api(req, res, url) {
   if (route === '/api/confirm') return confirmPage(req, res, url);
   if (req.method === 'GET' && route === '/api/verify') return verifyPage(req, res, url);
   if (route === '/api/ship') return shipPage(req, res, url);
+  if (req.method === 'GET' && route === '/api/tai-lieu/slide') return slidePage(res, me);
   if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
   if (req.method === 'GET' && route.startsWith('/api/media/')) return serveMedia(res, route.slice(11));
   if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
@@ -443,6 +444,15 @@ async function shipPage(req, res, url) {
     return page('Đã ship', `<h1>🚚 Đơn ${esc(o.id)} đã chuyển sang Đang giao</h1><p>Người xác nhận: ${esc(who)}, lúc ${esc(o.shipAt)}. Đơn này không nhắc lại nữa.</p>`);
   }
   return page('Xác nhận đã ship ' + o.id, `<h1>Xác nhận đã gửi hàng</h1>${info}<form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">🚚 Đã ship đơn ${esc(o.id)}</button></form><p style="font-size:13px">Chỉ bấm khi hàng đã giao cho bên vận chuyển.</p>`);
+}
+
+/* ---------- slide thuyết trình: chỉ CTV, đại lý và quản trị (tệp nằm ở thư mục dữ liệu, không có trong repo hay web công khai) ---------- */
+const SLIDE_FILE = path.join(DATA_DIR, 'tai-lieu', 'slide-thuyet-trinh.html');
+const slideOk = u => !!u && u.status !== 'locked' && (u.role === 'admin' || u.tier === 'ctv' || u.tier === 'daily');
+function slidePage(res, me) {
+  if (!me) return send(res, 302, '', { location: '/thanh-vien.html' });
+  if (!slideOk(me)) return send(res, 403, `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Slide thuyết trình</title></head><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0f11;color:#eef2f1;font:16px system-ui,sans-serif;text-align:center;padding:24px"><div><h1 style="color:#f3c76b;font-size:22px">Slide thuyết trình dành cho cộng tác viên và đại lý</h1><p>Tài khoản của anh chị chưa là cộng tác viên. Kích hoạt CTV để xem tài liệu này.</p><p><a href="/thanh-vien.html" style="color:#4fe6df">Về trang thành viên</a></p></div></body></html>`);
+  fs.readFile(SLIDE_FILE, (e, buf) => e ? send(res, 404, 'Chưa có slide thuyết trình') : send(res, 200, buf.toString('utf8'), { 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex' }));
 }
 
 /* ---------- tệp tĩnh (khi chạy riêng, không qua Caddy) ---------- */

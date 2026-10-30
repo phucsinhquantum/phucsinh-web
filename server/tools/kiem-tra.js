@@ -108,6 +108,13 @@ async function flow() {
     await confirm(s, owner, n0, 'đơn của A', A.c, ((oa.result || {}).order || {}).id);
     ok(((await A.c.boot()).me || {}).tier === 'daily', 'A tự lên đại lý khi tổng mua đã thanh toán đủ mốc');
 
+    // slide thuyết trình: tệp ở thư mục dữ liệu, chỉ CTV, đại lý, quản trị mở được
+    fs.mkdirSync(path.join(dir, 'tai-lieu'), { recursive: true }); fs.writeFileSync(path.join(dir, 'tai-lieu', 'slide-thuyet-trinh.html'), '<title>SLIDE-KT</title>');
+    const kl = client(s.port); await kl.act('register', { name: 'Khách Slide', username: 'ktslide', email: 'ktslide@kiem-tra.vn', pass: '123456a', ref: 'PS1000', agree: true });
+    const sl = async c => { const r = await c.req('GET', '/api/tai-lieu/slide'); return r.status === 200 && /SLIDE-KT/.test(r.text); };
+    ok(!(await sl(guest)) && !(await sl(kl)), 'slide thuyết trình: chưa đăng nhập và khách không mở được');
+    ok(await sl(A.c) && await sl(B.c) && await sl(owner), 'slide thuyết trình: đại lý, CTV, quản trị mở được');
+
     // C mua qua CTV B: B 10%, A (đại lý tuyển B) 40% thu nhập của B
     n0 = s.log().length;
     const oc = await C.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'Khách C', phone: '0987654321' }) });

@@ -1104,3 +1104,4 @@ html.reduce-motion .guide-hand .gh-hand, html.reduce-motion .guide-bar { animati
 .fan-foot .fan-ico { width: 34px; height: 34px; flex: none; }
 .lang-pop .lang-flag { flex: none; width: 30px; height: 20px; border-radius: 4px; box-shadow: 0 0 0 1px rgba(255,255,255,.18); }
 .lang-btn .lang-flag { width: 22px; height: 15px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.2); flex: none; }
+.user-pop a.up-slide { background: linear-gradient(90deg, rgba(243, 199, 107, .14), rgba(243, 199, 107, .02)); border: 1px solid rgba(243, 199, 107, .28); margin-bottom: 4px; font-weight: 600; }
