@@ -225,7 +225,7 @@
   const PLAN_FIELDS = [
     ['pkgPrice', 'Giá gói kích hoạt CTV', 'money', 'Khách mua gói này để trở thành cộng tác viên.'],
     ['pkgPoints', 'Điểm nhận khi kích hoạt', 'money', 'Đóng gói chỉ cộng điểm vào ví mua hàng. Đơn hàng đầu tiên được thanh toán mới lên CTV, hoa hồng tính trên đơn hàng.'],
-    ['ctvOverRate', 'Thu nhập của CTV từ tuyến dưới', 'pct', 'CTV nhận % hoa hồng bán hàng của người mình giới thiệu trực tiếp, vào ví tiền mặt, khi đủ điều kiện hoạt động như đại lý. Đại lý tuyến trên của CTV đó hưởng tiếp % thu nhập từ khoản này.'],
+    ['ctvOverRate', 'Thu nhập của CTV từ tuyến dưới', 'pct', 'CTV nhận % mọi thu nhập (hoa hồng bán hàng, thu nhập tuyến dưới) của người mình giới thiệu trực tiếp, vào ví tiền mặt, khi đủ điều kiện hoạt động như đại lý. Tuyến trên tính tiếp: CTV hưởng %, đại lý hưởng % thu nhập đại lý. Phần chênh lệch cấp bậc công ty giữ.'],
     ['ctvRate', 'Hoa hồng của CTV', 'pct', 'Trên mọi đơn mua hàng của người mình giới thiệu trực tiếp (khách hàng, CTV hay đại lý), trả khi công ty đã nhận tiền (đơn Đã thanh toán).'],
     ['agentRate', 'Hoa hồng của đại lý', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp.'],
     ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập từ đơn mua hàng của đại lý và CTV mình giới thiệu, tính dồn lên các đại lý tuyến trên. Thưởng giới thiệu CTV không tính.'],

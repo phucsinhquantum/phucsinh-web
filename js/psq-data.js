@@ -173,7 +173,7 @@
   function payCommission(d, c) {
     const P = plan(d);
     if (c.kind === 'override' && c.ctv) {
-      credit(d, c.user, 'cash', 'override', c.amount, `${c.rate}% hoa hồng bán hàng của ${(ADB.user(d, c.from) || {}).name || ''} (đơn ${c.order})`, c.order, { date: c.paidAt || c.date, taxable: true });
+      credit(d, c.user, 'cash', 'override', c.amount, `${c.rate}% thu nhập của ${(ADB.user(d, c.from) || {}).name || ''} (đơn ${c.order})`, c.order, { date: c.paidAt || c.date, taxable: true });
     } else if (c.kind === 'override') {
       const shop = pct(c.amount, P.overrideShop);
       const dt = c.paidAt || c.date;
@@ -187,12 +187,13 @@
     c.status = 'paid';
     // B (đại lý hoặc CTV) có thu nhập từ đơn mua hàng (kể cả thu nhập B nhận từ tầng dưới): đại lý A (người giới thiệu B) hưởng 40%, tính tiếp lên trên.
     // CTV do đại lý tuyển cũng tính (anh Tuân chốt 24/10). Thưởng giới thiệu CTV (200k) không tính là thu nhập để tuyến trên hưởng.
-    // tuyến trên là CTV: hưởng ctvOverRate% hoa hồng bán hàng của người mình giới thiệu, 1 tầng, vào ví tiền mặt (anh Tuân chốt 30/10)
-    if (c.kind === 'direct') {
-      const r = ADB.user(d, c.user), P = plan(d), up = r && r.sponsor && ADB.user(d, r.sponsor), amount = pct(c.amount, P.ctvOverRate || 0), date = c.paidAt || c.date;
-      if (up && up.tier === 'ctv' && amount >= 1) {
+    // tuyến trên là CTV: hưởng ctvOverRate% mọi thu nhập (hoa hồng bán hàng và thu nhập tuyến dưới) của người mình giới thiệu, vào ví tiền mặt,
+    // tính tiếp lên trên (anh Tuân chốt 30/10). Thưởng giới thiệu không tính. Phần chênh lệch cấp bậc công ty giữ.
+    if (c.kind === 'direct' || c.kind === 'override') {
+      const r = ADB.user(d, c.user), P = plan(d), up = r && r.sponsor && ADB.user(d, r.sponsor), amount = pct(c.amount, P.ctvOverRate || 0), date = c.paidAt || c.date, depth = (c.depth || 0) + 1;
+      if (up && up.tier === 'ctv' && amount >= 1 && depth <= 30) {
         const ok = ADB.activity(d, up.id, date).ok, status = ok ? 'paid' : P.overrideMode === 'hold' ? 'hold' : 'missed';
-        addCommission(d, { kind: 'override', ctv: true, order: c.order, user: up.id, from: r.id, level: 2, depth: 1, rate: P.ctvOverRate, base: c.amount, amount, date, status,
+        addCommission(d, { kind: 'override', ctv: true, order: c.order, user: up.id, from: r.id, level: depth + 1, depth, rate: P.ctvOverRate, base: c.amount, amount, date, status,
           note: ok ? '' : status === 'hold' ? 'Đang giữ, chờ đủ điều kiện nhận' : 'Chưa đủ điều kiện nhận (' + (P.activeRule === 'all' ? 'tự mua và có đơn bán' : 'tự mua hoặc có đơn bán') + ' trong ' + P.activeDays + ' ngày)' });
       }
     }

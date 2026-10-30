@@ -424,6 +424,15 @@ async function seed() {
   const E = ENG = createEngine({ webRoot: ROOT, content: () => null, state: () => ({}), actor: () => null });
   P = E.PRODUCTS.filter(p => p.price >= 1e6 && p.active !== false && p.id !== E.ADB.PKG_ID && p.id !== E.ADB.AGENT_PKG_ID).sort((a, b) => a.price - b.price)[0];
   ok(!(E.sandbox.DEALERS || []).length, 'không còn đại lý mẫu (mã mẫu đã trùng thành viên thật)');
+  // ví dụ anh Tuân 30/10: A (CTV) ← B (đại lý) ← C (CTV) ← D (CTV), khách của D mua 10.000.000 PS
+  {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: {} }; X.plan(d);
+    const day = new Date().toISOString().slice(0, 10), mk = (id, tier, sponsor) => { d.users.push({ id, name: id, tier, sponsor, role: 'member' }); d.orders.push({ id: 'tu-' + id, userId: id, status: 'done', settled: true, total: 100000, items: [{ id: 'x', price: 100000, qty: 1 }], date: day }); };
+    mk('A', 'ctv', null); mk('B', 'daily', 'A'); mk('C', 'ctv', 'B'); mk('D', 'ctv', 'C'); d.users.push({ id: 'K', name: 'Khách', tier: 'khach', sponsor: 'D', role: 'member' });
+    const o = { id: 'vd10', userId: 'K', status: 'paid', total: 10000000, items: [{ id: 'vong', price: 10000000, qty: 1 }], date: day }; d.orders.push(o); X.settleOrder(d, o);
+    const got = u => d.commissions.filter(c => c.user === u && c.order === 'vd10' && c.status === 'paid' && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
+    ok(got('D') === 1000000 && got('C') === 100000 && got('B') === 40000 && got('A') === 4000, `ví dụ 4 tầng: D 1.000.000, C 100.000, B 40.000, A 4.000 (thực tế ${['D', 'C', 'B', 'A'].map(got).join(', ')})`);
+  }
   try { await flow(); await seed(); }
   catch (e) { ok(false, 'lỗi khi kiểm tra: ' + (e.stack || e.message)); }
   console.log(failed ? `\nCÓ ${failed} BƯỚC SAI, KHÔNG ĐƯA LÊN.` : '\nTẤT CẢ ĐỀU ĐÚNG.');
