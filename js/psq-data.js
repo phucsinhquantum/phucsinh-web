@@ -162,8 +162,6 @@
   const psOf = p => (p && p.ps != null && p.ps !== '' && +p.ps >= 0) ? Math.round(+p.ps) : (p ? p.price : 0);
   const itemsPs = o => (o.items || []).reduce((s, x) => s + psOf(x) * x.qty, 0);
   // gốc tính hoa hồng của đơn: tổng PS, giảm theo đúng tỉ lệ mã giảm giá
-  // gốc hoa hồng sau khi bỏ phần đơn trả bằng điểm của gói CTV (o.pkgPaid)
-  const commBase = o => { const b = psBase(o), t = o.total || itemsTotal(o); return o.pkgPaid && t > 0 ? Math.round(b * Math.max(0, t - o.pkgPaid) / t) : b; };
   const psBase = o => { const t = itemsTotal(o), ps = itemsPs(o); return t > 0 ? Math.round(ps * Math.max(0, t - (o.discount || 0)) / t) : 0; };
   const now = () => { const t = new Date(); return t.toISOString().slice(0, 10); };
   const nowAt = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };   // giờ VN, để biết đơn đặt bao lâu rồi
@@ -237,11 +235,10 @@
     if (isPkg) {
       if (buyer.tier === 'khach') { buyer.tier = 'ctv'; buyer.activated = date; }
       credit(d, buyer.id, 'shop', 'package', P.pkgPoints, 'Điểm mua hàng từ gói kích hoạt cộng tác viên', o.id, { date });
-      // điểm của gói: khi tiêu vào đơn hàng thì phần đó không tính hoa hồng nữa (đã thưởng giới thiệu lúc mua gói)
       buyer.pkgLeft = (buyer.pkgLeft || 0) + P.pkgPoints;
       if (sp && (sp.tier === 'ctv' || sp.tier === 'daily')) addCommission(d, { kind: 'ref', wallet: 'cash', order: o.id, user: sp.id, from: buyer.id, rate: P.refRate, base: P.pkgPrice, amount: refAmount(P), date });
       else if (sp) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: P.refRate, base: P.pkgPrice, amount: refAmount(P), date, status: 'missed', note: 'Chưa kích hoạt cộng tác viên' });
-    } else if (sp) directCommission(d, o, buyer, sp, commBase(o), date);   // hoa hồng tính trên giá tính thưởng (PS), trừ theo tỉ lệ mã giảm giá và phần trả bằng điểm gói CTV
+    } else if (sp) directCommission(d, o, buyer, sp, psBase(o), date);   // hoa hồng tính trên giá tính thưởng (PS), trừ theo tỉ lệ mã giảm giá; đơn trả bằng điểm (kể cả điểm gói) vẫn tính (anh Tuân chốt 30/10)
     // lên đại lý khi tổng mua cộng dồn đủ mốc
     if (buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = date; }
     return true;

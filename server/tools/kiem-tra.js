@@ -150,8 +150,8 @@ async function flow() {
       const odId = ((od.result || {}).order || {}).id; ok(!od.error, 'D đặt đơn dùng điểm gói' + (od.error ? ': ' + od.error : ''));
       await confirm(s, owner, n1, 'đơn của D', D.c, odId);
       db = (await owner.req('GET', '/api/admin/db')).json.db;
-      const odO = db.orders.find(o => o.id === odId) || {}, bD = com(B.r.me.id, 'direct').find(c => c.order === odId), wantD = Math.round(Math.round(P.price * (P.price - plan.pkgPoints) / P.price) * plan.ctvRate / 100);
-      ok(odO.pkgPaid === plan.pkgPoints && bD && bD.amount === wantD, `đơn trả bằng điểm gói: B chỉ nhận ${plan.ctvRate}% phần trả thêm = ${wantD}đ (thực tế ${bD ? bD.amount : 'không có'})`);
+      const odO = db.orders.find(o => o.id === odId) || {}, bD = com(B.r.me.id, 'direct').find(c => c.order === odId);
+      ok(odO.pkgPaid === plan.pkgPoints && bD && bD.amount === Math.round(P.price * plan.ctvRate / 100), `đơn trả bằng điểm gói vẫn tính hoa hồng: B nhận ${plan.ctvRate}% cả đơn (thực tế ${bD ? bD.amount : 'không có'})`);
       // gói do quản trị cấp: lên CTV, không có thưởng giới thiệu
       const G = await reg('CTV cấp G', 'ktg', B.r.me.code);
       ok(!(await owner.act('ctvGrant', { id: G.r.me.id, note: 'Thử cấp' })).error && ((await G.c.boot()).me || {}).tier === 'ctv', 'chủ sở hữu cấp gói CTV: lên CTV ngay');
