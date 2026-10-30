@@ -4,7 +4,7 @@
       sổ quỹ điểm, voucher và mã giảm giá đã cấp, mã quay và lượt quay, quà đã trúng, mọi chương trình khuyến mãi
       (kể cả mã), khách nhớ link giới thiệu.
    Giữ nguyên: tài khoản, mã PS, tuyến giới thiệu, sản phẩm, kho, bài viết, thiết lập (cả danh sách quà của vòng quay),
-   fanpage, tin nhắn, nhật ký. Ai đã quay vòng chào mừng thì không được quay lại.
+   fanpage, tin nhắn, nhật ký. Tắt cả hai vòng quay: không ai được quay nữa (bật lại trong Quản trị nếu cần).
    Số đơn mới tiếp nối số cũ (không cấp lại mã PSQ đã dùng). Mã xác nhận đơn cũ trong Telegram bị hủy.
 
    Chạy KHI MÁY CHỦ ĐÃ DỪNG (máy chủ đang chạy sẽ ghi đè lại dữ liệu cũ):
@@ -60,6 +60,9 @@ D.orderSeq = Math.max(+D.orderSeq || 0, ...(D.orders || []).map(o => +String(o.i
 for (const k of ['orders', 'commissions', 'wallet', 'topups', 'fund', 'fundbook', 'coupons']) D[k] = [];
 D.guestRefs = {};
 if (D.wheel) { D.wheel.spins = []; D.wheel.codes = []; D.wheel.forced = {}; D.wheel.events = []; }
+// anh chốt: không ai được quay nữa (cả vòng quay khách hàng và vòng quay chào mừng), danh sách quà vẫn giữ
+if (D.wheel) D.wheel.settings = Object.assign({}, D.wheel.settings, { enabled: false });
+D.settings = D.settings || {}; D.settings.welcome = Object.assign({}, D.settings.welcome, { enabled: false });
 D.promos = [];
 (D.logs = D.logs || []).unshift({ id: 'nk' + Date.now().toString(36), date: today, actor: 'Hệ thống', action: 'Làm mới dữ liệu', detail: `${up.length} thành viên lên Đại lý; xóa đơn hàng, hoa hồng, ví, quỹ điểm, voucher, mã quay, khuyến mãi. Sao lưu ${path.basename(bak)}` });
 
