@@ -1093,3 +1093,12 @@ html.reduce-motion .guide-hand .gh-hand, html.reduce-motion .guide-bar { animati
 .fan-act span { font-size: 11px; color: var(--green, #5ad19a); border: 1px solid currentColor; border-radius: 999px; padding: 1px 7px; }
 .fan-row > .fan-card { transition: opacity .3s ease; }
 .dealer-row > .dealer-card { transition: opacity .3s ease; }
+/* thẻ fanpage gọn (30/10): bỏ hàng biểu tượng riêng, link phụ nằm cạnh nút */
+.fan-card { gap: 7px; padding: 13px 14px; }
+.fan-ph { width: 50px; height: 50px; font-size: 17px; }
+.fan-dot { width: 21px; height: 21px; } .fan-dot svg { width: 12px; height: 12px; }
+.fan-title { font-size: 12.5px; -webkit-line-clamp: 1; }
+.fan-act { font-size: 12px; }
+.fan-foot { display: flex; gap: 6px; align-items: center; margin-top: auto; padding-top: 2px; }
+.fan-foot .fan-go { flex: 1; margin: 0; height: 34px; }
+.fan-foot .fan-ico { width: 34px; height: 34px; flex: none; }
