@@ -18,10 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030c">
-<script src="js/lang.js?v=20261030c"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030d">
+<script src="js/lang.js?v=20261030d"></script>
 <link rel="stylesheet" href="css/intro.css">
-<script src="js/intro.js?v=20261030c"></script>
+<script src="js/intro.js?v=20261030d"></script>
 </head>
 <body data-page="home">
 <div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
@@ -102,20 +102,28 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261030c"></script>
-<script src="js/api.js?v=20261030c"></script>
-<script src="js/data.js?v=20261030c"></script>
-<script src="js/app.js?v=20261030c"></script>
-<script src="js/psq-data.js?v=20261030c"></script>
+<script src="js/patch.js?v=20261030d"></script>
+<script src="js/api.js?v=20261030d"></script>
+<script src="js/data.js?v=20261030d"></script>
+<script src="js/app.js?v=20261030d"></script>
+<script src="js/psq-data.js?v=20261030d"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, productCard, area, modal } = PSQ;
   // dải thẻ tự đảo mỗi 4 giây để ai cũng thấy các trang; dừng khi rê chuột, chạm, bấm nút trượt hoặc tab đang ẩn
+  // xáo thứ tự thẻ (mỗi lần tải trang và mỗi 3 phút) để trang nào cũng có lúc đứng đầu; thẻ có data-pin giữ đầu
+  function shuffle(row) {
+    const pin = [...row.children].filter(c => c.dataset.pin), rest = [...row.children].filter(c => !c.dataset.pin);
+    for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+    pin.concat(rest).forEach(c => row.appendChild(c)); row.scrollLeft = 0;
+  }
   function autoRotate(row, nav) {
     let hold = 0; const pause = () => { hold = Date.now() + 8000; };
     ['pointerenter', 'touchstart', 'focusin', 'wheel'].forEach(ev => row.addEventListener(ev, pause, { passive: true })); if (nav) nav.addEventListener('click', pause);
     row.addEventListener('pointerleave', () => { hold = Date.now() + 1500; });
-    if (row.children.length < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (row.children.length < 2) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return shuffle(row);
+    shuffle(row); setInterval(() => { if (!document.hidden && Date.now() >= hold) shuffle(row); }, 3 * 6e4);
     setInterval(() => {
       if (document.hidden || Date.now() < hold) return;
       const c = row.firstElementChild, w = c.offsetWidth + 14;
@@ -128,7 +136,8 @@
   const FN = PSQ.fans.list(), fanRow = $('#fans');
   $('#fanBadges').innerHTML = ['facebook', 'tiktok', 'zalo'].map(k => `<span class="fan-${k}">${PSQ.fans.ico(k)}</span>`).join('');
   if (FN.length) {
-    fanRow.innerHTML = FN.slice(0, 20).map((x, i) => PSQ.fans.card(x, i)).join('');
+    fanRow.innerHTML = FN.slice(0, 30).map((x, i) => PSQ.fans.card(x, i)).join('');
+    FN.slice(0, 30).forEach((x, i) => { if (x.tier === 'company') fanRow.children[i].dataset.pin = '1'; });
     const fanNav = $('#fanNav'), fanCheck = () => { fanNav.hidden = fanRow.scrollWidth <= fanRow.clientWidth + 4; };
     fanCheck(); addEventListener('resize', fanCheck);
     fanNav.addEventListener('click', e => {
