@@ -94,13 +94,24 @@ async function flow() {
       const n0 = s.log().length, r = await X.c.act('buyPackage', {});
       ok(!r.error && r.result && r.result.order, nm + ' đặt gói CTV');
       await confirm(s, owner, n0, nm + ' gói CTV', X.c, (r.result.order || {}).id);
-      ok(((await X.c.boot()).me || {}).tier === 'ctv', nm + ' lên CTV sau khi xác nhận');
+      ok(((await X.c.boot()).me || {}).tier === 'khach', nm + ' đóng gói xong chưa lên CTV, điểm vào ví mua hàng');
     }
+    // đơn hàng đầu tiên (trả bằng điểm gói, phần còn lại chuyển khoản) được thanh toán thì mới lên CTV
+    const first = async (X, nm, phone) => {
+      const n = s.log().length, r = await X.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: { name: 'Thành viên ' + nm, phone, address: '1 Đường Thử, Quận 1', pay: 'bank' }, useShop: plan.pkgPoints });
+      ok(!r.error, nm + ' đặt đơn đầu tiên bằng điểm gói' + (r.error ? ': ' + r.error : ''));
+      await confirm(s, owner, n, nm + ' đơn đầu tiên', X.c, ((r.result || {}).order || {}).id);
+      ok(((await X.c.boot()).me || {}).tier === 'ctv', nm + ' lên CTV khi đơn hàng đầu tiên được thanh toán');
+      return ((r.result || {}).order || {}).id;
+    };
+    await first(A, 'A', '0912000101'); const bFirst = await first(B, 'B', '0912000102');
     let db = (await owner.req('GET', '/api/admin/db')).json.db;
     const com = (u, kind) => (db.commissions || []).filter(c => c.user === u && c.kind === kind);
-    const refAmt = Math.round(plan.pkgPrice * plan.refRate / 100), cashOf = (u, t) => (db.wallet || []).filter(w => w.user === u && w.wallet === 'cash' && w.type === t);
+    const cashOf = (u, t) => (db.wallet || []).filter(w => w.user === u && w.wallet === 'cash' && w.type === t);
     ok(plan.pkgPoints === plan.pkgPrice && (db.wallet || []).some(w => w.user === B.r.me.id && w.wallet === 'shop' && w.type === 'package' && w.amount === plan.pkgPoints), `gói CTV nhận đủ ${plan.pkgPoints} PS vào ví mua hàng`);
-    ok(com(A.r.me.id, 'ref').some(c => c.amount === refAmt) && cashOf(A.r.me.id, 'referral').some(w => w.amount === refAmt && w.taxable), `A nhận thưởng giới thiệu ${plan.refRate}% gói = ${refAmt}đ vào ví tiền mặt khi B kích hoạt CTV`);
+    ok(!com(A.r.me.id, 'ref').length, 'đóng gói không có thưởng giới thiệu');
+    const aB = com(A.r.me.id, 'direct').find(c => c.order === bFirst);
+    ok(aB && aB.amount === Math.round(P.price * plan.ctvRate / 100) && cashOf(A.r.me.id, 'commission').some(w => w.amount === aB.amount && w.taxable), `A nhận ${plan.ctvRate}% cả đơn đầu tiên của B (trả bằng điểm gói) vào ví tiền mặt`);
 
     // A mua đủ mốc lên đại lý
     const info = { name: 'Đại lý A', phone: '0912345678', address: '1 Đường Thử, Quận 1', pay: 'bank' };
@@ -137,7 +148,15 @@ async function flow() {
       const D = await reg('CTV D', 'ktd', B.r.me.code), Ek = await reg('Khách E', 'kte', D.r.me && D.r.me.code);
       let n1 = s.log().length; const rd = await D.c.act('buyPackage', {});
       await confirm(s, owner, n1, 'D gói CTV', D.c, ((rd.result || {}).order || {}).id);
-      ok(((await D.c.boot()).me || {}).tier === 'ctv', 'D lên CTV ngay khi gói được xác nhận, chưa cần mua hàng');
+      ok(((await D.c.boot()).me || {}).tier === 'khach', 'D đóng gói chưa lên CTV');
+      // D tiêu 686.000 PS của gói vào đơn đầu tiên: lên CTV, B vẫn nhận hoa hồng cả đơn
+      n1 = s.log().length; const od = await D.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'CTV D', phone: '0987650002' }), useShop: plan.pkgPoints });
+      const odId = ((od.result || {}).order || {}).id; ok(!od.error, 'D đặt đơn dùng điểm gói' + (od.error ? ': ' + od.error : ''));
+      await confirm(s, owner, n1, 'đơn của D', D.c, odId);
+      ok(((await D.c.boot()).me || {}).tier === 'ctv', 'D lên CTV khi đơn đầu tiên được thanh toán');
+      db = (await owner.req('GET', '/api/admin/db')).json.db;
+      const odO = db.orders.find(o => o.id === odId) || {}, bD = com(B.r.me.id, 'direct').find(c => c.order === odId);
+      ok(odO.pkgPaid === plan.pkgPoints && bD && bD.amount === Math.round(P.price * plan.ctvRate / 100), `đơn trả bằng điểm gói vẫn tính hoa hồng: B nhận ${plan.ctvRate}% cả đơn (thực tế ${bD ? bD.amount : 'không có'})`);
       n1 = s.log().length; const oe = await Ek.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'Khách E', phone: '0987650001' }) });
       const oeId = ((oe.result || {}).order || {}).id; await confirm(s, owner, n1, 'đơn của E', Ek.c, oeId);
       db = (await owner.req('GET', '/api/admin/db')).json.db;
@@ -145,13 +164,6 @@ async function flow() {
       ok(dDir && bOv && bOv.amount === Math.round(dDir.amount * plan.ctvOverRate / 100) && bOv.status === 'paid' && cashOf(B.r.me.id, 'override').some(w => w.amount === bOv.amount && w.taxable), `B (CTV) nhận ${plan.ctvOverRate}% hoa hồng bán hàng của D = ${bOv ? bOv.amount : '?'}đ vào ví tiền mặt`);
       const aOv2 = com(A.r.me.id, 'override').find(c => c.order === oeId && c.from === B.r.me.id);
       ok(bOv && aOv2 && aOv2.amount === Math.round(bOv.amount * plan.overrideRate / 100) && aOv2.status === 'paid', `đại lý A nhận ${plan.overrideRate}% trên khoản 10% của CTV B = ${aOv2 ? aOv2.amount : '?'}đ, tính tiếp lên trên`);
-      // D tiêu 686.000 PS của gói vào đơn: B chỉ nhận hoa hồng trên phần trả thêm
-      n1 = s.log().length; const od = await D.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'CTV D', phone: '0987650002' }), useShop: plan.pkgPoints });
-      const odId = ((od.result || {}).order || {}).id; ok(!od.error, 'D đặt đơn dùng điểm gói' + (od.error ? ': ' + od.error : ''));
-      await confirm(s, owner, n1, 'đơn của D', D.c, odId);
-      db = (await owner.req('GET', '/api/admin/db')).json.db;
-      const odO = db.orders.find(o => o.id === odId) || {}, bD = com(B.r.me.id, 'direct').find(c => c.order === odId);
-      ok(odO.pkgPaid === plan.pkgPoints && bD && bD.amount === Math.round(P.price * plan.ctvRate / 100), `đơn trả bằng điểm gói vẫn tính hoa hồng: B nhận ${plan.ctvRate}% cả đơn (thực tế ${bD ? bD.amount : 'không có'})`);
       // gói do quản trị cấp: lên CTV, không có thưởng giới thiệu
       const G = await reg('CTV cấp G', 'ktg', B.r.me.code);
       ok(!(await owner.act('ctvGrant', { id: G.r.me.id, note: 'Thử cấp' })).error && ((await G.c.boot()).me || {}).tier === 'ctv', 'chủ sở hữu cấp gói CTV: lên CTV ngay');

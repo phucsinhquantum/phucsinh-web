@@ -4,7 +4,7 @@
   const { $, esc, icon, toast } = PSQ;
   window.ADMIN_MODULES = window.ADMIN_MODULES || {};
   const KEY = 'psq_terms_v1';
-  const TOKENS = [['{gia_goi}', 'Giá gói CTV'], ['{diem_goi}', 'Điểm nhận khi kích hoạt'], ['{moc_dai_ly}', 'Mốc lên đại lý'], ['{hh_ctv}', '% hoa hồng CTV'], ['{hh_daily}', '% hoa hồng đại lý'], ['{thuong_gt}', 'Thưởng giới thiệu'], ['{thu_nhap_ctv}', '% CTV từ tuyến dưới'], ['{thu_nhap_daily}', '% thu nhập từ đại lý tuyến dưới'], ['{so_ngay}', 'Số ngày xét điều kiện'], ['{thue}', '% thuế'], ['{rut_toi_thieu}', 'Rút tối thiểu'], ['{ten}', 'Tên cửa hàng'], ['{hotline}', 'Hotline'], ['{email}', 'Email'], ['{gia_goi_dl}', 'Giá gói đại lý'], ['{diem_goi_dl}', 'Điểm gói đại lý']];
+  const TOKENS = [['{gia_goi}', 'Giá gói CTV'], ['{diem_goi}', 'Điểm nhận khi kích hoạt'], ['{moc_dai_ly}', 'Mốc lên đại lý'], ['{hh_ctv}', '% hoa hồng CTV'], ['{hh_daily}', '% hoa hồng đại lý'], ['{thu_nhap_ctv}', '% CTV từ tuyến dưới'], ['{thu_nhap_daily}', '% thu nhập từ đại lý tuyến dưới'], ['{so_ngay}', 'Số ngày xét điều kiện'], ['{thue}', '% thuế'], ['{rut_toi_thieu}', 'Rút tối thiểu'], ['{ten}', 'Tên cửa hàng'], ['{hotline}', 'Hotline'], ['{email}', 'Email'], ['{gia_goi_dl}', 'Giá gói đại lý'], ['{diem_goi_dl}', 'Điểm gói đại lý']];
 
   if (!document.getElementById('adm-css-dieu-khoan')) {
     const st = document.createElement('style'); st.id = 'adm-css-dieu-khoan';

@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030k">
-<script src="js/lang.js?v=20261030k"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030l">
+<script src="js/lang.js?v=20261030l"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -240,11 +240,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261030k"></script>
-<script src="js/api.js?v=20261030k"></script>
-<script src="js/data.js?v=20261030k"></script>
-<script src="js/app.js?v=20261030k"></script>
-<script src="js/psq-data.js?v=20261030k"></script>
+<script src="js/patch.js?v=20261030l"></script>
+<script src="js/api.js?v=20261030l"></script>
+<script src="js/data.js?v=20261030l"></script>
+<script src="js/app.js?v=20261030l"></script>
+<script src="js/psq-data.js?v=20261030l"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -473,11 +473,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     const tier = me.tier || 'khach', o = pkgOrder(d, me.id), left = Math.max(0, P.agentThreshold - spent);
     const ctvDone = tier !== 'khach', agDone = tier === 'daily';
     return `<div class="step" style="--c:${ADB.TIERS.ctv.color}"><span class="sdot">${icon(ctvDone ? 'check' : 'star')}</span>
-        <div class="row between wrap" style="gap:6px"><b>Cộng tác viên</b>${ctvDone ? `<span class="badge ok">Đã đạt${me.activated ? ' ' + fdate(me.activated) : ''}</span>` : o ? '<span class="badge pending">Chờ xác nhận thanh toán</span>' : `<a class="btn btn-sm btn-gold" href="#kich-hoat">Kích hoạt</a>`}</div>
+        <div class="row between wrap" style="gap:6px"><b>Cộng tác viên</b>${ctvDone ? `<span class="badge ok">Đã đạt${me.activated ? ' ' + fdate(me.activated) : ''}</span>` : me.ctvPending ? '<span class="badge pending">Đặt đơn đầu tiên để lên CTV</span>' : o ? '<span class="badge pending">Chờ xác nhận thanh toán</span>' : `<a class="btn btn-sm btn-gold" href="#kich-hoat">Kích hoạt</a>`}</div>
         <span class="dim" style="font-size:13px">Kích hoạt gói ${money(P.pkgPrice)}</span>
         <ul>${perkLi(d, 'ctv')}</ul></div>
       <div class="step" style="--c:${ADB.TIERS.daily.color}"><span class="sdot">${icon(agDone ? 'check' : 'award')}</span>
-        <div class="row between wrap" style="gap:6px"><b>Đại lý</b>${agDone ? `<span class="badge ok">Đã đạt${me.agentSince ? ' ' + fdate(me.agentSince) : ''}</span>` : agentOrder(d, me.id) ? '<span class="badge pending">Chờ xác nhận gói đại lý</span>' : P.agentPkgOn ? `<a class="btn btn-sm btn-gold" href="#len-dai-ly">Đăng ký ngay</a>` : `<span class="dim nowrap" style="font-size:12.5px">${pctOf(Math.min(spent, P.agentThreshold), P.agentThreshold)}%</span>`}</div>
+        <div class="row between wrap" style="gap:6px"><b>Đại lý</b>${agDone ? `<span class="badge ok">Đã đạt${me.agentSince ? ' ' + fdate(me.agentSince) : ''}</span>` : me.agentPending ? '<span class="badge pending">Đặt đơn đầu tiên để lên đại lý</span>' : agentOrder(d, me.id) ? '<span class="badge pending">Chờ xác nhận gói đại lý</span>' : P.agentPkgOn ? `<a class="btn btn-sm btn-gold" href="#len-dai-ly">Đăng ký ngay</a>` : `<span class="dim nowrap" style="font-size:12.5px">${pctOf(Math.min(spent, P.agentThreshold), P.agentThreshold)}%</span>`}</div>
         <div><div class="progress mt-1"><i style="width:${Math.max(2, Math.min(100, pctOf(spent, P.agentThreshold)))}%"></i></div>
           <span class="dim" style="font-size:13px">Tổng mua ${money(spent)} / ${money(P.agentThreshold)}${agDone ? '' : ', còn ' + money(left)}. ${P.pkgCountsAs ? 'Gói kích hoạt được tính ' + money(P.pkgCountsAs) + '.' : 'Gói kích hoạt không tính vào doanh số.'}</span></div>
         <ul>${perkLi(d, 'daily')}</ul></div>`;
@@ -490,6 +490,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       box.innerHTML = ph('Đăng ký đại lý') + `<div class="card glow-cyan"><div class="row" style="gap:14px"><span class="stat-ico green">${icon('check')}</span><div><b>Tài khoản đã là Đại lý</b><div class="dim" style="font-size:13px">${me.agentSince ? 'Từ ngày ' + fdate(me.agentSince) : ''}</div></div></div><a class="btn btn-sm btn-outline-gold mt-2" href="#tong-quan">Về tổng quan</a></div>`;
       return;
     }
+    if (me.agentPending) { box.innerHTML = ph('Đăng ký đại lý') + `<div class="card glow-gold"><div class="row" style="gap:14px"><span class="stat-ico gold">${icon('bag')}</span><div><b>Đã nhận ${ps(P.agentPkgPoints)} vào ví mua hàng</b><div class="dim" style="font-size:13px">Đặt đơn hàng đầu tiên, khi đơn được thanh toán tài khoản lên Đại lý.</div></div></div><a class="btn btn-sm btn-gold mt-2" href="san-pham.html">Chọn sản phẩm</a></div>`; return; }
     if (!P.agentPkgOn) { box.innerHTML = ph('Đăng ký đại lý') + `<div class="card"><p class="muted">Hiện công ty chưa mở đăng ký gói đại lý. Anh chị lên Đại lý khi tổng mua cộng dồn đạt ${money(P.agentThreshold)}.</p></div>`; return; }
     const intro = `<div class="card glow-gold">${head('Gói đại lý', 'lên Đại lý ngay, không cần chờ cộng dồn')}
       <div class="ref-code" style="letter-spacing:.04em">${money(P.agentPkgPrice)}</div>
@@ -515,6 +516,10 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   /* ---------- KÍCH HOẠT CTV ---------- */
   function pActivate(box, d, me, redo) {
     const P = ADB.plan(d), o = pkgOrder(d, me.id), B = SITE.bank;
+    if ((me.tier || 'khach') === 'khach' && me.ctvPending) {
+      box.innerHTML = ph('Kích hoạt cộng tác viên') + `<div class="card glow-gold"><div class="row" style="gap:14px"><span class="stat-ico gold">${icon('bag')}</span><div><b>Đã nhận ${ps(P.pkgPoints)} vào ví mua hàng</b><div class="dim" style="font-size:13px">Đặt đơn hàng đầu tiên, khi đơn được thanh toán tài khoản lên Cộng tác viên.</div></div></div><a class="btn btn-sm btn-gold mt-2" href="san-pham.html">Chọn sản phẩm</a></div>`;
+      return;
+    }
     if ((me.tier || 'khach') !== 'khach') {
       box.innerHTML = ph('Kích hoạt cộng tác viên') + `<div class="card glow-cyan"><div class="row" style="gap:14px"><span class="stat-ico green">${icon('check')}</span><div><b>Tài khoản đã là ${esc(ADB.tierOf(me).name)}</b><div class="dim" style="font-size:13px">${me.activated ? 'Kích hoạt ngày ' + fdate(me.activated) : 'Đã kích hoạt'}</div></div></div><a class="btn btn-sm btn-outline-gold mt-2" href="#tong-quan">Về tổng quan</a></div>`;
       return;
@@ -524,7 +529,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       <div class="pkg-split mt-2"><div><span class="dim" style="font-size:12.5px">Vào ví mua hàng</span><b class="green">${ps(P.pkgPoints)}</b><span class="dim" style="font-size:12.5px">Dùng mua sản phẩm trên web</span></div>
         <div><span class="dim" style="font-size:12.5px">Quà kèm gói</span>
           <ul class="pkg-list">${perkLi(d, 'ctvFee')}</ul></div></div>
-      <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${money(Math.round(P.pkgPrice * P.refRate / 100))} vào ví tiền mặt khi người đó kích hoạt CTV, cùng ${P.ctvOverRate}% hoa hồng bán hàng của người mình giới thiệu. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
+      <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${P.ctvOverRate}% hoa hồng bán hàng của người mình giới thiệu. Đóng gói xong, điểm vào ví mua hàng; đơn hàng đầu tiên được thanh toán thì tài khoản lên Cộng tác viên. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn kích hoạt #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
         <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}${ptsBox(d, me, o.total, o)}
         <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản được kích hoạt Cộng tác viên ngay khi công ty duyệt bill chuyển khoản, hoặc ngay lập tức nếu trả bằng điểm. Anh chị có thể xem trạng thái tại Đơn hàng của tôi.</p></div>`

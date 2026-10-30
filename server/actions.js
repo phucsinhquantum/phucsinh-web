@@ -484,6 +484,7 @@ const ACTIONS = {
   buyPackage: { auth: 'member', run(c) {
     const { d, A, me } = c;
     if ((me.tier || 'khach') !== 'khach') return err('Tài khoản đã kích hoạt.');
+    if (me.ctvPending) return err('Anh chị đã đóng gói, điểm đã vào ví mua hàng. Đặt đơn hàng đầu tiên để lên Cộng tác viên.');
     const has = d.orders.find(o => o.userId === me.id && o.status !== 'failed' && (o.items || []).some(x => x.id === A.PKG_ID));
     if (c.args.pay === 'points') return payByPoints(c, has || A.buyPackage(d, me, 'points'), 'Kích hoạt CTV');
     if (has) return { order: has };
@@ -495,6 +496,7 @@ const ACTIONS = {
     const { d, A, me } = c;
     if (!A.plan(d).agentPkgOn) return err('Hiện công ty chưa mở đăng ký gói đại lý.');
     if (me.tier === 'daily') return err('Tài khoản đã là Đại lý.');
+    if (me.agentPending) return err('Anh chị đã đóng gói đại lý, điểm đã vào ví mua hàng. Đặt đơn hàng đầu tiên để lên Đại lý.');
     const has = d.orders.find(o => o.userId === me.id && o.status !== 'failed' && A.isAgentPkgOrder(o));
     if (c.args.pay === 'points') return payByPoints(c, has || A.buyAgentPackage(d, me, 'points'), 'Lên đại lý');
     if (has) return { order: has };

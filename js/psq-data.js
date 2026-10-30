@@ -119,7 +119,6 @@
      ===================================================================== */
   const PLAN = {
     pkgPrice: 686000, pkgPoints: 686000,          // gói kích hoạt CTV: nhận đủ 686k PS vào ví mua hàng (anh Tuân chốt 30/10)
-    refRate: 10,                                   // giới thiệu được 1 CTV kích hoạt gói: refRate% giá gói vào ví tiền mặt (68.600đ)
     ctvOverRate: 10,                               // tuyến trên là CTV hưởng 10% hoa hồng bán hàng của người mình giới thiệu, vào ví tiền mặt
     ctvRate: 10, agentRate: 25,                    // % hoa hồng trên đơn của người mình giới thiệu trực tiếp
     overrideRate: 40, overrideShop: 10,            // đại lý hưởng 40% thu nhập của đại lý mình giới thiệu; 10% phần này vào ví mua hàng
@@ -156,7 +155,6 @@
   const PAID = o => ['paid', 'ship', 'done'].includes(o.status);
   const plan = d => (d.settings.plan = Object.assign({}, PLAN, d.settings.plan || {}));
   const pct = (v, r) => Math.round(v * r / 100);
-  const refAmount = P => pct(P.pkgPrice, P.refRate);
   const itemsTotal = o => (o.items || []).reduce((s, x) => s + x.price * x.qty, 0);
   // giá tính thưởng (PS) của 1 sản phẩm: chưa đặt thì bằng giá bán. Đơn ghi lại x.ps lúc đặt để sửa sản phẩm sau không đổi đơn cũ.
   const psOf = p => (p && p.ps != null && p.ps !== '' && +p.ps >= 0) ? Math.round(+p.ps) : (p ? p.price : 0);
@@ -227,19 +225,22 @@
     const P = plan(d), sp = buyer.sponsor ? ADB.user(d, buyer.sponsor) : null, date = o.date || now();
     buyer.tier = buyer.tier || 'khach';
     const isPkg = (o.items || []).some(x => x.id === PKG_ID), isAgentPkg = (o.items || []).some(x => x.id === AGENT_PKG_ID);
+    // đóng gói chỉ đổi tiền thành điểm ví mua hàng: chưa lên cấp, chưa ai có hoa hồng. Đơn hàng đầu tiên được thanh toán
+    // mới lên CTV / đại lý, hoa hồng tính trên đơn hàng (anh Tuân chốt 30/10)
     if (isAgentPkg) {
-      if (buyer.tier === 'khach') buyer.activated = buyer.activated || date;
-      if (buyer.tier !== 'daily') { buyer.tier = 'daily'; buyer.agentSince = date; }
       credit(d, buyer.id, 'shop', 'package', P.agentPkgPoints, 'Điểm mua hàng từ gói đại lý', o.id, { date });
+      if (buyer.tier !== 'daily') buyer.agentPending = date;
       return true;
     }
     if (isPkg) {
-      if (buyer.tier === 'khach') { buyer.tier = 'ctv'; buyer.activated = date; }
       credit(d, buyer.id, 'shop', 'package', P.pkgPoints, 'Điểm mua hàng từ gói kích hoạt cộng tác viên', o.id, { date });
       buyer.pkgLeft = (buyer.pkgLeft || 0) + P.pkgPoints;
-      if (sp && (sp.tier === 'ctv' || sp.tier === 'daily')) addCommission(d, { kind: 'ref', wallet: 'cash', order: o.id, user: sp.id, from: buyer.id, rate: P.refRate, base: P.pkgPrice, amount: refAmount(P), date });
-      else if (sp) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: P.refRate, base: P.pkgPrice, amount: refAmount(P), date, status: 'missed', note: 'Chưa kích hoạt cộng tác viên' });
-    } else if (sp) directCommission(d, o, buyer, sp, psBase(o), date);   // hoa hồng tính trên giá tính thưởng (PS), trừ theo tỉ lệ mã giảm giá; đơn trả bằng điểm (kể cả điểm gói) vẫn tính (anh Tuân chốt 30/10)
+      if (buyer.tier === 'khach') buyer.ctvPending = date;
+      return true;
+    }
+    if (buyer.agentPending) { if (buyer.tier !== 'daily') { if (buyer.tier === 'khach') buyer.activated = date; buyer.tier = 'daily'; buyer.agentSince = date; } delete buyer.agentPending; }
+    if (buyer.ctvPending) { if (buyer.tier === 'khach') { buyer.tier = 'ctv'; buyer.activated = date; } delete buyer.ctvPending; }
+    if (sp) directCommission(d, o, buyer, sp, psBase(o), date);   // hoa hồng tính trên giá tính thưởng (PS), trừ theo tỉ lệ mã giảm giá; đơn trả bằng điểm (kể cả điểm gói) vẫn tính (anh Tuân chốt 30/10)
     // lên đại lý khi tổng mua cộng dồn đủ mốc
     if (buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = date; }
     return true;
@@ -586,7 +587,7 @@
     // số liệu kế hoạch để thay vào chữ {…} trong điều khoản, quyền lợi
     planVars(d) {
       const P = plan(d), m = PSQ.money, ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
-      return { gia_goi: m(P.pkgPrice), diem_goi: ps(P.pkgPoints), phi_goi: m(P.pkgPrice - P.pkgPoints), moc_dai_ly: m(P.agentThreshold), hh_ctv: P.ctvRate + '%', hh_daily: P.agentRate + '%', thuong_gt: m(refAmount(P)), thuong_gt_pct: P.refRate + '%', thu_nhap_ctv: (P.ctvOverRate || 0) + '%', thu_nhap_daily: P.overrideRate + '%', so_ngay: P.activeDays, thue: P.taxRate + '%', rut_toi_thieu: m(d.settings.minWithdraw || 0), gia_goi_dl: m(P.agentPkgPrice), diem_goi_dl: ps(P.agentPkgPoints), ten: SITE.brand, hotline: SITE.phone, email: SITE.email };
+      return { gia_goi: m(P.pkgPrice), diem_goi: ps(P.pkgPoints), phi_goi: m(P.pkgPrice - P.pkgPoints), moc_dai_ly: m(P.agentThreshold), hh_ctv: P.ctvRate + '%', hh_daily: P.agentRate + '%', thuong_gt: m(0), thu_nhap_ctv: (P.ctvOverRate || 0) + '%', thu_nhap_daily: P.overrideRate + '%', so_ngay: P.activeDays, thue: P.taxRate + '%', rut_toi_thieu: m(d.settings.minWithdraw || 0), gia_goi_dl: m(P.agentPkgPrice), diem_goi_dl: ps(P.agentPkgPoints), ten: SITE.brand, hotline: SITE.phone, email: SITE.email };
     },
     // thay {…} bằng số liệu, trả về HTML đã an toàn
     fill(text, V) { return PSQ.esc(String(text || '')).replace(/\{(\w+)\}/g, (m0, k) => k in V ? PSQ.esc(String(V[k])) : m0); },

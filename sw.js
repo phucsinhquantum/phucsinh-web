@@ -1,6 +1,6 @@
 /* Phúc Sinh QuanTum: service worker để cài web như ứng dụng (PWA).
    Luôn lấy bản mới nhất từ mạng; chỉ khi mất mạng mới dùng bản đã lưu, nên sửa web xong là khách thấy ngay. */
-const CACHE = 'psq-v29';
+const CACHE = 'psq-v30';
 const CORE = ['./', './index.html', './san-pham.html', './dat-hang.html', './thanh-vien.html', './lien-he.html', './khuyen-mai.html', './img/logo-psq.png', './img/icon-192.png', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
