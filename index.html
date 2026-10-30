@@ -18,10 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030m">
-<script src="js/lang.js?v=20261030m"></script>
+<link rel="stylesheet" href="css/app.css?v=20261031a">
+<script src="js/lang.js?v=20261031a"></script>
 <link rel="stylesheet" href="css/intro.css">
-<script src="js/intro.js?v=20261030m"></script>
+<script src="js/intro.js?v=20261031a"></script>
 </head>
 <body data-page="home">
 <div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
@@ -58,7 +58,8 @@
     <a class="card-link" href="san-pham.html">Xem tất cả</a></div>
   <section class="cat-row" id="cats"></section>
 
-  <div class="section-title"><div><span class="eyebrow">Được chọn nhiều</span><h2>Sản phẩm bán chạy</h2></div><a class="card-link" href="san-pham.html">Xem tất cả</a></div>
+  <div class="section-title"><div><span class="eyebrow">Cửa hàng Phúc Sinh</span><h2>Sản phẩm nổi bật</h2></div><a class="card-link" href="san-pham.html">Xem tất cả</a></div>
+  <div class="shop-tabs" id="bestTabs" role="tablist" aria-label="Lọc sản phẩm"></div>
   <section class="p-grid" id="best"></section>
 
   <!-- Đại lý uy tín: quản lý ở Quản trị > Trang web > Đại lý uy tín -->
@@ -102,11 +103,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261030m"></script>
-<script src="js/api.js?v=20261030m"></script>
-<script src="js/data.js?v=20261030m"></script>
-<script src="js/app.js?v=20261030m"></script>
-<script src="js/psq-data.js?v=20261030m"></script>
+<script src="js/patch.js?v=20261031a"></script>
+<script src="js/api.js?v=20261031a"></script>
+<script src="js/data.js?v=20261031a"></script>
+<script src="js/app.js?v=20261031a"></script>
+<script src="js/psq-data.js?v=20261031a"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, productCard, area, modal } = PSQ;
@@ -224,7 +225,22 @@
     });
     autoRotate(dlRow, dlNav);
   }
-  $('#best').innerHTML = PSQ.shopList().sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0)).slice(0, 8).map(productCard).join('');
+  // 30 sản phẩm: theo thứ tự quản trị đặt, rồi hàng bán chạy, yêu thích, mới; lọc nhanh theo nhãn
+  {
+    const tagged = p => p.badges || (p.hot ? ['hot'] : []);
+    const rank = p => (p.pos ? p.pos : 1000) * 10 - (PSQ.isHot(p) ? 4 : 0) - (tagged(p).includes('love') ? 2 : 0) - (tagged(p).includes('new') ? 1 : 0);
+    const all = PSQ.shopList().map((p, i) => [p, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
+    const TABS = [['', 'Tất cả', () => true], ['hot', 'Bán chạy', PSQ.isHot], ['love', 'Yêu thích', p => tagged(p).includes('love')], ['new', 'Mới', p => tagged(p).includes('new')], ['sale', 'Giảm giá', p => !!p.old || tagged(p).includes('sale')], ['gift', 'Có quà tặng', p => tagged(p).includes('gift')]]
+      .map(t => [...t, all.filter(t[2]).length]).filter((t, i) => !i || t[3]);
+    let tab = '';
+    const draw = () => {
+      const f = TABS.find(t => t[0] === tab) || TABS[0];
+      $('#bestTabs').innerHTML = TABS.length > 1 ? TABS.map(t => `<button type="button" role="tab" data-t="${t[0]}" class="${t[0] === tab ? 'on' : ''}" aria-selected="${t[0] === tab}">${t[1]}<small>${t[3]}</small></button>`).join('') : '';
+      $('#best').innerHTML = all.filter(f[2]).slice(0, 30).map(productCard).join('');
+    };
+    $('#bestTabs').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { tab = b.dataset.t; draw(); } });
+    draw();
+  }
   const months = ['T11', 'T12', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10'];
   const draw = () => area($('#journey'), { labels: months, height: 250, mark: 9, fmt: v => Math.round(v).toLocaleString('vi-VN'),
     series: [{ name: 'Khách mới', color: '#f3c76b', dots: true, values: [320, 380, 360, 470, 450, 560, 520, 610, 640, 780, 700, 760] },

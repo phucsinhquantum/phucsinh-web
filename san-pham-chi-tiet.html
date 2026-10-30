@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030m">
-<script src="js/lang.js?v=20261030m"></script>
+<link rel="stylesheet" href="css/app.css?v=20261031a">
+<script src="js/lang.js?v=20261031a"></script>
 <style>
   .topbar > div:nth-child(2) { min-width: 0; }
   .topbar h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -64,6 +64,22 @@
   .trust { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   .trust div { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 14px 8px; border-radius: 12px; background: rgba(0, 0, 0, .22); border: 1px solid var(--line); font-size: 12px; color: var(--text-2); line-height: 1.35; }
   .trust svg { width: 22px; height: 22px; color: var(--gold); }
+  .thumbs.real { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 10px; }
+  .thumbs.real .thumb { aspect-ratio: 1; }
+  .stage .p-tags { top: 14px; left: 14px; z-index: 1; }
+  .vpick { display: grid; gap: 10px; scroll-margin-top: 90px; }
+  .vpick > b { font-size: 14px; color: var(--text-2); font-weight: 600; }
+  .vpick > b span { color: var(--gold); }
+  .vopts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .vopt { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 5px 14px 5px 5px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(255,255,255,.02); color: var(--text); font: inherit; font-size: 14px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .vopt.noimg { padding-left: 14px; }
+  .vopt img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
+  .vopt small { color: var(--gold); font-weight: 600; }
+  .vopt:hover { border-color: rgba(243, 199, 107, .5); }
+  .vopt.on { border-color: var(--gold); background: rgba(243, 199, 107, .1); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .vpick.need .vopts { animation: vshake .4s; } .vpick.need > b { color: var(--red); }
+  @keyframes vshake { 0%, 100% { transform: none; } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .short { color: var(--text-2); font-size: 15px; line-height: 1.7; margin: 0; }
   .tab-panel { padding-top: 18px; }
   .tab-panel.prose { font-size: 15px; line-height: 1.8; }
   .tab-panel[hidden] { display: none; }
@@ -101,10 +117,10 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261030m"></script>
-<script src="js/api.js?v=20261030m"></script>
-<script src="js/data.js?v=20261030m"></script>
-<script src="js/app.js?v=20261030m"></script>
+<script src="js/patch.js?v=20261031a"></script>
+<script src="js/api.js?v=20261031a"></script>
+<script src="js/data.js?v=20261031a"></script>
+<script src="js/app.js?v=20261031a"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, productCard, qs, cart, toast } = PSQ;
@@ -130,20 +146,26 @@
   const size = p.spec ? p.spec : p.bead ? p.bead + ' li (mm)' : p.art === 'mala' ? '8 li, 108 hạt' : p.art === 'necklace' ? '6 li, mặt ngọc 18 mm' : p.art === 'car' ? 'Hạt 10 li, dây dài 28 cm' : p.art === 'statue' ? 'Cao khoảng 12 cm' : p.art === 'cone' ? 'Không áp dụng' : 'Hộp 30 x 22 cm';
   const material = p.material ? p.material : p.art === 'cone' ? 'Bột trầm hương tự nhiên, không hóa chất' : p.art === 'box' ? 'Vòng trầm, nụ trầm, hộp gỗ và thiệp' : p.gem ? 'Trầm hương tự nhiên phối đá tự nhiên' : p.charm ? 'Trầm hương tự nhiên, charm vàng' : 'Trầm hương tự nhiên nguyên khối';
   const variants = ['Toàn cảnh', 'Cận chất trầm', 'Góc nghiêng'];
-  const out = PSQ.soldOut(p.id);
+  const out = PSQ.soldOut(p.id), pics = PSQ.imagesOf(p), V = p.variants || [], tags = PSQ.badgesOf(p);
+  const html = PSQ.isHtml(p.desc), short = p.short || (html ? '' : p.desc || '');
+  const vlabel = V.length ? (V.length > 1 ? 'Chọn phân loại' : 'Phân loại') : '';
+  let vsel = V.length === 1 ? V[0].id : (V.find(v => location.hash === '#v-' + v.id) || {}).id || '';
 
   view.innerHTML = `
     <section class="pd">
       <div class="card glow-mix gallery reveal">
-        <div class="stage" id="stage">${art(p)}${off ? `<span class="badge gold tag">Giảm ${off}%</span>` : p.hot ? '<span class="badge violet tag">Bán chạy</span>' : ''}<span class="v-name" id="vname">${variants[0]}</span></div>
-        <div class="thumbs" role="tablist" aria-label="Góc nhìn sản phẩm">${variants.map((v, i) => `<button class="thumb v-${i}${i ? '' : ' on'}" type="button" data-v="${i}" aria-label="${v}">${art(p)}</button>`).join('')}</div>
+        ${pics.length ? `<div class="stage" id="stage"><img src="${esc(pics[0])}" alt="${esc(p.name)}" id="stageImg">${tags.length ? `<span class="p-tags">${tags.map(b => `<span class="badge ${b.c}">${esc(b.t)}</span>`).join('')}</span>` : ''}</div>
+        ${pics.length > 1 ? `<div class="thumbs real" role="tablist" aria-label="Ảnh sản phẩm">${pics.map((u, i) => `<button class="thumb${i ? '' : ' on'}" type="button" data-src="${esc(u)}" aria-label="Ảnh ${i + 1}"><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}`
+        : `<div class="stage" id="stage">${art(p)}${tags.length ? `<span class="p-tags">${tags.map(b => `<span class="badge ${b.c}">${esc(b.t)}</span>`).join('')}</span>` : ''}<span class="v-name" id="vname">${variants[0]}</span></div>
+        <div class="thumbs" role="tablist" aria-label="Góc nhìn sản phẩm">${variants.map((v, i) => `<button class="thumb v-${i}${i ? '' : ' on'}" type="button" data-v="${i}" aria-label="${v}">${art(p)}</button>`).join('')}</div>`}
       </div>
       <div class="card glow-gold info reveal">
-        <div class="row wrap" style="gap:8px"><a class="badge ship" href="san-pham.html?cat=${p.cat}">${esc(cat.name)}</a>${p.hot ? '<span class="badge violet">Bán chạy</span>' : ''}${out ? '<span class="badge failed">Hết hàng</span>' : '<span class="badge ok">Còn hàng</span>'}</div>
+        <div class="row wrap" style="gap:8px"><a class="badge ship" href="san-pham.html?cat=${p.cat}">${esc(cat.name)}</a>${tags.filter(b => b.c !== 'gold').map(b => `<span class="badge ${b.c}">${esc(b.t)}</span>`).join('')}${out ? '<span class="badge failed">Hết hàng</span>' : '<span class="badge ok">Còn hàng</span>'}</div>
         <h2 class="display">${esc(p.name)}</h2>
-        <div class="price-row"><span class="now">${money(p.price)}</span>${p.old ? `<s class="dim">${money(p.old)}</s><span class="badge gold">Tiết kiệm ${money(p.old - p.price)}</span>` : ''}</div>
+        ${short ? `<p class="short">${esc(short)}</p>` : ''}
+        <div class="price-row" id="priceRow"></div>
+        ${V.length ? `<div class="vpick" id="chon"><b>${vlabel}: <span id="vsel"></span></b><div class="vopts" role="radiogroup" aria-label="${vlabel}">${V.map(v => `<button class="vopt${v.image ? '' : ' noimg'}" type="button" role="radio" data-vid="${esc(v.id)}">${v.image ? `<img src="${esc(v.image)}" alt="">` : ''}<span>${esc(v.name)}</span><small>${money(v.price)}</small></button>`).join('')}</div></div>` : ''}
         <div class="pts">${icon('sparkle')}<span>Thanh toán bằng ví điểm hoặc chuyển khoản. Đơn của thành viên được cộng <b id="ptsVal">${money(PSQ.psOf(p)).replace('đ', ' PS')}</b> vào doanh số mua hàng để lên Đại lý.</span></div>${p.partner ? `<div class="pts">${icon('award')}<span>Sản phẩm đối tác${p.partnerName ? ': <b>' + esc(p.partnerName) + '</b>' : ''}</span></div>` : ''}${p.warranty ? `<div class="pts">${icon('check')}<span>${esc(p.warranty)}</span></div>` : ''}
-        <p class="muted">${esc(p.desc)}</p>
         <div class="divider" style="margin:2px 0"></div>
         <div class="buy">
           <div class="qty" aria-label="Số lượng"><button type="button" data-step="-1" aria-label="Bớt">${icon('minus')}</button><input id="qty" type="number" inputmode="numeric" min="1" max="99" value="1" aria-label="Số lượng"><button type="button" data-step="1" aria-label="Thêm">${icon('plus')}</button></div>
@@ -163,8 +185,8 @@
     <section class="card mt-3 reveal">
       <div class="tabs" role="tablist" id="tabs"><button class="on" type="button" role="tab" data-tab="0">Mô tả</button><button type="button" role="tab" data-tab="1">Thông số</button><button type="button" role="tab" data-tab="2">Hướng dẫn bảo quản</button></div>
       <div class="tab-panel prose" data-panel="0">
-        <p>${esc(p.desc)}</p>
-        <p>Mỗi sản phẩm của Phúc Sinh QuanTum được tuyển chọn từ lô trầm có hồ sơ nguồn gốc, chế tác thủ công và kiểm tra kỹ trước khi đóng hộp. Màu sắc, vân dầu giữa các hạt có thể khác nhau đôi chút vì đây là trầm tự nhiên. (nội dung mẫu)</p>
+        <div id="descBox">${PSQ.richText(p.desc)}</div>
+        ${html ? '' : '<p>Mỗi sản phẩm của Phúc Sinh QuanTum được tuyển chọn từ lô trầm có hồ sơ nguồn gốc, chế tác thủ công và kiểm tra kỹ trước khi đóng hộp. Màu sắc, vân dầu giữa các hạt có thể khác nhau đôi chút vì đây là trầm tự nhiên. (nội dung mẫu)</p>'}
         <p class="dim" style="font-size:14px">Trầm hương là sản phẩm văn hóa và tinh thần, không phải thuốc, không thay thế việc khám chữa bệnh.</p>
       </div>
       <div class="tab-panel" data-panel="1" hidden>
@@ -173,7 +195,7 @@
           <dt>${p.spec ? 'Quy cách' : isBead ? 'Kích thước hạt' : 'Kích thước'}</dt><dd>${esc(size)}</dd>
           <dt>Nguồn gốc</dt><dd>Vùng nguyên liệu miền Trung Việt Nam (mẫu)</dd>
           <dt>Danh mục</dt><dd>${esc(cat.name)}</dd>
-          <dt>Mã sản phẩm</dt><dd>${esc(p.id.toUpperCase())}</dd>
+          <dt>Mã sản phẩm</dt><dd>${esc(p.id.toUpperCase())}</dd>${V.length ? `<dt>Phân loại</dt><dd>${V.map(v => esc(v.name)).join(', ')}</dd>` : ''}
           <dt>Kèm theo</dt><dd>Hộp đựng, thẻ bảo hành, giấy giới thiệu nguồn gốc (mẫu)</dd>
         </dl>
       </div>
@@ -195,19 +217,36 @@
   const related = [...others.filter(x => x.cat === p.cat), ...others.filter(x => x.cat !== p.cat).sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0))].slice(0, 4);
   $('#related').innerHTML = related.map(productCard).join('');
 
-  // góc nhìn
+  PSQ.rich($('#descBox'));
+  // ảnh thật: bấm ảnh nhỏ đổi ảnh lớn; chưa có ảnh: đổi góc nhìn hình vẽ
+  const showImg = src => { const im = $('#stageImg'); if (!im || !src) return; im.src = src; $$('.thumb').forEach(x => x.classList.toggle('on', x.dataset.src === src)); };
   $$('.thumb').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.src) return showImg(b.dataset.src);
     const v = +b.dataset.v; $$('.thumb').forEach(x => x.classList.toggle('on', x === b));
     const st = $('#stage'); st.classList.remove('v-0', 'v-1', 'v-2'); st.classList.add('v-' + v); $('#vname').textContent = variants[v];
   }));
+  // giá theo phân loại đang chọn
+  const cur = () => PSQ.pv(p, vsel);
+  const drawPrice = () => {
+    const c = cur(), lo = Math.min(...PSQ.prices(p)), hi = Math.max(...PSQ.prices(p));
+    $('#priceRow').innerHTML = V.length && !vsel ? `<span class="now">${lo === hi ? money(lo) : money(lo) + ' - ' + money(hi)}</span>`
+      : `<span class="now">${money(c.price)}</span>${c.old ? `<s class="dim">${money(c.old)}</s><span class="badge gold">Tiết kiệm ${money(c.old - c.price)}</span>` : ''}`;
+    if ($('#vsel')) $('#vsel').textContent = vsel ? c.vname : 'chưa chọn';
+    $$('.vopt').forEach(b => { const on = b.dataset.vid === vsel; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+    if (vsel && c.image && $('#stageImg')) showImg(c.image);
+    upd();
+  };
+  $$('.vopt').forEach(b => b.addEventListener('click', () => { vsel = b.dataset.vid; $('#chon').classList.remove('need'); drawPrice(); }));
+  const need = () => { if (!V.length || vsel) return false; const k = $('#chon'); k.classList.remove('need'); void k.offsetWidth; k.classList.add('need'); k.scrollIntoView({ behavior: 'smooth', block: 'center' }); toast('Anh chị chọn phân loại trước nhé', 'err'); return true; };
   // số lượng
   const qi = $('#qty');
   const getQ = () => Math.max(1, Math.min(99, parseInt(qi.value, 10) || 1));
-  const upd = () => { $('#ptsVal').textContent = money(PSQ.psOf(p) * getQ()).replace('đ', ' PS'); };
+  const upd = () => { $('#ptsVal').textContent = V.length && !vsel ? 'theo phân loại' : money(PSQ.psOf(cur()) * getQ()).replace('đ', ' PS'); };
   $$('[data-step]').forEach(b => b.addEventListener('click', () => { qi.value = Math.max(1, Math.min(99, getQ() + +b.dataset.step)); upd(); }));
   qi.addEventListener('input', upd); qi.addEventListener('blur', () => { qi.value = getQ(); upd(); });
-  $('#addBtn').addEventListener('click', () => { if (cart.add(p.id, getQ())) toast(`Đã thêm ${getQ()} sản phẩm vào giỏ`); });
-  $('#buyBtn').addEventListener('click', () => { if (cart.add(p.id, getQ())) location.href = 'dat-hang.html'; });
+  $('#addBtn').addEventListener('click', () => { if (!need() && cart.add(p.id, getQ(), vsel)) toast(`Đã thêm ${getQ()} ${vsel ? cur().vname : 'sản phẩm'} vào giỏ`); });
+  $('#buyBtn').addEventListener('click', () => { if (!need() && cart.add(p.id, getQ(), vsel)) location.href = 'dat-hang.html'; });
+  drawPrice(); if (location.hash === '#chon' && V.length) setTimeout(() => $('#chon').scrollIntoView({ block: 'center' }), 300);
   // hướng dẫn: chỉ vào nút Mua ngay; nút bật/tắt hướng dẫn ngay dưới
   if (PSQ.guide && !$('#buyBtn').disabled) {
     $('#buyBtn').parentElement.insertAdjacentHTML('afterend', `<div class="mt-1">${PSQ.guide.toggle()}</div>`);

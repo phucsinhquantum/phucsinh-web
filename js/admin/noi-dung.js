@@ -239,20 +239,7 @@
         <div>
           <input class="ed-title" id="edT" maxlength="140" placeholder="Nhập tiêu đề bài viết" value="${esc(v.title)}">
           <div class="field mt-2"><label for="edX">Tóm tắt (hiện dưới tiêu đề và trên thẻ bài, 1 đến 2 câu)</label><textarea class="input" id="edX" maxlength="300" style="min-height:70px">${esc(v.excerpt)}</textarea><span class="nd-hint" id="edXc"></span></div>
-          <div class="ed-bar" id="edBar">
-            <select data-block aria-label="Kiểu chữ"><option value="p">Đoạn văn</option><option value="h2">Tiêu đề mục</option><option value="h3">Tiêu đề nhỏ</option></select>
-            <span class="sep"></span>
-            ${B('bold', '<b>B</b>', 'In đậm (Ctrl+B)')}${B('italic', '<i>I</i>', 'In nghiêng (Ctrl+I)')}${B('underline', '<u>U</u>', 'Gạch chân (Ctrl+U)')}
-            <span class="sep"></span>
-            ${B('insertUnorderedList', '• Danh sách', 'Danh sách chấm')}${B('insertOrderedList', '1. Danh sách', 'Danh sách số')}${B('quote', '❝ Trích dẫn', 'Khung trích dẫn')}
-            <span class="sep"></span>
-            ${B('link', icon('globe') + ' Liên kết', 'Chèn liên kết')}${B('image', icon('plus') + ' Chèn ảnh', 'Chèn ảnh vào bài')}${B('insertHorizontalRule', '―', 'Đường kẻ ngang')}
-            <span class="sep"></span>
-            ${B('removeFormat', 'Xóa định dạng', 'Xóa định dạng')}${B('undo', '↶', 'Hoàn tác')}${B('redo', '↷', 'Làm lại')}
-            <button type="button" data-html style="margin-left:auto" title="Xem và sửa mã HTML">&lt;/&gt; HTML</button>
-          </div>
-          <div class="prose ed-area" id="edB" contenteditable="true" data-ph="Bắt đầu viết nội dung tại đây. Dùng thanh công cụ phía trên để tạo tiêu đề mục, danh sách, chèn ảnh..."></div>
-          <textarea class="input ed-html" id="edH" hidden spellcheck="false"></textarea>
+          <div id="edRx" class="mt-2"></div>
           <div class="ed-stats"><span id="edW"></span><span id="edS"></span><span id="edAuto"></span></div>
           <p class="nd-hint mt-1">Viết về văn hóa, cách chọn và bảo quản trầm. Không nêu công dụng chữa bệnh. Dán chữ từ Word hay web khác sẽ tự bỏ định dạng lạ.</p>
         </div>
@@ -275,94 +262,36 @@
           <p class="red" id="edE" style="font-size:13px;min-height:1em;margin:0"></p>
         </aside>
       </div></div>`;
-    const ed = $('#edB', el), html = $('#edH', el), T = $('#edT', el), X = $('#edX', el);
-    ed.innerHTML = v.body || '';
-    try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
-    const body = () => clean(htmlMode ? html.value : ed.innerHTML);
+    const T = $('#edT', el), X = $('#edX', el);
+    const rx = PSQED.mount($('#edRx', el), { html: v.body || '', placeholder: 'Bắt đầu viết nội dung tại đây. Dùng thanh công cụ phía trên để đổi kiểu chữ, màu, chèn ảnh, chèn sản phẩm, video...', minHeight: 460, onChange: () => autosave() });
+    const ed = rx.area, body = () => rx.get();
     const stats = () => {
-      const b = body(), words = b.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length, imgs = (b.match(/<img/g) || []).length;
+      const b = body(), words = b.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length, imgs = (b.match(/<img/g) || []).length, prods = (b.match(/data-prod=/g) || []).length;
       $('#edW', el).textContent = `${words.toLocaleString('vi-VN')} chữ · khoảng ${Math.max(1, Math.round(words / 220))} phút đọc`;
-      $('#edS', el).textContent = `${imgs} ảnh trong bài · bài nặng khoảng ${kb(b) + kb(cover)} KB`;
-      $('#edMem', el).textContent = `Bộ nhớ trình duyệt đã dùng ${usedMB().toFixed(1)} / khoảng 5 MB`;
+      $('#edS', el).textContent = `${imgs} ảnh${prods ? ` · ${prods} sản phẩm` : ''} trong bài`;
+      $('#edMem', el).textContent = '';
       $('#edXc', el).textContent = `${X.value.length} / 300 ký tự`;
       const c = POST_CATS.find(x => x.id === $('#edCat', el).value);
       $('#edPv', el).innerHTML = `<div class="card post-card" style="box-shadow:none"><div class="post-cover" style="background-image:url(${esc(cleanUrl(cover || COVERS[0]))})"></div><div class="post-body"><div class="post-meta"><span class="badge gold">${esc(c ? c.name : '')}</span></div><h3>${esc(T.value || 'Tiêu đề bài viết')}</h3><small class="dim">${esc(toVn($('#edD', el).value || PSQ.today()))} · ${+$('#edR', el).value || Math.max(1, Math.round(words / 220))} phút đọc</small></div></div>`;
     };
     // tự lưu nháp mỗi khi gõ (chỉ trên máy này)
     let at; const autosave = () => { dirty = true; clearTimeout(at); at = setTimeout(() => {
-      try { localStorage.setItem(DRAFT, JSON.stringify({ for: p ? p.id : '', at: Date.now(), title: T.value, excerpt: X.value, body: htmlMode ? html.value : ed.innerHTML, cover, cat: $('#edCat', el).value, date: toVn($('#edD', el).value), read: +$('#edR', el).value || 0, featured: $('#edF', el).checked })); $('#edAuto', el).textContent = 'Đã tự lưu nháp lúc ' + new Date().toLocaleTimeString('vi-VN'); }
+      if (!document.body.contains(T)) return;   // đã rời trang soạn
+      try { localStorage.setItem(DRAFT, JSON.stringify({ for: p ? p.id : '', at: Date.now(), title: T.value, excerpt: X.value, body: body(), cover, cat: $('#edCat', el).value, date: toVn($('#edD', el).value), read: +$('#edR', el).value || 0, featured: $('#edF', el).checked })); $('#edAuto', el).textContent = 'Đã tự lưu nháp lúc ' + new Date().toLocaleTimeString('vi-VN'); }
       catch (e) { $('#edAuto', el).textContent = 'Không tự lưu được nháp (bộ nhớ đầy)'; }
       stats(); }, 700); };
-    [T, X, ed, html].forEach(n => n.addEventListener('input', autosave));
+    [T, X].forEach(n => n.addEventListener('input', autosave));
     ['edCat', 'edD', 'edR', 'edF'].forEach(id => $('#' + id, el).addEventListener('change', autosave));
     stats();
-
-    // thanh công cụ
-    // chèn khối (ảnh) ngay sau đoạn đang đứng, rồi đặt con trỏ vào đoạn mới bên dưới
-    const insertBlock = h => {
-      const sel = getSelection(); let n = sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
-      while (n && n.parentNode !== ed) n = n.parentNode;
-      const tmp = document.createElement('div'); tmp.innerHTML = h; const blk = tmp.firstElementChild, after = document.createElement('p'); after.innerHTML = '<br>';
-      if (n && n.parentNode === ed) { const empty = !n.textContent.trim() && !n.querySelector('img'); n.after(blk); blk.after(after); if (empty && n.tagName === 'P') n.remove(); }
-      else { ed.appendChild(blk); ed.appendChild(after); }
-      const r = document.createRange(); r.setStart(after, 0); r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
-    };
-    const exec = (c, a = null) => { ed.focus(); document.execCommand(c, false, a); autosave(); syncBar(); };
-    const syncBar = () => {
-      if (htmlMode) return;
-      ['bold', 'italic', 'underline', 'insertUnorderedList', 'insertOrderedList'].forEach(c => { const b = $(`[data-cmd="${c}"]`, el); try { b.classList.toggle('on', document.queryCommandState(c)); } catch (e) {} });
-      let blk = ''; try { blk = String(document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, ''); } catch (e) {}
-      $('[data-block]', el).value = ['h2', 'h3'].includes(blk) ? blk : 'p';
-      $('[data-cmd="quote"]', el).classList.toggle('on', blk === 'blockquote');
-    };
-    document.addEventListener('selectionchange', () => { if (el.contains(document.activeElement) && document.activeElement === ed) syncBar(); });
-    $('[data-block]', el).addEventListener('change', e => exec('formatBlock', e.target.value));
-    let saved = null; const keep = () => { const s = getSelection(); if (s.rangeCount && ed.contains(s.anchorNode)) saved = s.getRangeAt(0).cloneRange(); };
-    const restore = () => { ed.focus(); if (saved) { const s = getSelection(); s.removeAllRanges(); s.addRange(saved); } };
-    ed.addEventListener('keyup', keep); ed.addEventListener('mouseup', keep); ed.addEventListener('blur', keep);
-    $('#edBar', el).addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-    $('#edBar', el).addEventListener('click', async e => {
-      const b = e.target.closest('[data-cmd]'); if (!b || htmlMode) return;
-      const c = b.dataset.cmd;
-      if (c === 'quote') { let blk = ''; try { blk = String(document.queryCommandValue('formatBlock')).toLowerCase(); } catch (x) {} return exec('formatBlock', blk.includes('blockquote') ? 'p' : 'blockquote'); }
-      if (c === 'link') {
-        keep(); const sel = String(getSelection()), url = prompt('Dán đường dẫn (https://... hoặc tên trang như san-pham.html):', 'https://'); if (!url || url === 'https://') return;
-        restore(); if (!sel) document.execCommand('insertHTML', false, `<a href="${esc(url)}">${esc(url)}</a>`); else document.execCommand('createLink', false, url); autosave(); return;
-      }
-      if (c === 'image') {
-        keep(); const file = await pick(); if (!file) return;
-        if (!/^image\//.test(file.type)) return toast('Hãy chọn một file ảnh');
-        try {
-          const im = await bodyFrom(file), cap = prompt('Chú thích dưới ảnh (để trống nếu không cần):', '') || '';
-          restore(); insertBlock(`<figure><img src="${im.src}" alt="${esc(cap || T.value)}">${cap ? `<figcaption>${esc(cap)}</figcaption>` : ''}</figure>`);
-          if (im.w < 800) toast(`Ảnh chỉ rộng ${im.w} px, có thể bị mờ. Nên dùng ảnh ngang 1200 px.`); else toast('Đã chèn ảnh');
-          autosave();
-        } catch (x) { toast('Không đọc được ảnh này, thử ảnh JPG hoặc PNG khác'); }
-        return;
-      }
-      exec(c);
-    });
-    // dán chữ: bỏ định dạng lạ từ Word / web
-    ed.addEventListener('paste', e => {
-      const h = e.clipboardData && e.clipboardData.getData('text/html'), t = e.clipboardData && e.clipboardData.getData('text/plain');
-      if (!h && !t) return; e.preventDefault();
-      const safe = h ? clean(h.replace(/<img[^>]*>/gi, '')) : t.split(/\n{2,}/).map(x => `<p>${esc(x).replace(/\n/g, '<br>')}</p>`).join('');
-      document.execCommand('insertHTML', false, safe); autosave();
-    });
-    $('[data-html]', el).addEventListener('click', e => {
-      htmlMode = !htmlMode; e.currentTarget.classList.toggle('on', htmlMode);
-      if (htmlMode) { html.value = clean(ed.innerHTML).replace(/(<\/(p|h2|h3|ul|ol|blockquote|figure)>)/g, '$1\n'); }
-      else ed.innerHTML = clean(html.value);
-      ed.hidden = htmlMode; html.hidden = !htmlMode; $$('#edBar [data-cmd], #edBar [data-block]', el).forEach(b => b.disabled = htmlMode); stats();
-    });
 
     // ảnh bìa
     const setCover = src => { cover = src; const c = $('#edC', el); c.classList.toggle('has', !!src); c.style.backgroundImage = src ? `url(${cleanUrl(src)})` : ''; $('[data-cpick]', el).textContent = src ? 'Đổi ảnh' : 'Tải ảnh'; $('[data-cnone]', el).hidden = !src; autosave(); stats(); };
     const upCover = async () => {
       const file = await pick(); if (!file) return; if (!/^image\//.test(file.type)) return toast('Hãy chọn một file ảnh');
-      try { const r = await coverFrom(file); setCover(r.src);
+      try { $('#edC', el).classList.add('rx-busy'); const r = await PSQED.upload(file, { w: COVER_W, crop: COVER_W / COVER_H }); r.small = r.w < COVER_W * 0.6; setCover(r.url);
         $('#edCw', el).textContent = r.small ? `Ảnh gốc ${r.w} × ${r.h} px hơi nhỏ, có thể bị mờ. Nên dùng ảnh 1600 × 900 px.` : Math.abs(r.w / r.h - 16 / 9) > 0.05 ? `Ảnh gốc ${r.w} × ${r.h} px khác tỉ lệ 16:9 nên đã được cắt ở giữa. Xem khung trên để kiểm tra.` : `Ảnh gốc ${r.w} × ${r.h} px, đúng tỉ lệ.`;
-      } catch (x) { toast('Không đọc được ảnh này, thử ảnh JPG hoặc PNG khác'); }
+      } catch (x) { toast(x.message || 'Không đọc được ảnh này, thử ảnh JPG hoặc PNG khác', 'err'); }
+      $('#edC', el).classList.remove('rx-busy');
     };
     $('#edC', el).addEventListener('click', upCover); $('#edC', el).addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); upCover(); } });
     $('[data-cpick]', el).addEventListener('click', upCover);
@@ -377,6 +306,7 @@
         ${X.value ? `<p class="lead mt-2" style="color:var(--text-2)">${esc(X.value)}</p>` : ''}
         <div class="prose mt-2" style="max-width:none">${body() || '<p class="dim">Chưa có nội dung.</p>'}</div>`);
       $('.modal', m.el).classList.add('nd-wide');
+      PSQ.rich($('.prose', m.el));
     });
     const leave = () => { if (dirty && !confirm('Rời trang soạn bài? Bản nháp vẫn được giữ trên máy này, lần sau mở lại được.')) return; back(); };
     $('[data-back]', el).addEventListener('click', leave);
@@ -387,7 +317,7 @@
       err.textContent = '';
       if (!title) { err.textContent = 'Anh chị nhập tiêu đề bài viết.'; T.focus(); return; }
       if (!$('#edCat', el).value) { err.textContent = 'Cần tạo danh mục kiến thức trước.'; return; }
-      if (!b2) { err.textContent = 'Nội dung bài viết đang trống.'; ed.focus(); return; }
+      if (!b2) { err.textContent = 'Nội dung bài viết đang trống.'; rx.focus(); return; }
       if (show && !cover) { if (!confirm('Bài chưa có ảnh bìa. Dùng ảnh có sẵn của web và đăng luôn?')) return; }
       const words = b2.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length, L = allPosts();
       const cur = p ? L.find(x => x.id === p.id) : null;

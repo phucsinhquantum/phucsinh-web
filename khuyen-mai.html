@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030m">
-<script src="js/lang.js?v=20261030m"></script>
+<link rel="stylesheet" href="css/app.css?v=20261031a">
+<script src="js/lang.js?v=20261031a"></script>
 <style>
   .pm-hero { position: relative; overflow: hidden; display: flex; gap: 16px; align-items: center; padding: 22px 24px; }
   .pm-hero h2 { font-family: 'Cormorant Garamond', serif; font-size: 34px; margin: 2px 0 6px; }
@@ -33,6 +33,8 @@
   .pm-hot { color: #fff; background: linear-gradient(135deg, #ff5f6d, #ff9a3d); border: 0; }
   .pm-hot svg { width: 13px; height: 13px; }
   .pm-desc { color: var(--text-2); font-size: 14px; white-space: pre-line; margin: 0; }
+  .pm-rich { font-size: 14.5px; line-height: 1.7; max-width: none; } .pm-rich p { margin: 0 0 10px; } .pm-rich h2 { font-size: 18px; margin: 12px 0 6px; } .pm-rich h3 { font-size: 16px; margin: 10px 0 6px; }
+  .pm-img { margin: -2px -2px 4px; border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 9; background: #0c1114; } .pm-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pm-code { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--c); background: color-mix(in srgb, var(--c) 8%, transparent); margin-top: auto; }
   .pm-code > div { flex: 1; min-width: 0; } .pm-code small { display: block; font-size: 11px; color: var(--text-3); }
   .pm-code b { display: block; font-size: 20px; letter-spacing: 1.5px; color: var(--c); } .pm-code span { font-size: 12.5px; color: var(--text-2); }
@@ -50,10 +52,10 @@
   <section class="mt-3" id="pmList"></section>
 </div>
 
-<script src="js/patch.js?v=20261030m"></script>
-<script src="js/api.js?v=20261030m"></script>
-<script src="js/data.js?v=20261030m"></script>
-<script src="js/app.js?v=20261030m"></script>
+<script src="js/patch.js?v=20261031a"></script>
+<script src="js/api.js?v=20261031a"></script>
+<script src="js/data.js?v=20261031a"></script>
+<script src="js/app.js?v=20261031a"></script>
 <script>
 (function () {
   const { $, esc, icon, toast, money, fdate } = PSQ;
@@ -62,12 +64,14 @@
   const list = PSQ.promos();
   $('#pmList').innerHTML = list.length ? `<div class="pm-grid">${list.map(p => `<article class="card pm-card" style="--c:${esc(p.color || '#ff9a3d')}">
       <div class="pm-top"><span class="badge pm-hot">${icon('fire')} Đang diễn ra</span><small class="dim">${esc(when(p))}</small></div>
+      ${p.image ? `<div class="pm-img"><img src="${esc(p.image)}" alt="${esc(p.title)}" loading="lazy"></div>` : ''}
       <h3>${esc(p.title)}</h3>
-      ${p.desc ? `<p class="pm-desc">${esc(p.desc)}</p>` : ''}
+      ${p.desc ? (PSQ.isHtml(p.desc) ? `<div class="prose pm-rich">${p.desc}</div>` : `<p class="pm-desc">${esc(p.desc)}</p>`) : ''}
       ${p.code ? `<div class="pm-code"><div><small>Mã khuyến mãi</small><b>${esc(String(p.code).toUpperCase())}</b><span>${esc(off(p))}${+p.minOrder ? ' · đơn từ ' + money(+p.minOrder) : ''}</span></div><button class="btn btn-sm" type="button" data-copy="${esc(String(p.code).toUpperCase())}">${icon('copy')} Sao chép</button></div>` : ''}
       <div class="row mt-2" style="gap:8px;flex-wrap:wrap"><a class="btn btn-gold" href="${esc(p.link || 'san-pham.html')}">${icon('cart')} Mua ngay</a></div>
     </article>`).join('')}</div>`
     : `<div class="card empty" style="padding:40px 16px">${icon('gift')}<p>Hiện chưa có chương trình khuyến mãi. Anh chị quay lại sau nhé.</p><a class="btn btn-outline-gold mt-2" href="san-pham.html">Xem sản phẩm</a></div>`;
+  $('#pmList').querySelectorAll('.pm-rich').forEach(x => PSQ.rich(x));
   $('#pmList').addEventListener('click', e => { const b = e.target.closest('[data-copy]'); if (!b) return; navigator.clipboard && navigator.clipboard.writeText(b.dataset.copy).catch(() => {}); toast('Đã sao chép mã ' + b.dataset.copy + ', dán vào ô mã khi đặt hàng'); });
 })();
 </script>

@@ -289,6 +289,12 @@ async function api(req, res, url) {
     }
     if (route === '/api/admin/db') return send(res, 200, bootPayload(me));
     if (route === '/api/admin/slide') return saveSlide(res, me, body);
+    // tải ảnh lên (sản phẩm, bài viết, khuyến mãi...): nhận ảnh base64 đã thu nhỏ ở trình duyệt, trả đường dẫn tệp
+    if (route === '/api/admin/media') {
+      const m = /^data:image\/(jpeg|jpg|png|webp|gif);base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data || ''));
+      if (!m || m[2].length > 8e6) return send(res, 400, { error: 'Ảnh chưa đúng (JPG, PNG, WEBP, GIF, tối đa khoảng 6 MB).' });
+      return send(res, 200, { url: mediaFile(m[1], m[2]) });
+    }
   }
   return send(res, 404, { error: 'Không có đường dẫn này.' });
 }

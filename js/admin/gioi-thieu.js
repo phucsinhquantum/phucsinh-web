@@ -40,6 +40,7 @@
   const area = (id, label, v, rows = 5, hint = '') => `<div class="field full"><label for="${id}">${label}</label><textarea class="input" id="${id}" rows="${rows}">${esc(v || '')}</textarea>${hint ? `<span class="gt-hint">${hint}</span>` : ''}</div>`;
   const pairs = (key, list, n) => Array.from({ length: n }, (_, i) => { const v = list[i] || { t: '', d: '' }; return `<div class="gt-pair"><input class="input" data-${key}-t="${i}" maxlength="60" placeholder="Tiêu đề ${i + 1}" value="${esc(v.t)}"><textarea class="input" data-${key}-d="${i}" rows="2" placeholder="Mô tả">${esc(v.d)}</textarea></div>`; }).join('');
 
+  let storyEd = null;
   function render(el) {
     const edit = ADMIN.can('content'), D = cur(), A = D.about;
     team = D.team.map(m => ({ ...m }));
@@ -50,7 +51,8 @@
           <fieldset ${edit ? '' : 'disabled'} style="border:0;padding:0;margin:0;min-width:0">
           <div class="gt-sec"><h4>1. Đầu trang</h4><div class="form-grid">
             ${inp('gtHE', 'Dòng nhỏ phía trên', A.heroEyebrow, false, 80)}
-            ${inp('gtHI', 'Ảnh nền (đường dẫn ảnh)', A.heroImg, false, 300)}
+            ${inp('gtHI', 'Ảnh nền (đường dẫn ảnh, hoặc bấm Tải ảnh bên dưới)', A.heroImg, false, 300)}
+            <div class="field full" style="margin-top:-6px"><button class="btn btn-sm btn-outline-gold" type="button" id="gtHIu"${edit ? '' : ' disabled'}>${icon('upload')} Tải ảnh nền từ máy</button> <span class="gt-hint">Ảnh ngang, đẹp nhất 1920 × 900 px.</span></div>
             ${inp('gtHT', 'Tiêu đề lớn', A.heroTitle, false, 120)}
             ${inp('gtHM', 'Phần tiêu đề in nghiêng (màu vàng)', A.heroEm, false, 120)}
             ${area('gtHL', 'Đoạn mô tả', A.heroLead, 3)}
@@ -58,7 +60,7 @@
           <div class="gt-sec"><h4>2. Câu chuyện thương hiệu</h4><div class="form-grid">
             ${inp('gtSE', 'Dòng nhỏ phía trên', A.storyEyebrow, false, 80)}
             ${inp('gtST', 'Tiêu đề', A.storyTitle, false, 160)}
-            ${area('gtSB', 'Nội dung', (A.story || []).join('\n\n'), 10, 'Mỗi đoạn cách nhau một dòng trống.')}
+            <div class="field full"><label>Nội dung</label><div id="gtSBx"></div><span class="gt-hint">Soạn như bài viết: đổi kiểu chữ, màu, căn lề, chèn ảnh, video, sản phẩm.</span></div>
           </div></div>
           <div class="gt-sec"><h4>3. Cam kết</h4><div class="form-grid">
             ${inp('gtPT', 'Tiêu đề khung cam kết', A.promiseTitle, true, 80)}
@@ -85,7 +87,9 @@
         </form>
       </div>`;
     drawTeam(edit);
-    if (!edit) return;
+    storyEd = PSQED.mount($('#gtSBx'), { html: A.storyHtml || (A.story || []).map(p => `<p>${esc(p)}</p>`).join(''), minHeight: 260, placeholder: 'Câu chuyện thương hiệu...' });
+    if (!edit) { storyEd.area.contentEditable = 'false'; return; }
+    $('#gtHIu').addEventListener('click', async () => { const f = await PSQED.pickFile(); if (!f) return; try { const r = await PSQED.upload(f, { w: 1920 }); $('#gtHI').value = r.url; toast('Đã tải ảnh nền, bấm Lưu để cập nhật trang'); } catch (x) { toast(x.message, 'err'); } });
     const T = $('#gtTeam');
     $('#gtAdd').addEventListener('click', () => { syncTeam(); team.push({ name: '', role: '', initials: '' }); drawTeam(true); const ins = T.querySelectorAll('[data-mn]'); ins[ins.length - 1].focus(); });
     T.addEventListener('click', e => {
@@ -113,7 +117,7 @@
     const data = {
       about: {
         heroEyebrow: v('gtHE'), heroImg: v('gtHI') || window.ABOUT_DEFAULT.about.heroImg, heroTitle: v('gtHT'), heroEm: v('gtHM'), heroLead: v('gtHL'),
-        storyEyebrow: v('gtSE'), storyTitle: v('gtST'), story: paras($('#gtSB').value),
+        storyEyebrow: v('gtSE'), storyTitle: v('gtST'), story: paras(PSQ.$('.rx-area', $('#gtSBx')).innerText), storyHtml: storyEd.get(),
         promiseTitle: v('gtPT'), promises: lines($('#gtPL').value),
         values: grab('v', 4), teamNote: v('gtTN'), steps: grab('s', 5),
         ctaTitle: v('gtCT'), ctaText: v('gtCX')

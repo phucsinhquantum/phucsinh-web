@@ -21,8 +21,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030m">
-<script src="js/lang.js?v=20261030m"></script>
+<link rel="stylesheet" href="css/app.css?v=20261031a">
+<script src="js/lang.js?v=20261031a"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -162,11 +162,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261030m"></script>
-<script src="js/api.js?v=20261030m"></script>
-<script src="js/data.js?v=20261030m"></script>
-<script src="js/app.js?v=20261030m"></script>
-<script src="js/psq-data.js?v=20261030m"></script>
+<script src="js/patch.js?v=20261031a"></script>
+<script src="js/api.js?v=20261031a"></script>
+<script src="js/data.js?v=20261031a"></script>
+<script src="js/app.js?v=20261031a"></script>
+<script src="js/psq-data.js?v=20261031a"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -191,7 +191,7 @@
   const off = () => coupon ? coupon.discount : 0;
   const myCoupons = () => { if (!u || !window.ADB) return []; try { return ADB.couponsOf(ADB.load(), u.id).filter(c => c.status === 'new' && (!c.expires || c.expires >= PSQ.today())); } catch (e) { return []; } };
   function applyCoupon(code) {
-    const r = API.act('couponCheck', { code, phone: form.phone, items: cart.items().map(x => ({ id: x.id, qty: x.qty })) });
+    const r = API.act('couponCheck', { code, phone: form.phone, items: cart.items().map(x => Object.assign({ id: x.id, qty: x.qty }, x.v ? { v: x.v } : {})) });
     if (r.error) { coupon = null; return r.error; }
     coupon = { code: r.code, label: r.label, discount: r.discount, sub: cart.total() }; return '';
   }
@@ -214,10 +214,10 @@
   }
 
   function summaryItems(items) {
-    return items.map(x => `<div class="sum-item"><span class="cart-thumb">${art(product(x.id) || x)}<i>${x.qty}</i></span><b>${esc(x.name)}</b><span class="nowrap">${money(x.price * x.qty)}</span></div>`).join('');
+    return items.map(x => `<div class="sum-item"><span class="cart-thumb">${art(PSQ.pv(x.id, x.v) || product(x.id) || x)}<i>${x.qty}</i></span><b>${esc(x.name)}</b><span class="nowrap">${money(x.price * x.qty)}</span></div>`).join('');
   }
   function renderSummary() {
-    const items = placed ? placed.items : cart.items().map(x => { const p = product(x.id); return { id: p.id, name: p.name, price: p.price, qty: x.qty, art: p.art, tone: p.tone }; });
+    const items = placed ? placed.items : cart.items().map(x => { const p = PSQ.pv(x.id, x.v); return { id: p.id, v: x.v, name: p.name, price: p.price, qty: x.qty, art: p.art, tone: p.tone, image: p.image }; });
     const sub = items.reduce((s, x) => s + x.price * x.qty, 0), n = items.reduce((s, x) => s + x.qty, 0);
     $('#summary').classList.toggle('done', !!placed);
     $('#summary').innerHTML = `<div class="card-head"><h3>${placed ? 'Đơn vừa đặt' : 'Tóm tắt đơn hàng'}</h3><span class="badge gold" style="margin-left:auto">${n} sản phẩm</span></div>` +
@@ -257,11 +257,11 @@
     const sub = cart.total();
     return `<div class="card glow-gold">
       <div class="card-head"><div><span class="eyebrow">Bước 1</span><h2 class="display mt-1">Giỏ hàng của anh chị</h2></div><button class="link-btn" type="button" id="clearCart" style="margin-left:auto">Xóa tất cả</button></div>
-      <div class="lines">${it.map(x => { const p = product(x.id); return `<div class="line">
+      <div class="lines">${it.map(x => { const p = PSQ.pv(x.id, x.v), k = esc(x.key); return `<div class="line">
         <a class="cart-thumb" href="san-pham-chi-tiet.html?id=${p.id}">${art(p)}</a>
         <div class="nm"><h3><a href="san-pham-chi-tiet.html?id=${p.id}">${esc(p.name)}</a></h3><div class="meta">${money(p.price)}</div></div>
-        <span class="qty" aria-label="Số lượng"><button type="button" data-qty="${p.id}|-1" aria-label="Bớt">${icon('minus')}</button><span>${x.qty}</span><button type="button" data-qty="${p.id}|1" aria-label="Thêm">${icon('plus')}</button></span>
-        <div class="sum"><b>${money(p.price * x.qty)}</b><button class="link-btn" type="button" data-qty="${p.id}|x">${icon('trash')}Xóa</button></div>
+        <span class="qty" aria-label="Số lượng"><button type="button" data-qty="${k}|-1" aria-label="Bớt">${icon('minus')}</button><span>${x.qty}</span><button type="button" data-qty="${k}|1" aria-label="Thêm">${icon('plus')}</button></span>
+        <div class="sum"><b>${money(p.price * x.qty)}</b><button class="link-btn" type="button" data-qty="${k}|x">${icon('trash')}Xóa</button></div>
       </div>`; }).join('')}</div>
       <div class="totals mt-2">
         <div class="row"><span class="muted">Tạm tính (${cart.count()} sản phẩm)</span><b style="font-size:18px" class="gold">${money(sub)}</b></div>
@@ -333,7 +333,7 @@
           <p class="muted mt-1" style="font-size:13px">${form.pay === 'bank' ? `Chuyển khoản tới ${esc(S.bank.name)}, số tài khoản ${esc(S.bank.account)}, nội dung ghi mã đơn hàng.` : `${payUsed() ? `Ví điểm mua hàng trừ ${PS(payUsed())}. ` : ''}${cashUsed() ? `Ví tiền mặt trừ ${money(cashUsed())}. ` : ''}Đơn được ghi nhận đã thanh toán ngay.`}</p></div>
       </div>
       <div class="box mt-2" style="padding:0">
-        <div class="lines">${it.map(x => { const p = product(x.id); return `<div class="sum-item" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="cart-thumb">${art(p)}<i>${x.qty}</i></span><b>${esc(p.name)} <span class="dim">x ${x.qty}</span></b><span class="nowrap gold">${money(p.price * x.qty)}</span></div>`; }).join('')}</div>
+        <div class="lines">${it.map(x => { const p = PSQ.pv(x.id, x.v); return `<div class="sum-item" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="cart-thumb">${art(p)}<i>${x.qty}</i></span><b>${esc(p.name)} <span class="dim">x ${x.qty}</span></b><span class="nowrap gold">${money(p.price * x.qty)}</span></div>`; }).join('')}</div>
       </div>
       <div class="totals mt-2">
         <div class="row"><span class="muted">Tạm tính</span><span>${money(sub)}</span></div>

@@ -14,6 +14,14 @@ const money = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ';
 const ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 const int = v => Math.round(+v || 0);
+// dòng đặt hàng theo phân loại: sản phẩm có p.variants thì bắt buộc chọn v; giá, PS lấy theo phân loại (PS trống = bằng giá)
+const psVal = x => x.ps != null && x.ps !== '' && +x.ps >= 0 ? Math.round(+x.ps) : undefined;
+function lineOf(p, v) {
+  const L = Array.isArray(p.variants) ? p.variants.filter(x => x && x.id) : [];
+  if (!L.length) return { name: p.name, price: Math.max(0, int(p.price)), ps: psVal(p) };
+  const x = L.find(y => y.id === v); if (!x) return null;
+  return { v: x.id, name: p.name + ' - ' + String(x.name || '').slice(0, 80), price: Math.max(0, int(x.price)), ps: psVal(x) };
+}
 const normPhone = p => String(p || '').replace(/[^\d]/g, '').replace(/^84/, '0');
 const err = e => ({ error: e });
 
@@ -40,7 +48,7 @@ function scopeFor(d, me, A) {
   const out = { v: d.v, settings: Object.assign({}, d.settings), stock: d.stock || {}, stockMin: d.stockMin, users: [], orders: [], commissions: [], wallet: [], topups: [], addresses: [], messages: [], logs: [], mails: [], fundbook: [], receipts: [], expenses: [], stores: d.stores || [], roles: [] };
   delete out.settings.fundWarn; delete out.settings.codeReserve;
   // chương trình khuyến mãi đang chạy (công khai), không gửi danh sách người đã dùng
-  out.promos = A.promosLive(d).map(p => pick(p, ['id', 'title', 'desc', 'start', 'end', 'code', 'type', 'value', 'maxOff', 'minOrder', 'color', 'link']));
+  out.promos = A.promosLive(d).map(p => pick(p, ['id', 'title', 'desc', 'start', 'end', 'code', 'type', 'value', 'maxOff', 'minOrder', 'color', 'link', 'image']));
   const users = new Map();
   const addU = (u, keys) => { if (!u) return; const prev = users.get(u.id) || {}; users.set(u.id, Object.assign(prev, keys ? pick(u, keys) : clean(u))); };
   // danh sách thành viên mới ở trang chủ
@@ -350,8 +358,10 @@ const ACTIONS = {
       const p = c.products.find(q => q.id === x.id), qty = int(x.qty);
       if (!p || p.id === A.PKG_ID || p.id === A.AGENT_PKG_ID || p.active === false) return err('Có sản phẩm không còn bán, anh chị tải lại trang giúp em.');
       if (qty < 1 || qty > 999) return err('Số lượng chưa đúng.');
-      const st = A.stockOf(d, p.id); if (st !== null && qty > st) return err(st ? `${p.name} chỉ còn ${st} trong kho, anh chị giảm số lượng giúp em.` : `${p.name} đã hết hàng, anh chị bỏ sản phẩm này khỏi giỏ.`);
-      const f = items.find(i => i.id === p.id); if (f) f.qty += qty; else items.push(Object.assign({ id: p.id, name: p.name, price: p.price, qty }, p.ps != null && p.ps !== '' ? { ps: A.psOf(p) } : {}));
+      const L = lineOf(p, x.v); if (!L) return err(`${p.name}: anh chị chọn lại phân loại giúp em (tải lại trang).`);
+      const st = A.stockOf(d, p.id), had = items.filter(i => i.id === p.id).reduce((n, i) => n + i.qty, 0);
+      if (st !== null && had + qty > st) return err(st ? `${p.name} chỉ còn ${st} trong kho, anh chị giảm số lượng giúp em.` : `${p.name} đã hết hàng, anh chị bỏ sản phẩm này khỏi giỏ.`);
+      const f = items.find(i => i.id === p.id && (i.v || '') === (L.v || '')); if (f) f.qty += qty; else items.push(Object.assign({ id: p.id }, L.v ? { v: L.v } : {}, { name: L.name, price: L.price, qty }, L.ps != null ? { ps: L.ps } : {}));
     }
     if (!items.length) return err('Giỏ hàng đang trống.');
     const name = str(info.name, 80), phone = normPhone(info.phone), email = str(info.email, 120), address = str(info.address, 300), pay = info.pay === 'wallet' ? 'wallet' : 'bank';
@@ -554,7 +564,7 @@ const ACTIONS = {
     return { prize: r.prize, index: r.index, segments: r.segments, coupon: r.coupon };
   } },
   couponCheck: { run(c) {
-    const sub = (Array.isArray(c.args.items) ? c.args.items : []).reduce((s, x) => { const p = c.products.find(q => q.id === x.id); return s + (p ? p.price * Math.max(0, int(x.qty)) : 0); }, 0);
+    const sub = (Array.isArray(c.args.items) ? c.args.items : []).reduce((s, x) => { const p = c.products.find(q => q.id === x.id), L = p && lineOf(p, x.v); return s + (L ? L.price * Math.max(0, int(x.qty)) : 0); }, 0);
     const r = c.A.codeCheck(c.d, c.args.code, c.me, sub, normPhone(c.args.phone)); if (r.error) return r;
     return r.coupon ? { code: r.coupon.code, label: r.coupon.label, discount: r.discount } : { code: String(r.promo.code).toUpperCase(), label: r.promo.title, discount: r.discount, promo: true };
   } },
@@ -790,9 +800,9 @@ function botProducts(d, A, products, q, base) {
   const list = (products || []).filter(p => p.id !== A.PKG_ID && p.id !== A.AGENT_PKG_ID && p.active !== false);
   const hit = qf ? list.filter(p => (' ' + fold(p.name + ' ' + (p.partnerName || '')) + ' ').includes(' ' + qf + ' ') || fold(p.id).includes(qf)) : list;
   const out = hit.slice(0, 30).map(p => { const st = A.stockOf(d, p.id);
-    return { name: p.name, price: p.price, old: p.old || null, partner: !!p.partner, partnerName: p.partnerName || '', inStock: st !== 0, stock: st, spec: p.spec || '', warranty: p.warranty || '', link: b + '/san-pham-chi-tiet.html?id=' + encodeURIComponent(p.id) }; });
+    return { name: p.name, price: p.price, old: p.old || null, partner: !!p.partner, partnerName: p.partnerName || '', inStock: st !== 0, stock: st, spec: p.spec || '', warranty: p.warranty || '', short: p.short || '', variants: (p.variants || []).map(v => ({ name: v.name, price: +v.price || 0, old: +v.old || null })), link: b + '/san-pham-chi-tiet.html?id=' + encodeURIComponent(p.id) }; });
   return { query: q || '', count: hit.length, total: list.length, products: out,
-    rule: 'Chỉ giới thiệu sản phẩm có trong danh sách này. Sản phẩm khách hỏi mà không có ở đây thì báo đã hết hàng hoặc ngừng bán, gợi ý sản phẩm tương tự. inStock false thì báo tạm hết hàng. Bảo hành theo trường warranty của từng sản phẩm; trống thì theo chính sách chung của công ty (hàng đối tác trống thì mời khách hỏi lại, em kiểm tra). Hàng đối tác do công ty giao.' };
+    rule: 'Chỉ giới thiệu sản phẩm có trong danh sách này. Sản phẩm khách hỏi mà không có ở đây thì báo đã hết hàng hoặc ngừng bán, gợi ý sản phẩm tương tự. inStock false thì báo tạm hết hàng. Bảo hành theo trường warranty của từng sản phẩm; trống thì theo chính sách chung của công ty (hàng đối tác trống thì mời khách hỏi lại, em kiểm tra). Hàng đối tác do công ty giao. Sản phẩm có variants thì giá theo từng phân loại, hỏi khách chọn phân loại nào.' };
 }
 const botKeyOf = store => (store.getJSON('secret:bot') || {}).key || '';
 

@@ -193,28 +193,64 @@
   // giá tính thưởng (PS): chưa đặt thì bằng giá bán. Hàng đối tác nằm ở trang riêng.
   const psOf = p => (p && p.ps != null && p.ps !== '' && +p.ps >= 0) ? Math.round(+p.ps) : (p ? p.price : 0);
   const shopList = partner => PRODUCTS.filter(p => !!p.partner === !!partner);
+  /* ---------- phân loại (dòng sản phẩm), ảnh, nhãn ----------
+     p.variants [{ id, name, price, old, ps, image }]: mỗi dòng giá, ảnh riêng; p.images: bộ ảnh (ảnh đầu là ảnh đại diện);
+     p.badges ['hot','love','new','limited','gift','sale'] + p.badgeText (nhãn tự đặt); p.short: mô tả ngắn; p.desc: mô tả (HTML). */
+  const variantOf = (p, v) => (p && v && (p.variants || []).find(x => x.id === v)) || null;
+  function pv(id, v) {
+    const p = typeof id === 'object' ? id : product(id), x = variantOf(p, v); if (!p) return null; if (!x) return p;
+    const o = Object.assign({}, p, { v: x.id, vname: x.name, name: p.name + ' - ' + x.name, price: +x.price || 0, old: +x.old || undefined, image: x.image || p.image });
+    if (x.ps != null && x.ps !== '') o.ps = x.ps; else delete o.ps; return o;
+  }
+  const prices = p => (p.variants || []).length ? p.variants.map(x => +x.price || 0) : [p.price];
+  const priceLabel = p => { const L = prices(p), lo = Math.min(...L), hi = Math.max(...L); return lo === hi ? money(lo) : 'Từ ' + money(lo); };
+  const BADGES = { hot: ['Bán chạy', 'violet'], love: ['Yêu thích', 'love'], new: ['Mới', 'ship'], limited: ['Số lượng có hạn', 'pending'], gift: ['Có quà tặng', 'ok'], sale: ['Giảm giá', 'gold'] };
+  const isHot = p => !!(p.hot || (p.badges || []).includes('hot'));
+  function badgesOf(p) {
+    const out = [], L = p.badges || (p.hot ? ['hot'] : []);
+    const off = p.old && !(p.variants || []).length ? Math.round((1 - p.price / p.old) * 100) : 0;
+    if (off > 0) out.push({ t: '-' + off + '%', c: 'gold' }); else if (L.includes('sale')) out.push({ t: BADGES.sale[0], c: 'gold' });
+    L.forEach(k => { if (BADGES[k] && k !== 'sale') out.push({ t: BADGES[k][0], c: BADGES[k][1] }); });
+    if (p.badgeText) out.push({ t: p.badgeText, c: 'cyan' });
+    return out;
+  }
+  const imagesOf = p => { const L = [p.image, ...(p.images || [])].filter(Boolean); return [...new Set(L)]; };
+  // nội dung soạn trong quản trị: vẽ thẻ sản phẩm sống, video; mô tả cũ dạng chữ thường thì giữ xuống dòng
+  const isHtml = s => /<(p|h2|h3|ul|ol|figure|blockquote|strong|b|em|span|br)\b/i.test(String(s || ''));
+  const richText = s => isHtml(s) ? String(s) : String(s || '').split(/\n{2,}/).map(x => x.trim() ? `<p>${esc(x).replace(/\n/g, '<br>')}</p>` : '').join('');
+  const richProd = p => { const out = soldOut(p.id), many = (p.variants || []).length; return `<a class="rp-img" href="san-pham-chi-tiet.html?id=${encodeURIComponent(p.id)}">${art(p)}</a><div class="rp-body"><a class="rp-name" href="san-pham-chi-tiet.html?id=${encodeURIComponent(p.id)}">${esc(p.name)}</a><span class="rp-price">${priceLabel(p)}${p.old && !many ? ` <s>${money(p.old)}</s>` : ''}</span>${p.short ? `<small>${esc(p.short)}</small>` : ''}<span class="rp-act">${out ? '<span class="badge failed">Hết hàng</span>' : many ? `<a class="btn btn-sm btn-gold" href="san-pham-chi-tiet.html?id=${encodeURIComponent(p.id)}#chon">Chọn loại</a>` : `<button class="btn btn-sm btn-outline-gold" type="button" data-add="${esc(p.id)}">${icon('cart')} Thêm vào giỏ</button><button class="btn btn-sm btn-gold" type="button" data-add="${esc(p.id)}" data-go="1">Mua ngay</button>`}</span></div>`; };
+  const richYt = id => `<div class="rich-yt-box"><iframe src="https://www.youtube-nocookie.com/embed/${esc(id)}" title="Video" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+  function rich(el) {
+    if (!el) return el;
+    el.querySelectorAll('[data-prod]').forEach(f => { const p = product(f.dataset.prod); if (p) f.innerHTML = richProd(p); else f.remove(); });
+    el.querySelectorAll('[data-yt]').forEach(f => { if (/^[\w-]{11}$/.test(f.dataset.yt)) f.innerHTML = richYt(f.dataset.yt); else f.remove(); });
+    return el;
+  }
   // tồn kho do quản trị cập nhật (Kho): null là chưa quản lý tồn kho, coi như còn hàng
   let stockC = null;
   const stockMap = () => stockC || (setTimeout(() => { stockC = null; }), stockC = (API.db || {}).stock || {});
   const stockOf = id => { const m = stockMap(); return id in m ? Math.max(0, +m[id] || 0) : null; };
   const soldOut = id => stockOf(id) === 0;
+  // dòng giỏ hàng: { id, v (mã phân loại, có thể trống), qty }; key = id~v
+  const lineKey = x => x.id + (x.v ? '~' + x.v : '');
   const cart = {
-    items() { return store.get(CART_KEY, []).filter(x => product(x.id)); },
+    items() { return store.get(CART_KEY, []).filter(x => { const p = product(x.id); return p && (!x.v || variantOf(p, x.v)) && !(!x.v && (p.variants || []).length); }).map(x => Object.assign(x, { key: lineKey(x) })); },
     count() { return cart.items().reduce((s, x) => s + x.qty, 0); },
-    total() { return cart.items().reduce((s, x) => s + product(x.id).price * x.qty, 0); },
-    add(id, qty = 1) {
+    total() { return cart.items().reduce((s, x) => s + pv(x.id, x.v).price * x.qty, 0); },
+    add(id, qty = 1, v = '') {
+      const p = product(id); if (p && (p.variants || []).length && !variantOf(p, v)) { location.href = 'san-pham-chi-tiet.html?id=' + encodeURIComponent(id) + '#chon'; return false; }
       const st = stockOf(id); if (st === 0) { toast('Sản phẩm này đã hết hàng.', 'err'); return false; }
-      const it = cart.items(); const f = it.find(x => x.id === id); f ? f.qty += qty : it.push({ id, qty });
+      const it = cart.items(), k = lineKey({ id, v }); const f = it.find(x => x.key === k); f ? f.qty += qty : it.push(v ? { id, v, qty } : { id, qty });
       const g = f || it[it.length - 1]; let capped = false; if (st !== null && g.qty > st) { g.qty = st; capped = true; }
-      store.set(CART_KEY, it); cart.changed(); if (capped) toast(`Sản phẩm này chỉ còn ${st} trong kho.`, 'err'); return true;
+      store.set(CART_KEY, it.map(({ key, ...x }) => x)); cart.changed(); if (capped) toast(`Sản phẩm này chỉ còn ${st} trong kho.`, 'err'); return true;
     },
-    set(id, qty) { let it = cart.items(); const f = it.find(x => x.id === id), st = stockOf(id); if (st !== null && qty > st) { qty = st; toast(`Sản phẩm này chỉ còn ${st} trong kho.`, 'err'); } if (f) f.qty = qty; it = it.filter(x => x.qty > 0); store.set(CART_KEY, it); cart.changed(); },
+    set(key, qty) { let it = cart.items(); const f = it.find(x => x.key === key), st = f ? stockOf(f.id) : null; if (st !== null && qty > st) { qty = st; toast(`Sản phẩm này chỉ còn ${st} trong kho.`, 'err'); } if (f) f.qty = qty; it = it.filter(x => x.qty > 0); store.set(CART_KEY, it.map(({ key, ...x }) => x)); cart.changed(); },
     clear() { store.set(CART_KEY, []); cart.changed(); },
     changed() { $$('[data-cart-count]').forEach(n => { const c = cart.count(); n.textContent = c; n.hidden = !c; }); renderDrawer(); document.dispatchEvent(new CustomEvent('cart:change')); }
   };
   // đặt hàng: máy chủ tính lại giá, tồn kho, trừ ví. extra: { useShop, useCash, saveAddr }
   function placeOrder(info, extra = {}) {
-    const items = cart.items().map(x => ({ id: x.id, qty: x.qty }));
+    const items = cart.items().map(x => Object.assign({ id: x.id, qty: x.qty }, x.v ? { v: x.v } : {}));
     if (!items.length) return { error: 'Giỏ hàng đang trống.' };
     const r = API.act('placeOrder', Object.assign({ items, info }, API.me ? {} : { ref: refCode() }, extra));
     if (r.error) return r;
@@ -536,8 +572,8 @@
       if (t.matches('[data-nav-close]')) app.classList.remove('nav-open');
       if (t.matches('[data-cart-open]')) openCart(true);
       if (t.matches('[data-cart-close]')) openCart(false);
-      if (t.matches('[data-add]')) { e.preventDefault(); if (t.disabled || !cart.add(t.dataset.add, +(t.dataset.n || 1))) return; toast('Đã thêm vào giỏ: ' + product(t.dataset.add).name); if (t.dataset.go) location.href = 'dat-hang.html'; }
-      if (t.matches('[data-qty]')) { const [id, d] = t.dataset.qty.split('|'); const it = cart.items().find(x => x.id === id); if (it) cart.set(id, d === 'x' ? 0 : it.qty + +d); }
+      if (t.matches('[data-add]')) { e.preventDefault(); if (t.disabled || !cart.add(t.dataset.add, +(t.dataset.n || 1), t.dataset.v || '')) return; toast('Đã thêm vào giỏ: ' + pv(t.dataset.add, t.dataset.v).name); if (t.dataset.go) location.href = 'dat-hang.html'; }
+      if (t.matches('[data-qty]')) { const [k, d] = t.dataset.qty.split('|'); const it = cart.items().find(x => x.key === k); if (it) cart.set(k, d === 'x' ? 0 : it.qty + +d); }
     });
     addEventListener('keydown', e => { if (e.key === 'Escape') { openCart(false); app.classList.remove('nav-open'); closeUser(); } });
     // menu tài khoản ở góc trên
@@ -616,7 +652,7 @@
   function renderDrawer() {
     const body = $('#drawerBody'), foot = $('#drawerFoot'); if (!body) return;
     const it = cart.items();
-    body.innerHTML = it.length ? it.map(x => { const p = product(x.id); return `<div class="cart-line"><div class="cart-thumb">${art(p)}</div><div><b>${esc(p.name)}</b><span class="gold">${money(p.price)}</span><br><span class="qty"><button type="button" data-qty="${p.id}|-1" aria-label="Bớt">${icon('minus')}</button><span>${x.qty}</span><button type="button" data-qty="${p.id}|1" aria-label="Thêm">${icon('plus')}</button></span></div><button class="link-btn" type="button" data-qty="${p.id}|x">Xóa</button></div>`; }).join('')
+    body.innerHTML = it.length ? it.map(x => { const p = pv(x.id, x.v), k = esc(x.key); return `<div class="cart-line"><div class="cart-thumb">${art(p)}</div><div><b>${esc(p.name)}</b><span class="gold">${money(p.price)}</span><br><span class="qty"><button type="button" data-qty="${k}|-1" aria-label="Bớt">${icon('minus')}</button><span>${x.qty}</span><button type="button" data-qty="${k}|1" aria-label="Thêm">${icon('plus')}</button></span></div><button class="link-btn" type="button" data-qty="${k}|x">Xóa</button></div>`; }).join('')
       : `<div class="empty">${icon('cart')}Giỏ hàng đang trống.<div class="mt-2"><a class="btn btn-outline-gold btn-sm" href="san-pham.html">Xem sản phẩm</a></div></div>`;
     foot.innerHTML = it.length ? `<div class="row between"><span class="muted">Tạm tính</span><b class="gold" style="font-size:18px">${money(cart.total())}</b></div><a class="btn btn-gold btn-block" href="dat-hang.html">Đặt hàng ${icon('arrow')}</a>` : '';
   }
@@ -659,13 +695,13 @@
   }
   // thẻ sản phẩm dùng chung
   function productCard(p) {
-    const out = soldOut(p.id);
+    const out = soldOut(p.id), many = (p.variants || []).length, url = 'san-pham-chi-tiet.html?id=' + encodeURIComponent(p.id), bs = badgesOf(p);
     return `<article class="card p-card${out ? ' sold-out' : ''}">
-      <a class="p-img" href="san-pham-chi-tiet.html?id=${p.id}">${art(p)}${out ? '<span class="badge failed tag">Hết hàng</span>' : p.old ? `<span class="badge gold tag">-${Math.round((1 - p.price / p.old) * 100)}%</span>` : p.hot ? '<span class="badge violet tag">Bán chạy</span>' : ''}</a>
-      <div class="p-body"><h3><a href="san-pham-chi-tiet.html?id=${p.id}">${esc(p.name)}</a></h3>
-        <div class="row" style="gap:8px;flex-wrap:wrap"><span class="p-price">${money(p.price)}</span>${p.old ? `<s class="dim" style="font-size:12px">${money(p.old)}</s>` : ''}</div>${API.me ? `<small class="p-ps">Giá tính thưởng <b>${money(psOf(p)).replace('đ', ' PS')}</b></small>` : ''}${p.partner && p.partnerName ? `<small class="dim">Đối tác: ${esc(p.partnerName)}</small>` : ''}
+      <a class="p-img" href="${url}">${art(p)}${out ? '<span class="p-tags"><span class="badge failed">Hết hàng</span></span>' : bs.length ? `<span class="p-tags">${bs.slice(0, 3).map(b => `<span class="badge ${b.c}">${esc(b.t)}</span>`).join('')}</span>` : ''}</a>
+      <div class="p-body"><h3><a href="${url}">${esc(p.name)}</a></h3>
+        <div class="row" style="gap:8px;flex-wrap:wrap"><span class="p-price">${priceLabel(p)}</span>${p.old && !many ? `<s class="dim" style="font-size:12px">${money(p.old)}</s>` : ''}</div>${many ? `<small class="dim">${many} phân loại</small>` : ''}${API.me ? `<small class="p-ps">Giá tính thưởng <b>${many ? 'theo phân loại' : money(psOf(p)).replace('đ', ' PS')}</b></small>` : ''}${p.partner && p.partnerName ? `<small class="dim">Đối tác: ${esc(p.partnerName)}</small>` : ''}
 </div>
-      <div class="p-actions">${out ? `<button class="btn btn-ghost btn-sm" type="button" disabled>Hết hàng</button>` : `<button class="btn btn-outline-gold btn-sm" type="button" data-add="${p.id}">${icon('cart')} Thêm</button><button class="btn btn-gold btn-sm" type="button" data-add="${p.id}" data-go="1">Mua ngay</button>`}</div>
+      <div class="p-actions">${out ? `<button class="btn btn-ghost btn-sm" type="button" disabled>Hết hàng</button>` : many ? `<a class="btn btn-gold btn-sm" href="${url}#chon" style="grid-column:1/-1">Chọn phân loại ${icon('arrow')}</a>` : `<button class="btn btn-outline-gold btn-sm" type="button" data-add="${esc(p.id)}">${icon('cart')} Thêm</button><button class="btn btn-gold btn-sm" type="button" data-add="${esc(p.id)}" data-go="1">Mua ngay</button>`}</div>
     </article>`;
   }
   const statusName = { pending: 'Chờ xác nhận', paid: 'Đã thanh toán', ship: 'Đang giao', done: 'Hoàn thành', failed: 'Đã hủy' };
@@ -693,7 +729,7 @@
     };
   })();
 
-  window.PSQ = { fans, guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  window.PSQ = { pv, variantOf, priceLabel, prices, badgesOf, isHot, imagesOf, BADGES, rich, richText, richProd, richYt, isHtml, fans, guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {

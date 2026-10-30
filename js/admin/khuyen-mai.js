@@ -37,7 +37,8 @@
     const md = modal(`<form id="pmF" novalidate><div class="card-head"><h3>${id ? 'Sửa chương trình' : 'Thêm chương trình khuyến mãi'}</h3>${closeBtn}</div>
       <div class="form-grid mt-1">
         <div class="field full"><label for="pmT">Tên chương trình</label><input class="input" id="pmT" maxlength="80" value="${esc(p.title || '')}" placeholder="Ví dụ: Mừng khai trương giảm 10%"></div>
-        <div class="field full"><label for="pmD">Nội dung</label><textarea class="input" id="pmD" rows="4" maxlength="1500" placeholder="Ưu đãi gì, áp dụng cho sản phẩm nào, cách nhận">${esc(p.desc || '')}</textarea></div>
+        <div class="field full"><label>Ảnh banner (ngang 16:9, đẹp nhất 1600 × 900 px)</label><div class="row" style="gap:10px;align-items:center;flex-wrap:wrap"><span id="pmImgV" style="width:160px;aspect-ratio:16/9;border-radius:10px;border:1px dashed rgba(243,199,107,.45);background:#0c1114 center/cover no-repeat;${p.image ? `background-image:url('${esc(p.image)}')` : ''}"></span><button class="btn btn-sm btn-outline-gold" type="button" id="pmImgU">${icon('upload')} ${p.image ? 'Đổi ảnh' : 'Tải ảnh'}</button><button class="btn btn-sm btn-ghost" type="button" id="pmImgX"${p.image ? '' : ' hidden'}>Bỏ ảnh</button></div></div>
+        <div class="field full"><label>Nội dung</label><div id="pmD"></div></div>
         <div class="field"><label for="pmS">Bắt đầu</label><input class="input" id="pmS" type="date" value="${esc(p.start || PSQ.today())}"></div>
         <div class="field"><label for="pmE">Kết thúc (để trống là không hạn)</label><input class="input" id="pmE" type="date" value="${esc(p.end || '')}"></div>
         <div class="field"><label for="pmC">Mã khuyến mãi (để trống nếu không kèm mã)</label><input class="input" id="pmC" maxlength="20" value="${esc(p.code || '')}" placeholder="Ví dụ KHAITRUONG" style="text-transform:uppercase"></div>
@@ -53,9 +54,17 @@
       <p class="red mt-1" id="pmErr" style="font-size:13px;min-height:1em"></p>
       <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">${icon('check')} Lưu</button></div></form>`);
     const q = s => md.el.querySelector(s), errEl = q('#pmErr');
+    md.el.querySelector('.modal').style.width = 'min(860px, 100%)';
+    const rx = PSQED.mount(q('#pmD'), { html: PSQ.richText(p.desc || ''), minHeight: 180, placeholder: 'Ưu đãi gì, áp dụng cho sản phẩm nào, cách nhận. Có thể chèn ảnh, sản phẩm.' });
+    let img = p.image || '';
+    const setImg = u => { img = u; q('#pmImgV').style.backgroundImage = u ? `url('${u}')` : ''; q('#pmImgX').hidden = !u; q('#pmImgU').lastChild.textContent = u ? ' Đổi ảnh' : ' Tải ảnh'; };
+    q('#pmImgU').addEventListener('click', async () => { const f = await PSQED.pickFile(); if (!f) return; try { setImg((await PSQED.upload(f, { w: 1600, crop: 16 / 9 })).url); } catch (x) { toast(x.message, 'err'); } });
+    q('#pmImgX').addEventListener('click', () => setImg(''));
+    // modal đóng khi bấm nền: hỏi lại nếu đang soạn
+    md.el.addEventListener('click', e => { if (e.target === md.el && rx.get() !== PSQ.richText(p.desc || '') && !confirm('Đóng và bỏ nội dung đang soạn?')) e.stopImmediatePropagation(); }, true);
     q('#pmF').addEventListener('submit', e => {
       e.preventDefault();
-      const v = { title: q('#pmT').value.trim(), desc: q('#pmD').value.trim(), start: q('#pmS').value, end: q('#pmE').value, code: q('#pmC').value.trim().toUpperCase().replace(/\s+/g, ''), type: q('#pmTy').value, value: Math.max(0, +q('#pmV').value || 0), maxOff: Math.max(0, +q('#pmX').value || 0), minOrder: Math.max(0, +q('#pmM').value || 0), limit: Math.max(0, Math.round(+q('#pmL').value || 0)), link: q('#pmK').value.trim(), color: q('#pmCo').value, active: q('#pmA').checked };
+      const v = { title: q('#pmT').value.trim(), desc: rx.get(), image: img || undefined, start: q('#pmS').value, end: q('#pmE').value, code: q('#pmC').value.trim().toUpperCase().replace(/\s+/g, ''), type: q('#pmTy').value, value: Math.max(0, +q('#pmV').value || 0), maxOff: Math.max(0, +q('#pmX').value || 0), minOrder: Math.max(0, +q('#pmM').value || 0), limit: Math.max(0, Math.round(+q('#pmL').value || 0)), link: q('#pmK').value.trim(), color: q('#pmCo').value, active: q('#pmA').checked };
       if (v.title.length < 3) return errEl.textContent = 'Nhập tên chương trình.';
       if (v.end && v.start && v.end < v.start) return errEl.textContent = 'Ngày kết thúc phải sau ngày bắt đầu.';
       if (v.code && !/^[A-Z0-9_-]{3,20}$/.test(v.code)) return errEl.textContent = 'Mã từ 3 đến 20 ký tự, chỉ gồm chữ không dấu, số, gạch ngang.';

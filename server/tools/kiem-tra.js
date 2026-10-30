@@ -401,6 +401,24 @@ async function flow() {
     const vf = await guest.req('GET', '/api/verify?t=sai-ma');
     ok(vf.status === 200 && /Chưa kích hoạt được/.test(vf.text), 'đường dẫn kích hoạt sai hiện trang báo rõ ràng');
     ok(!/TypeError|ReferenceError|SyntaxError|\[lỗi/.test(s.log()), 'nhật ký máy chủ không có lỗi');
+    // sản phẩm nhiều phân loại: giá, PS theo phân loại; tải ảnh lên thành tệp
+    {
+      const png = 'data:image/png;base64,' + Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(600, 3)]).toString('base64');
+      const up = await owner.req('POST', '/api/admin/media', { data: png });
+      ok(up.status === 200 && /^\/api\/media\/[a-f0-9]{24}\.png$/.test(up.json.url) && (await guest.req('GET', up.json.url)).status === 200, 'tải ảnh sản phẩm lên thành tệp, mở được');
+      ok((await guest.req('POST', '/api/admin/media', { data: png })).status === 403, 'khách không tải ảnh lên được');
+      const cur = ((await owner.boot()).content || {}).psq_products_v1 || { edits: [], hidden: [] };
+      const VP = { id: 'kt-phan-loai', cat: P.cat, name: 'Trà thử', price: 100000, image: up.json.url, badges: ['hot', 'love'], hot: true, variants: [{ id: 'v1', name: 'Túi nhỏ', price: 100000 }, { id: 'v2', name: 'Hộp lớn', price: 300000, ps: 200000 }] };
+      await owner.req('POST', '/api/admin/content', { key: 'psq_products_v1', value: Object.assign({}, cur, { edits: [...(cur.edits || []), VP] }) });
+      const gi = { name: 'Khách phân loại', phone: '0912000111', address: '3 Đường Thử, Quận 5', pay: 'bank' };
+      ok(/phân loại/.test((await client(s.port).act('placeOrder', { items: [{ id: VP.id, qty: 1 }], info: gi })).error || ''), 'sản phẩm nhiều phân loại: chưa chọn phân loại thì không đặt được');
+      const ov = await client(s.port).act('placeOrder', { items: [{ id: VP.id, v: 'v2', qty: 2 }, { id: VP.id, v: 'v1', qty: 1 }], info: gi });
+      const its = ((ov.result || {}).order || {}).items || [];
+      ok(its.length === 2 && its[0].price === 300000 && its[0].ps === 200000 && /Hộp lớn/.test(its[0].name) && its[1].price === 100000 && its[1].ps === undefined && ov.result.order.total === 700000 + (+((await guest.boot()).content.psq_site_v1 || {}).shipFee || 0), 'đặt theo phân loại: giá, PS, tên theo từng dòng' + (ov.error ? ': ' + ov.error : ''));
+      const cc = await client(s.port).act('couponCheck', { code: 'KHONGCO', items: [{ id: VP.id, v: 'v2', qty: 1 }] });
+      ok(!!cc.error, 'kiểm tra mã giảm giá vẫn chạy với phân loại');
+      await owner.req('POST', '/api/admin/content', { key: 'psq_products_v1', value: cur });
+    }
     // công cụ làm mới dữ liệu: dừng máy chủ, chạy, khởi động lại
     const maxOld = Math.max(...((await owner.boot()).db.orders || []).map(o => +String(o.id).replace(/\D/g, '') || 0));
     s.stop(); await new Promise(r => setTimeout(r, 500));
