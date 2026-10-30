@@ -288,6 +288,7 @@ async function api(req, res, url) {
       return send(res, 200, { ok: true });
     }
     if (route === '/api/admin/db') return send(res, 200, bootPayload(me));
+    if (route === '/api/admin/slide') return saveSlide(res, me, body);
   }
   return send(res, 404, { error: 'Không có đường dẫn này.' });
 }
@@ -452,7 +453,37 @@ const slideOk = u => !!u && u.status !== 'locked' && (u.role === 'admin' || u.ti
 function slidePage(res, me) {
   if (!me) return send(res, 302, '', { location: '/thanh-vien.html' });
   if (!slideOk(me)) return send(res, 403, `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Slide thuyết trình</title></head><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0f11;color:#eef2f1;font:16px system-ui,sans-serif;text-align:center;padding:24px"><div><h1 style="color:#f3c76b;font-size:22px">Slide thuyết trình dành cho cộng tác viên và đại lý</h1><p>Tài khoản của anh chị chưa là cộng tác viên. Kích hoạt CTV để xem tài liệu này.</p><p><a href="/thanh-vien.html" style="color:#4fe6df">Về trang thành viên</a></p></div></body></html>`);
-  fs.readFile(SLIDE_FILE, (e, buf) => e ? send(res, 404, 'Chưa có slide thuyết trình') : send(res, 200, buf.toString('utf8'), { 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex' }));
+  fs.readFile(SLIDE_FILE, (e, buf) => e ? send(res, 404, 'Chưa có slide thuyết trình') : send(res, 200, slideHtml(buf.toString('utf8'), me), { 'cache-control': 'private, no-store', 'x-robots-tag': 'noindex' }));
+}
+// chữ quản trị sửa ngay trên slide lưu riêng (slide_edits), ghép vào tệp mỗi lần mở; quản trị có quyền nội dung thấy nút Sửa chữ
+const EDITS_TAG = /(<script type="application\/json" id="psq-edits">)[\s\S]*?(<\/script>)/;
+const jsonTag = v => JSON.stringify(v).replace(/</g, '\\u003c');
+function slideHtml(html, me) {
+  const edits = store.getJSON('slide_edits');
+  if (edits) html = html.replace(EDITS_TAG, (m, a, b) => a + jsonTag(edits) + b);
+  if (can(me, 'content')) html = html.replace(EDITS_TAG, m => `<script>window.PSQ_SLIDE=${jsonTag({ save: '/api/admin/slide', owner: A().isOwner(me) })}</script>` + m);
+  return html;
+}
+// lưu chữ đã sửa ({edits}), hoặc chủ sở hữu thay cả tệp slide ({html}); thay tệp thì bỏ chữ sửa cũ vì tệp mới đã có sẵn
+function saveSlide(res, me, body) {
+  if (!can(me, 'content')) return send(res, 403, { error: 'Tài khoản không có quyền sửa nội dung.' });
+  if (typeof body.html === 'string') {
+    if (!A().isOwner(me)) return send(res, 403, { error: 'Chỉ chủ sở hữu thay được tệp slide.' });
+    if (!EDITS_TAG.test(body.html)) return send(res, 400, { error: 'Tệp này không phải slide thuyết trình PSQ.' });
+    fs.mkdirSync(path.dirname(SLIDE_FILE), { recursive: true });
+    if (fs.existsSync(SLIDE_FILE)) fs.copyFileSync(SLIDE_FILE, SLIDE_FILE + '.truoc');
+    fs.writeFileSync(SLIDE_FILE + '.tmp', body.html); fs.renameSync(SLIDE_FILE + '.tmp', SLIDE_FILE);
+    store.setJSON('slide_edits', null); store.history(me.email, 'slide', 'thay tệp ' + body.html.length + ' byte');
+    return send(res, 200, { ok: true });
+  }
+  const e = body.edits;
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return send(res, 400, { error: 'Dữ liệu không đọc được.' });
+  const keys = Object.keys(e);
+  if (keys.length > 2000 || keys.some(k => !/^\d{1,4}$/.test(k) || typeof e[k] !== 'string' || e[k].length > 5000)) return send(res, 400, { error: 'Dữ liệu không đọc được.' });
+  // chỉ giữ chữ và vài thẻ định dạng, giống trang slide làm sạch trước khi gửi
+  const safe = Object.fromEntries(keys.map(k => [k, e[k].replace(/<(?!\/?(?:em|strong|b|small|sup|br)>)[^>]*>?/gi, '')]));
+  store.setJSON('slide_edits', safe); store.history(me.email, 'slide', 'sửa chữ ' + keys.length + ' mục');
+  return send(res, 200, { ok: true });
 }
 
 /* ---------- tệp tĩnh (khi chạy riêng, không qua Caddy) ---------- */
