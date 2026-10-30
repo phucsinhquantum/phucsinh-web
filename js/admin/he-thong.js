@@ -231,7 +231,7 @@
     ['agentRate', 'Hoa hồng của đại lý', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp.'],
     ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập từ đơn mua hàng của đại lý và CTV mình giới thiệu, tính dồn lên các đại lý tuyến trên. Thưởng giới thiệu CTV không tính.'],
     ['overrideShop', 'Phần vào ví mua hàng', 'pct', 'Tỉ lệ của khoản thu nhập trên vào ví mua hàng, còn lại vào ví điểm thưởng.'],
-    ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng, khi chuyển điểm thưởng sang khả dụng, và khi rút về ngân hàng phần tiền mặt chưa chịu thuế (thưởng giới thiệu, thu nhập CTV).'],
+    ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng, khi chuyển điểm thưởng sang khả dụng, và khi rút về ngân hàng phần tiền mặt chưa chịu thuế (hoa hồng, thưởng giới thiệu, thu nhập CTV).'],
     ['agentThreshold', 'Mốc lên đại lý', 'money', 'Tổng tiền mua đã thanh toán cộng dồn để tự lên đại lý.'],
     ['pkgCountsAs', 'Phần của gói tính vào doanh số mua hàng', 'money', 'Khi tính mốc lên đại lý, mỗi gói kích hoạt được tính số tiền này. Để 0 là gói không tính vào doanh số.'],
     ['activeDays', 'Chu kỳ xét điều kiện đại lý', 'days', 'Trong số ngày này, đại lý phải có đơn tự mua hoặc đơn bán (theo quy tắc bên dưới) mới nhận thu nhập từ đại lý tuyến dưới.'],

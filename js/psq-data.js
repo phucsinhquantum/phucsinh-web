@@ -140,9 +140,9 @@
   // thứ tự hiển thị: hàng trên tiền mặt, điểm khả dụng; hàng dưới hoa hồng bán hàng, điểm thưởng, điểm mua hàng
   // tiền (VNĐ): cash, sales · điểm (PS): avail, bonus, shop
   const WALLETS = {
-    cash: { name: 'Ví tiền mặt', short: 'Tiền mặt', color: '#ff9f6b', icon: 'card', unit: 'vnd', note: 'Nạp từ ngân hàng, mua hàng, đổi sang điểm PS hoặc rút về ngân hàng' },
+    cash: { name: 'Ví tiền mặt', short: 'Tiền mặt', color: '#ff9f6b', icon: 'card', unit: 'vnd', note: 'Nhận hoa hồng, thưởng; nạp từ ngân hàng, mua hàng, đổi sang điểm PS hoặc rút về ngân hàng (trừ thuế phần thu nhập)' },
     avail: { name: 'Ví điểm khả dụng', short: 'Điểm khả dụng', color: '#4fe6df', icon: 'gem', unit: 'ps', note: 'Điểm đã trừ thuế, chuyển cho thành viên khác hoặc sang ví mua hàng' },
-    sales: { name: 'Ví hoa hồng bán hàng', short: 'Hoa hồng bán hàng', color: '#f3c76b', icon: 'wallet', unit: 'vnd', note: 'Hoa hồng bằng tiền, rút sang ví tiền mặt trừ thuế thu nhập 10%' },
+    sales: { name: 'Ví hoa hồng bán hàng', short: 'Hoa hồng bán hàng', color: '#f3c76b', icon: 'wallet', unit: 'vnd', note: 'Hoa hồng cũ (trước 30/10), rút sang ví tiền mặt trừ thuế thu nhập 10%' },
     bonus: { name: 'Ví điểm thưởng', short: 'Điểm thưởng', color: '#b98cff', icon: 'gift', unit: 'ps', note: 'Thu nhập từ đại lý tuyến dưới, chuyển sang ví khả dụng trừ thuế 10%' },
     shop: { name: 'Ví điểm mua hàng', short: 'Điểm mua hàng', color: '#45e08f', icon: 'bag', unit: 'ps', note: 'Chỉ dùng để thanh toán đơn hàng, không chuyển sang ví khác' }
   };
@@ -183,7 +183,8 @@
       credit(d, c.user, 'shop', 'override', shop, `${P.overrideShop}% thu nhập đại lý tuyến dưới vào ví mua hàng`, c.order, { date: dt });
     } else {
       if (c.kind === 'ref') credit(d, c.user, c.wallet || 'sales', 'referral', c.amount, `Thưởng giới thiệu CTV ${(ADB.user(d, c.from) || {}).name || ''}`, c.order, { date: c.date, ...(c.wallet === 'cash' ? { taxable: true } : {}) });
-      else credit(d, c.user, 'sales', 'commission', c.amount, `Hoa hồng ${c.rate}% đơn ${c.order}`, c.order, { date: c.date });
+      // hoa hồng bán hàng vào thẳng ví tiền mặt, rút về ngân hàng mới trừ thuế (anh Tuân chọn 30/10); số dư ví hoa hồng cũ vẫn rút sang tiền mặt như trước
+      else credit(d, c.user, 'cash', 'commission', c.amount, `Hoa hồng ${c.rate}% đơn ${c.order}`, c.order, { date: c.date, taxable: true });
     }
     c.status = 'paid';
     // B (đại lý hoặc CTV) có thu nhập từ đơn mua hàng (kể cả thu nhập B nhận từ tầng dưới): đại lý A (người giới thiệu B) hưởng 40%, tính tiếp lên trên.
