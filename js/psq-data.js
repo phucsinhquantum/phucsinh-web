@@ -4,7 +4,7 @@
    trình duyệt dùng nó để hiển thị. Cần nạp sau js/data.js và js/app.js. */
 (function () {
   const { db, today } = PSQ;
-  const VERSION = 7;
+  const VERSION = 8;
 
   const DEFAULT_SETTINGS = {
     shopName: SITE.brand, hotline: SITE.phone, email: SITE.email, address: SITE.address,
@@ -45,6 +45,8 @@
     d.stock = d.stock || {}; d.stockMin = d.stockMin ?? 3;
     d.stores = d.stores || [{ id: 'st1', name: 'Showroom ' + SITE.brand, line: SITE.address, phone: SITE.phone, type: 'Cửa hàng' }];
     plan(d);
+    // v8 (30/10): gói CTV nhận đủ 686.000 PS, thưởng giới thiệu = refRate% giá gói vào ví tiền mặt
+    if ((d.v || 0) < 8 && +d.settings.plan.pkgPoints === 346000) d.settings.plan.pkgPoints = 686000;
     d.v = VERSION; return true;
   }
 
@@ -116,11 +118,12 @@
      1 điểm PS = 1 đồng.
      ===================================================================== */
   const PLAN = {
-    pkgPrice: 686000, pkgPoints: 346000,          // gói kích hoạt CTV: 346k PS vào ví mua hàng, 340k phí nền tảng
-    refBonus: 200000,                              // giới thiệu được 1 CTV kích hoạt gói
+    pkgPrice: 686000, pkgPoints: 686000,          // gói kích hoạt CTV: nhận đủ 686k PS vào ví mua hàng (anh Tuân chốt 30/10)
+    refRate: 10,                                   // giới thiệu được 1 CTV kích hoạt gói: refRate% giá gói vào ví tiền mặt (68.600đ)
+    ctvOverRate: 10,                               // tuyến trên là CTV hưởng 10% hoa hồng bán hàng của người mình giới thiệu, vào ví tiền mặt
     ctvRate: 10, agentRate: 25,                    // % hoa hồng trên đơn của người mình giới thiệu trực tiếp
     overrideRate: 40, overrideShop: 10,            // đại lý hưởng 40% thu nhập của đại lý mình giới thiệu; 10% phần này vào ví mua hàng
-    taxRate: 10,                                   // thuế khi rút ví hoa hồng và khi chuyển điểm thưởng sang khả dụng
+    taxRate: 10,                                   // thuế khi rút ví hoa hồng, chuyển điểm thưởng sang khả dụng, và khi rút về ngân hàng phần tiền mặt chưa chịu thuế
     agentThreshold: 16800000,                      // tổng mua cộng dồn để lên đại lý
     agentBy: 'ps',                                 // mốc đại lý cộng theo: ps (giá tính thưởng) · money (tiền khách trả)
     pkgCountsAs: 0,                                // phần của gói tính vào doanh số mua hàng (mốc đại lý): gói không tính
@@ -153,11 +156,14 @@
   const PAID = o => ['paid', 'ship', 'done'].includes(o.status);
   const plan = d => (d.settings.plan = Object.assign({}, PLAN, d.settings.plan || {}));
   const pct = (v, r) => Math.round(v * r / 100);
+  const refAmount = P => pct(P.pkgPrice, P.refRate);
   const itemsTotal = o => (o.items || []).reduce((s, x) => s + x.price * x.qty, 0);
   // giá tính thưởng (PS) của 1 sản phẩm: chưa đặt thì bằng giá bán. Đơn ghi lại x.ps lúc đặt để sửa sản phẩm sau không đổi đơn cũ.
   const psOf = p => (p && p.ps != null && p.ps !== '' && +p.ps >= 0) ? Math.round(+p.ps) : (p ? p.price : 0);
   const itemsPs = o => (o.items || []).reduce((s, x) => s + psOf(x) * x.qty, 0);
   // gốc tính hoa hồng của đơn: tổng PS, giảm theo đúng tỉ lệ mã giảm giá
+  // gốc hoa hồng sau khi bỏ phần đơn trả bằng điểm của gói CTV (o.pkgPaid)
+  const commBase = o => { const b = psBase(o), t = o.total || itemsTotal(o); return o.pkgPaid && t > 0 ? Math.round(b * Math.max(0, t - o.pkgPaid) / t) : b; };
   const psBase = o => { const t = itemsTotal(o), ps = itemsPs(o); return t > 0 ? Math.round(ps * Math.max(0, t - (o.discount || 0)) / t) : 0; };
   const now = () => { const t = new Date(); return t.toISOString().slice(0, 10); };
   const nowAt = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };   // giờ VN, để biết đơn đặt bao lâu rồi
@@ -170,18 +176,30 @@
   // trả một khoản hoa hồng vào ví
   function payCommission(d, c) {
     const P = plan(d);
-    if (c.kind === 'override') {
+    if (c.kind === 'override' && c.ctv) {
+      credit(d, c.user, 'cash', 'override', c.amount, `${c.rate}% hoa hồng bán hàng của ${(ADB.user(d, c.from) || {}).name || ''} (đơn ${c.order})`, c.order, { date: c.paidAt || c.date, taxable: true });
+    } else if (c.kind === 'override') {
       const shop = pct(c.amount, P.overrideShop);
       const dt = c.paidAt || c.date;
       credit(d, c.user, 'bonus', 'override', c.amount - shop, `${c.rate || P.overrideRate}% thu nhập của đại lý ${(ADB.user(d, c.from) || {}).name || ''} (đơn ${c.order})`, c.order, { date: dt });
       credit(d, c.user, 'shop', 'override', shop, `${P.overrideShop}% thu nhập đại lý tuyến dưới vào ví mua hàng`, c.order, { date: dt });
     } else {
-      credit(d, c.user, 'sales', c.kind === 'ref' ? 'referral' : 'commission', c.amount, c.kind === 'ref' ? `Thưởng giới thiệu CTV ${(ADB.user(d, c.from) || {}).name || ''}` : `Hoa hồng ${c.rate}% đơn ${c.order}`, c.order, { date: c.date });
+      if (c.kind === 'ref') credit(d, c.user, c.wallet || 'sales', 'referral', c.amount, `Thưởng giới thiệu CTV ${(ADB.user(d, c.from) || {}).name || ''}`, c.order, { date: c.date, ...(c.wallet === 'cash' ? { taxable: true } : {}) });
+      else credit(d, c.user, 'sales', 'commission', c.amount, `Hoa hồng ${c.rate}% đơn ${c.order}`, c.order, { date: c.date });
     }
     c.status = 'paid';
     // B (đại lý hoặc CTV) có thu nhập từ đơn mua hàng (kể cả thu nhập B nhận từ tầng dưới): đại lý A (người giới thiệu B) hưởng 40%, tính tiếp lên trên.
     // CTV do đại lý tuyển cũng tính (anh Tuân chốt 24/10). Thưởng giới thiệu CTV (200k) không tính là thu nhập để tuyến trên hưởng.
-    if (c.kind !== 'ref') {
+    // tuyến trên là CTV: hưởng ctvOverRate% hoa hồng bán hàng của người mình giới thiệu, 1 tầng, vào ví tiền mặt (anh Tuân chốt 30/10)
+    if (c.kind === 'direct') {
+      const r = ADB.user(d, c.user), P = plan(d), up = r && r.sponsor && ADB.user(d, r.sponsor), amount = pct(c.amount, P.ctvOverRate || 0), date = c.paidAt || c.date;
+      if (up && up.tier === 'ctv' && amount >= 1) {
+        const ok = ADB.activity(d, up.id, date).ok, status = ok ? 'paid' : P.overrideMode === 'hold' ? 'hold' : 'missed';
+        addCommission(d, { kind: 'override', ctv: true, order: c.order, user: up.id, from: r.id, level: 2, depth: 1, rate: P.ctvOverRate, base: c.amount, amount, date, status,
+          note: ok ? '' : status === 'hold' ? 'Đang giữ, chờ đủ điều kiện nhận' : 'Chưa đủ điều kiện nhận (' + (P.activeRule === 'all' ? 'tự mua và có đơn bán' : 'tự mua hoặc có đơn bán') + ' trong ' + P.activeDays + ' ngày)' });
+      }
+    }
+    if (c.kind !== 'ref' && !c.ctv) {
       const r = ADB.user(d, c.user), P = plan(d), depth = (c.depth || 0) + 1, amount = pct(c.amount, P.overrideRate), date = c.paidAt || c.date;
       let up = r && r.sponsor && ADB.user(d, r.sponsor), hops = 0;
       // chuyển lên trên: bỏ qua đại lý chưa đủ điều kiện
@@ -218,9 +236,11 @@
     if (isPkg) {
       if (buyer.tier === 'khach') { buyer.tier = 'ctv'; buyer.activated = date; }
       credit(d, buyer.id, 'shop', 'package', P.pkgPoints, 'Điểm mua hàng từ gói kích hoạt cộng tác viên', o.id, { date });
-      if (sp && (sp.tier === 'ctv' || sp.tier === 'daily')) addCommission(d, { kind: 'ref', order: o.id, user: sp.id, from: buyer.id, rate: 0, base: P.pkgPrice, amount: P.refBonus, date });
-      else if (sp) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: 0, base: P.pkgPrice, amount: P.refBonus, date, status: 'missed', note: 'Chưa kích hoạt cộng tác viên' });
-    } else if (sp) directCommission(d, o, buyer, sp, psBase(o), date);   // hoa hồng tính trên giá tính thưởng (PS), trừ theo tỉ lệ mã giảm giá
+      // điểm của gói: khi tiêu vào đơn hàng thì phần đó không tính hoa hồng nữa (đã thưởng giới thiệu lúc mua gói)
+      buyer.pkgLeft = (buyer.pkgLeft || 0) + P.pkgPoints;
+      if (sp && (sp.tier === 'ctv' || sp.tier === 'daily')) addCommission(d, { kind: 'ref', wallet: 'cash', order: o.id, user: sp.id, from: buyer.id, rate: P.refRate, base: P.pkgPrice, amount: refAmount(P), date });
+      else if (sp) addCommission(d, { kind: 'missed', order: o.id, user: sp.id, from: buyer.id, rate: P.refRate, base: P.pkgPrice, amount: refAmount(P), date, status: 'missed', note: 'Chưa kích hoạt cộng tác viên' });
+    } else if (sp) directCommission(d, o, buyer, sp, commBase(o), date);   // hoa hồng tính trên giá tính thưởng (PS), trừ theo tỉ lệ mã giảm giá và phần trả bằng điểm gói CTV
     // lên đại lý khi tổng mua cộng dồn đủ mốc
     if (buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = date; }
     return true;
@@ -265,7 +285,7 @@
         if (FUND_IN.includes(t)) { kt -= a; rows.push({ date: w.date, kind: t, amount: -a, note: w.note, user: w.user, wallet: ADB.walletOf(w), src: w, i }); if (['commission', 'referral', 'override'].includes(t)) commIn += a; }
         else if (t === 'refund') dtv -= a;
         else if (t === 'spend') dtv -= a;
-        else if (t === 'withdraw') { if (w.status === 'done') paid -= a; else held -= a; }
+        else if (t === 'withdraw') { const tx = +w.tax || 0; if (w.status === 'done') { paid -= a + tx; thue += tx; } else held -= a; }
         else if (FUND_PAIR.includes(t)) { thue -= a; const g = groups[w.ref || w.id] = groups[w.ref || w.id] || { sum: 0, tax: 0, list: [] }; g.sum += a; g.tax = Math.max(g.tax, +w.tax || 0); g.list.push(w); }
         else unknown.push(w);
       });
@@ -359,13 +379,27 @@
       credit(d, u.id, 'cash', 'tocash', amount - tax, `Nhận từ ví hoa hồng bán hàng (đã trừ thuế ${P.taxRate}%)`, ref, { tax, date });
       return { net: amount - tax, tax };
     },
-    // rút ví tiền mặt về tài khoản ngân hàng (đã trừ thuế ở bước trên), công ty duyệt và chuyển khoản
+    // phần ví tiền mặt chưa chịu thuế (thưởng giới thiệu, 10% thu nhập tuyến dưới). Tiền nạp và tiền từ ví hoa hồng (đã trừ thuế) không tính.
+    // Tiền ra khỏi ví tiền mặt (mua hàng, đổi điểm, rút) lấy phần chưa chịu thuế trước.
+    cashTaxable(d, id) {
+      let tx = 0;
+      (d.wallet || []).forEach(w => {
+        if (w.user !== id || ADB.walletOf(w) !== 'cash' || w.status === 'rejected' || (w.status === 'pending' && w.amount > 0)) return;
+        if (w.amount > 0) { if (w.taxable) tx += w.amount; }
+        else tx -= w.type === 'withdraw' ? Math.min(tx, w.taxBase || 0) : Math.min(tx, -w.amount);
+      });
+      return Math.max(0, Math.min(tx, ADB.balances(d, id).cash));
+    },
+    // thuế khi rút số tiền này về ngân hàng
+    withdrawTax(d, id, amount) { const P = plan(d), base = Math.min(Math.round(+amount) || 0, ADB.cashTaxable(d, id)); return { base, tax: pct(base, P.taxRate), net: (Math.round(+amount) || 0) - pct(base, P.taxRate), rate: P.taxRate }; },
+    // rút ví tiền mặt về tài khoản ngân hàng: trừ thuế trên phần chưa chịu thuế, công ty duyệt và chuyển khoản số thực nhận
     withdraw(d, u, amount, bank, opt = {}) {
       const b = ADB.balances(d, u.id).cash; amount = Math.round(+amount);
       if (!(amount > 0)) return { error: 'Anh chị nhập số tiền cần rút.' };
       if (amount < (d.settings.minWithdraw || 0)) return { error: 'Số tiền rút tối thiểu là ' + PSQ.money(d.settings.minWithdraw) + '.' };
       if (amount > b) return { error: 'Số dư ví tiền mặt không đủ (còn ' + PSQ.money(b) + ').' };
-      return { entry: credit(d, u.id, 'cash', 'withdraw', -amount, `Rút về ${bank && bank.bank ? bank.bank + ' ' + (bank.account || '') : 'tài khoản ngân hàng'}`, '', { status: opt.status || 'pending', tax: 0, net: amount, bank: bank || null, date: opt.date || now() }) };
+      const t = ADB.withdrawTax(d, u.id, amount);
+      return { tax: t.tax, net: t.net, entry: credit(d, u.id, 'cash', 'withdraw', -amount, `Rút về ${bank && bank.bank ? bank.bank + ' ' + (bank.account || '') : 'tài khoản ngân hàng'}${t.tax ? ` (thuế thu nhập ${t.rate}%: ${PSQ.money(t.tax)})` : ''}`, '', { status: opt.status || 'pending', tax: t.tax, taxBase: t.base, net: t.net, bank: bank || null, date: opt.date || now() }) };
     },
     // chuyển ví điểm thưởng sang ví khả dụng (trừ thuế)
     convert(d, u, amount, opt = {}) {
@@ -404,6 +438,7 @@
       const b = ADB.balances(d, u.id).shop; amount = Math.min(Math.round(+amount), b, order.total);
       if (!(amount > 0)) return 0;
       credit(d, u.id, 'shop', 'spend', -amount, 'Thanh toán đơn ' + order.id, order.id);
+      const pk = Math.min(amount, u.pkgLeft || 0); if (pk > 0) { u.pkgLeft -= pk; order.pkgPaid = pk; }   // tiêu điểm gói CTV trước
       order.shopPaid = amount; return amount;
     },
     // nạp tiền từ ngân hàng vào ví tiền mặt. Chuyển khoản: hệ thống thật sẽ tự xác nhận khi ngân hàng báo có
@@ -444,6 +479,7 @@
       if (!o || o.refunded || !o.userId || !(o.shopPaid || o.cashPaid || o.availPaid)) return 0;
       credit(d, o.userId, 'avail', 'refund', o.availPaid || 0, 'Hoàn điểm đơn hủy ' + o.id, o.id);
       credit(d, o.userId, 'shop', 'refund', o.shopPaid || 0, 'Hoàn điểm đơn hủy ' + o.id, o.id);
+      if (o.pkgPaid) { const b = ADB.user(d, o.userId); if (b) b.pkgLeft = (b.pkgLeft || 0) + o.pkgPaid; }
       credit(d, o.userId, 'cash', 'refund', o.cashPaid || 0, 'Hoàn tiền đơn hủy ' + o.id, o.id);
       o.refunded = true; return (o.shopPaid || 0) + (o.cashPaid || 0) + (o.availPaid || 0);
     },
@@ -551,7 +587,7 @@
     // số liệu kế hoạch để thay vào chữ {…} trong điều khoản, quyền lợi
     planVars(d) {
       const P = plan(d), m = PSQ.money, ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
-      return { gia_goi: m(P.pkgPrice), diem_goi: ps(P.pkgPoints), phi_goi: m(P.pkgPrice - P.pkgPoints), moc_dai_ly: m(P.agentThreshold), hh_ctv: P.ctvRate + '%', hh_daily: P.agentRate + '%', thuong_gt: m(P.refBonus), thu_nhap_daily: P.overrideRate + '%', so_ngay: P.activeDays, thue: P.taxRate + '%', rut_toi_thieu: m(d.settings.minWithdraw || 0), gia_goi_dl: m(P.agentPkgPrice), diem_goi_dl: ps(P.agentPkgPoints), ten: SITE.brand, hotline: SITE.phone, email: SITE.email };
+      return { gia_goi: m(P.pkgPrice), diem_goi: ps(P.pkgPoints), phi_goi: m(P.pkgPrice - P.pkgPoints), moc_dai_ly: m(P.agentThreshold), hh_ctv: P.ctvRate + '%', hh_daily: P.agentRate + '%', thuong_gt: m(refAmount(P)), thuong_gt_pct: P.refRate + '%', thu_nhap_ctv: (P.ctvOverRate || 0) + '%', thu_nhap_daily: P.overrideRate + '%', so_ngay: P.activeDays, thue: P.taxRate + '%', rut_toi_thieu: m(d.settings.minWithdraw || 0), gia_goi_dl: m(P.agentPkgPrice), diem_goi_dl: ps(P.agentPkgPoints), ten: SITE.brand, hotline: SITE.phone, email: SITE.email };
     },
     // thay {…} bằng số liệu, trả về HTML đã an toàn
     fill(text, V) { return PSQ.esc(String(text || '')).replace(/\{(\w+)\}/g, (m0, k) => k in V ? PSQ.esc(String(V[k])) : m0); },
@@ -562,7 +598,7 @@
       d.orders.unshift(o); return o;
     }
   });
-  ADB.walletType = Object.assign(ADB.walletType, { commission: 'Hoa hồng bán hàng', referral: 'Thưởng giới thiệu CTV', override: 'Thu nhập từ đại lý tuyến dưới', package: 'Gói kích hoạt CTV', convert: 'Chuyển điểm thưởng', tocash: 'Rút sang ví tiền mặt', toshop: 'Chuyển sang ví mua hàng', transfer: 'Chuyển điểm', topup: 'Nạp tiền', topoints: 'Đổi sang điểm PS', spend: 'Thanh toán đơn hàng', refund: 'Hoàn tiền đơn hủy', prize: 'Quà vòng quay' });
+  ADB.walletType = Object.assign(ADB.walletType, { commission: 'Hoa hồng bán hàng', referral: 'Thưởng giới thiệu CTV', override: 'Thu nhập từ tuyến dưới', package: 'Gói kích hoạt CTV', convert: 'Chuyển điểm thưởng', tocash: 'Rút sang ví tiền mặt', toshop: 'Chuyển sang ví mua hàng', transfer: 'Chuyển điểm', topup: 'Nạp tiền', topoints: 'Đổi sang điểm PS', spend: 'Thanh toán đơn hàng', refund: 'Hoàn tiền đơn hủy', prize: 'Quà vòng quay' });
   ADB.commissionKind = { ref: 'Thưởng giới thiệu', direct: 'Hoa hồng bán hàng', override: 'Thu nhập từ đại lý', missed: 'Hoa hồng bỏ lỡ' };
   ADB.commissionStatus.missed = ['Bỏ lỡ', 'failed'];
   ADB.commissionStatus.hold = ['Đang giữ, chờ đủ điều kiện', 'pending'];

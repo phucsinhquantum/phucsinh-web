@@ -11,7 +11,7 @@
     ['daily', 'Đại lý', 'Hiện ở form đăng ký, lộ trình cấp bậc và trang Đăng ký đại lý.'],
     ['dailyPkg', 'Gói đại lý', 'Hiện ở trang Đăng ký đại lý (khi bật gói đại lý trong Thiết lập).']
   ];
-  const TOK = [['{diem_goi}', 'Điểm gói CTV'], ['{gia_goi}', 'Giá gói CTV'], ['{phi_goi}', 'Phí nền tảng'], ['{thuong_gt}', 'Thưởng giới thiệu'], ['{hh_ctv}', '% CTV'], ['{hh_daily}', '% đại lý'], ['{thu_nhap_daily}', '% từ đại lý tuyến dưới'], ['{moc_dai_ly}', 'Mốc lên đại lý'], ['{gia_goi_dl}', 'Giá gói đại lý'], ['{diem_goi_dl}', 'Điểm gói đại lý']];
+  const TOK = [['{diem_goi}', 'Điểm gói CTV'], ['{gia_goi}', 'Giá gói CTV'], ['{phi_goi}', 'Phí nền tảng'], ['{thuong_gt}', 'Thưởng giới thiệu'], ['{thu_nhap_ctv}', '% CTV từ tuyến dưới'], ['{hh_ctv}', '% CTV'], ['{hh_daily}', '% đại lý'], ['{thu_nhap_daily}', '% từ đại lý tuyến dưới'], ['{moc_dai_ly}', 'Mốc lên đại lý'], ['{gia_goi_dl}', 'Giá gói đại lý'], ['{diem_goi_dl}', 'Điểm gói đại lý']];
   let last = null;
 
   ADMIN_MODULES.perks = {

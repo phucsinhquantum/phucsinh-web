@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030i">
-<script src="js/lang.js?v=20261030i"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030j">
+<script src="js/lang.js?v=20261030j"></script>
 <style>
   .adm-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
   .adm-main { min-width: 0; }
@@ -183,31 +183,31 @@
   </div>
 </div>
 
-<script src="js/patch.js?v=20261030i"></script>
-<script src="js/api.js?v=20261030i"></script>
-<script src="js/data.js?v=20261030i"></script>
-<script src="js/app.js?v=20261030i"></script>
-<script src="js/psq-data.js?v=20261030i"></script>
+<script src="js/patch.js?v=20261030j"></script>
+<script src="js/api.js?v=20261030j"></script>
+<script src="js/data.js?v=20261030j"></script>
+<script src="js/app.js?v=20261030j"></script>
+<script src="js/psq-data.js?v=20261030j"></script>
 <!-- các mục quản trị mở rộng: mỗi file đăng ký vào window.ADMIN_MODULES -->
-<script src="js/admin/pha-he.js?v=20261030i"></script>
-<script src="js/admin/nguoi-dung.js?v=20261030i"></script>
-<script src="js/admin/noi-dung.js?v=20261030i"></script>
-<script src="js/admin/kho.js?v=20261030i"></script>
-<script src="js/admin/tai-chinh.js?v=20261030i"></script>
-<script src="js/admin/he-thong.js?v=20261030i"></script>
-<script src="js/admin/vong-quay.js?v=20261030i"></script>
-<script src="js/admin/chao-mung.js?v=20261030i"></script>
-<script src="js/admin/khuyen-mai.js?v=20261030i"></script>
-<script src="js/admin/quy-diem.js?v=20261030i"></script>
-<script src="js/admin/gioi-thieu.js?v=20261030i"></script>
-<script src="js/admin/dai-ly.js?v=20261030i"></script>
-<script src="js/admin/so-dep.js?v=20261030i"></script>
-<script src="js/admin/xoa-tv.js?v=20261030i"></script>
-<script src="js/admin/don-sot.js?v=20261030i"></script>
-<script src="js/admin/fanpage.js?v=20261030i"></script>
-<script src="js/admin/danh-gia.js?v=20261030i"></script>
-<script src="js/admin/dieu-khoan.js?v=20261030i"></script>
-<script src="js/admin/quyen-loi.js?v=20261030i"></script>
+<script src="js/admin/pha-he.js?v=20261030j"></script>
+<script src="js/admin/nguoi-dung.js?v=20261030j"></script>
+<script src="js/admin/noi-dung.js?v=20261030j"></script>
+<script src="js/admin/kho.js?v=20261030j"></script>
+<script src="js/admin/tai-chinh.js?v=20261030j"></script>
+<script src="js/admin/he-thong.js?v=20261030j"></script>
+<script src="js/admin/vong-quay.js?v=20261030j"></script>
+<script src="js/admin/chao-mung.js?v=20261030j"></script>
+<script src="js/admin/khuyen-mai.js?v=20261030j"></script>
+<script src="js/admin/quy-diem.js?v=20261030j"></script>
+<script src="js/admin/gioi-thieu.js?v=20261030j"></script>
+<script src="js/admin/dai-ly.js?v=20261030j"></script>
+<script src="js/admin/so-dep.js?v=20261030j"></script>
+<script src="js/admin/xoa-tv.js?v=20261030j"></script>
+<script src="js/admin/don-sot.js?v=20261030j"></script>
+<script src="js/admin/fanpage.js?v=20261030j"></script>
+<script src="js/admin/danh-gia.js?v=20261030j"></script>
+<script src="js/admin/dieu-khoan.js?v=20261030j"></script>
+<script src="js/admin/quyen-loi.js?v=20261030j"></script>
 <script>
 (function () {
   const { $, $$, esc, money, short, icon, db, auth, statusBadge, statusName, spark, area, donut, toast, modal, art, initials, fdate } = PSQ;
@@ -549,7 +549,7 @@
       if (r.error || x.status >= 400) return toast(r.error || 'Lỗi ' + x.status, 'err');
       location.href = 'thanh-vien.html#tong-quan'; return;
     }
-    const m = modal(`<form id="meF"><div class="card-head"><h3>Sửa thành viên ${esc(u.code || '')}</h3><button class="btn btn-sm btn-outline-gold" type="button" id="meSp" style="margin-left:auto">Đổi người giới thiệu</button><button class="btn btn-sm btn-outline-gold" type="button" id="meCode">Đổi mã PS</button><button class="icon-btn" type="button" data-close aria-label="Đóng">${icon('close')}</button></div>
+    const m = modal(`<form id="meF"><div class="card-head"><h3>Sửa thành viên ${esc(u.code || '')}</h3><button class="btn btn-sm btn-outline-gold" type="button" id="meSp" style="margin-left:auto">Đổi người giới thiệu</button><button class="btn btn-sm btn-outline-gold" type="button" id="meCode">Đổi mã PS</button>${(u.tier || 'khach') === 'khach' && ADB.isOwner(auth.user()) ? '<button class="btn btn-sm btn-outline-gold" type="button" id="meCtv">Cấp gói CTV</button>' : ''}<button class="icon-btn" type="button" data-close aria-label="Đóng">${icon('close')}</button></div>
       <div class="form-grid">
         <div class="field full"><label>Họ tên</label><input class="input" name="name" value="${esc(u.name)}" required></div>
         <div class="field"><label>Email</label><input class="input" name="email" type="email" value="${esc(u.email)}" required></div>
@@ -563,6 +563,11 @@
       <div class="row mt-2" style="justify-content:flex-end"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit">Lưu</button></div></form>`);
     $('#meCode', m.el).addEventListener('click', () => { m.close(); codeStore(u, membersPane); });
     $('#meSp', m.el).addEventListener('click', () => { m.close(); sponsorPick(u, membersPane); });
+    const gb = $('#meCtv', m.el); if (gb) gb.addEventListener('click', () => {
+      const P = ADB.plan(ADB.load()), note = prompt(`Cấp gói cộng tác viên cho ${u.name}: lên CTV ngay và cộng ${P.pkgPoints.toLocaleString('vi-VN')} PS vào ví mua hàng (không trả thưởng giới thiệu vì không thu tiền).\n\nLý do cấp:`);
+      if (note == null) return; const r = API.act('ctvGrant', { id: u.id, note: note.trim() });
+      if (r.error) return alert(r.error); m.close(); API.load(); toast('Đã cấp gói CTV cho ' + u.name); membersPane();
+    });
     $('#meF', m.el).addEventListener('submit', ev => {
       ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)), er = $('#meErr', m.el);
       const r = API.act('adminEditMember', { id: u.id, name: f.name.trim(), email: f.email.trim(), phone: f.phone.trim(), username: f.username.trim(), status: f.status });

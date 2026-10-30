@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030i">
-<script src="js/lang.js?v=20261030i"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030j">
+<script src="js/lang.js?v=20261030j"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -240,11 +240,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261030i"></script>
-<script src="js/api.js?v=20261030i"></script>
-<script src="js/data.js?v=20261030i"></script>
-<script src="js/app.js?v=20261030i"></script>
-<script src="js/psq-data.js?v=20261030i"></script>
+<script src="js/patch.js?v=20261030j"></script>
+<script src="js/api.js?v=20261030j"></script>
+<script src="js/data.js?v=20261030j"></script>
+<script src="js/app.js?v=20261030j"></script>
+<script src="js/psq-data.js?v=20261030j"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -522,9 +522,9 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     const intro = `<div class="card glow-gold">${head('Gói kích hoạt cộng tác viên', 'một lần, không gia hạn')}
       <div class="ref-code" style="letter-spacing:.04em">${money(P.pkgPrice)}</div>
       <div class="pkg-split mt-2"><div><span class="dim" style="font-size:12.5px">Vào ví mua hàng</span><b class="green">${ps(P.pkgPoints)}</b><span class="dim" style="font-size:12.5px">Dùng mua sản phẩm trên web</span></div>
-        <div><span class="dim" style="font-size:12.5px">Phí nền tảng</span><b class="gold">${money(P.pkgPrice - P.pkgPoints)}</b>
+        <div><span class="dim" style="font-size:12.5px">Quà kèm gói</span>
           <ul class="pkg-list">${perkLi(d, 'ctvFee')}</ul></div></div>
-      <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${money(P.refBonus)} khi người đó kích hoạt CTV. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
+      <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${money(Math.round(P.pkgPrice * P.refRate / 100))} vào ví tiền mặt khi người đó kích hoạt CTV, cùng ${P.ctvOverRate}% hoa hồng bán hàng của người mình giới thiệu. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn kích hoạt #' + esc(o.id), 'tạo ngày ' + fdate(o.date), statusBadge(o.status))}
         <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}${ptsBox(d, me, o.total, o)}
         <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản được kích hoạt Cộng tác viên ngay khi công ty duyệt bill chuyển khoản, hoặc ngay lập tức nếu trả bằng điểm. Anh chị có thể xem trạng thái tại Đơn hàng của tôi.</p></div>`
@@ -861,7 +861,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     const d = ADB.load(), me = ADB.user(d, ME), P = ADB.plan(d), b = ADB.balances(d, me.id), min = d.settings.minWithdraw || 0, tx = P.taxRate;
     const cfg = {
       tocash: { t: 'Rút sang ví tiền mặt', from: 'sales', sub: `Trừ thuế thu nhập ${tx}%. Ví tiền mặt nhận số tiền thực rút, chuyển ngay.` },
-      withdraw: { t: 'Rút về ngân hàng', from: 'cash', sub: `Từ ví tiền mặt, tối thiểu ${money(min)}. Thuế đã trừ khi rút sang ví tiền mặt, công ty chuyển khoản đủ số tiền sau khi duyệt.` },
+      withdraw: { t: 'Rút về ngân hàng', from: 'cash', sub: `Từ ví tiền mặt, tối thiểu ${money(min)}. Phần tiền thưởng giới thiệu và thu nhập CTV chưa chịu thuế sẽ trừ thuế thu nhập khi rút. Tiền nạp và tiền đã trừ thuế từ ví hoa hồng không trừ nữa.` },
       convert: { t: 'Chuyển điểm thưởng sang khả dụng', from: 'bonus', sub: `Trừ thuế ${tx}% khi chuyển.` },
       topoints: { t: 'Đổi tiền mặt sang điểm PS', from: 'cash', sub: '1đ = 1 PS, không mất phí, không trừ thuế. Điểm vào ví điểm khả dụng.' },
       toshop: { t: 'Chuyển sang ví mua hàng', from: 'avail', sub: 'Không mất phí. Điểm mua hàng chỉ dùng thanh toán đơn trên web.' },
@@ -889,7 +889,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       if (!a) { C.innerHTML = ''; return; }
       C.innerHTML = kind === 'topoints' ? kv([['Trừ ví tiền mặt', money(a)], ['Vào ví điểm khả dụng', '<span class="green">' + ps(a) + '</span>'], ['Tiền mặt còn lại', money(max - a)]])
         : kind === 'tocash' ? kv([['Trừ ví hoa hồng bán hàng', money(a)], [`Thuế thu nhập ${tx}%`, '<span class="red">-' + money(tax(a)) + '</span>'], ['Thực nhận vào ví tiền mặt', '<span class="green">' + money(a - tax(a)) + '</span>']])
-        : kind === 'withdraw' ? kv([['Trừ ví tiền mặt', money(a)], ['Công ty chuyển khoản', '<span class="green">' + money(a) + '</span>'], ['Số dư còn lại', money(max - a)]])
+        : kind === 'withdraw' ? (() => { const t = ADB.withdrawTax(d, me.id, Math.min(a, max)); return kv([['Trừ ví tiền mặt', money(a)], [`Thuế thu nhập ${tx}%`, t.tax ? '<span class="red">-' + money(t.tax) + '</span>' : '0đ'], ['Thực nhận (công ty chuyển khoản)', '<span class="green">' + money(a - t.tax) + '</span>'], ['Số dư còn lại', money(max - a)]]); })()
         : kind === 'convert' ? kv([['Trừ ví điểm thưởng', ps(a)], [`Thuế ${tx}%`, '<span class="red">-' + ps(tax(a)) + '</span>'], ['Vào ví điểm khả dụng', '<span class="green">' + ps(a - tax(a)) + '</span>']])
         : kind === 'toshop' ? kv([['Trừ ví điểm khả dụng', ps(a)], ['Vào ví điểm mua hàng', '<span class="green">' + ps(a) + '</span>']])
         : kv([['Người nhận', (() => { const t = rcpt(); return t ? esc(t.name) + ' @' + esc(t.username) : '<span class="dim">chưa chọn</span>'; })()], ['Số điểm chuyển', ps(a)], ['Số dư còn lại', ps(max - a)]]);
@@ -911,7 +911,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       if (kind === 'withdraw') {
         const bank = $('#waB', el).value.trim(), account = $('#waN', el).value.trim();
         if (!bank || !account) return E.textContent = 'Anh chị điền tên ngân hàng và số tài khoản.';
-        if (!act('wallet', { kind, amount: a, bank, account }, 'Đã gửi yêu cầu rút ' + money(a) + ' về ngân hàng, chờ công ty duyệt', E)) return;
+        if (!act('wallet', { kind, amount: a, bank, account }, r => 'Đã gửi yêu cầu rút ' + money(a) + (r.tax ? ', thực nhận ' + money(r.net) + ' sau thuế' : '') + ', chờ công ty duyệt', E)) return;
       } else if (kind === 'tocash') { if (!act('wallet', { kind, amount: a }, r => 'Đã rút, ví tiền mặt nhận ' + money(r.net), E)) return; }
       else if (kind === 'topoints') { if (!act('wallet', { kind, amount: a }, 'Đã đổi, nhận ' + ps(a) + ' vào ví điểm khả dụng', E)) return; }
       else if (kind === 'convert') { if (!act('wallet', { kind, amount: a }, r => 'Đã chuyển, nhận ' + ps(r.net) + ' vào ví điểm khả dụng', E)) return; }

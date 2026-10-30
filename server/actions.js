@@ -519,8 +519,9 @@ const ACTIONS = {
       const bank = str(args.bank, 80), account = str(args.account, 120);
       if (!bank || !account) return err('Anh chị điền tên ngân hàng và số tài khoản.');
       r = A.withdraw(d, me, a, { bank, account }); if (r.error) return r;
-      c.log('Yêu cầu rút tiền', `@${me.username}: ${money(a)} từ ví tiền mặt về ${bank} ${account}`);
-      c.notify(`Yêu cầu rút tiền\n${me.name} (@${me.username})\n${money(a)} về ${bank} ${account}\nDuyệt trong Quản trị > Tài chính.`);
+      c.log('Yêu cầu rút tiền', `@${me.username}: ${money(a)} từ ví tiền mặt về ${bank} ${account}, thuế ${money(r.tax)}, chuyển khoản ${money(r.net)}`);
+      c.notify(`Yêu cầu rút tiền\n${me.name} (@${me.username}, ${me.code || ''})\nKhách rút: ${money(a)}\nTrừ thuế ${A.plan(d).taxRate}%: ${money(r.tax)}\nCông ty chuyển khoản: ${money(r.net)}\nNgân hàng: ${bank}\nSố tài khoản, tên: ${account}\nDuyệt trong Quản trị > Tài chính.`);
+      r = { tax: r.tax, net: r.net };
     } else if (k === 'tocash') { r = A.toCash(d, me, a); if (r.error) return r; c.log('Rút sang ví tiền mặt', `@${me.username}: ${money(a)}, thuế ${money(r.tax)}, thực nhận ${money(r.net)}`); }
     else if (k === 'topoints') { r = A.cashToPoints(d, me, a); if (r.error) return r; c.log('Đổi tiền mặt sang điểm PS', `@${me.username}: ${money(a)} thành ${ps(a)}`); }
     else if (k === 'convert') { r = A.convert(d, me, a); if (r.error) return r; c.log('Chuyển điểm thưởng', `@${me.username}: ${ps(a)}, thuế ${ps(r.tax)}`); }
@@ -600,6 +601,18 @@ const ACTIONS = {
     return { ok: true, code: k, old };
   } },
   // đổi người giới thiệu (tuyến trên) của thành viên sang đại lý/CTV khác hoặc về công ty. Hoa hồng đã ghi giữ nguyên, đơn sau tính cho người mới.
+  // chủ sở hữu cấp gói CTV (không thu tiền): lên CTV, cộng điểm gói vào ví mua hàng; không có thưởng giới thiệu vì công ty không thu tiền
+  ctvGrant: { auth: 'owner', run(c) {
+    const { d, A } = c, u = A.user(d, c.args.id), P = A.plan(d), note = str(c.args.note, 120);
+    if (!u || u.role === 'admin') return err('Chỉ cấp được cho tài khoản thành viên.');
+    if ((u.tier || 'khach') !== 'khach') return err(`${u.name} đã là ${A.TIERS[u.tier].name}.`);
+    if (!note) return err('Anh nhập lý do cấp để lưu vào nhật ký.');
+    const date = c.today();
+    u.tier = 'ctv'; u.activated = date; u.ctvGrant = { by: c.me.id, date, note };
+    if (c.args.points !== false) { A.credit(d, u.id, 'shop', 'package', P.pkgPoints, 'Quản trị cấp gói cộng tác viên: ' + note, '', { date }); u.pkgLeft = (u.pkgLeft || 0) + P.pkgPoints; }
+    c.log('Cấp gói CTV', `${u.name} (${u.code})${c.args.points !== false ? ', cộng ' + ps(P.pkgPoints) : ', không cộng điểm'}: ${note}`, u);
+    return { ok: true };
+  } },
   memberSponsor: { auth: 'admin', perm: 'members', run(c) {
     const { d, A } = c, u = A.user(d, c.args.id), k = str(c.args.code, 40).toUpperCase();
     if (!u || u.role === 'admin') return err('Chỉ đổi được cho tài khoản thành viên.');

@@ -224,13 +224,14 @@
   // [khóa trong d.settings.plan, nhãn, kiểu, ghi chú]
   const PLAN_FIELDS = [
     ['pkgPrice', 'Giá gói kích hoạt CTV', 'money', 'Khách mua gói này để trở thành cộng tác viên.'],
-    ['pkgPoints', 'Điểm nhận khi kích hoạt', 'money', 'Cộng vào ví điểm mua hàng. Phần còn lại của giá gói là phí nền tảng.'],
-    ['refBonus', 'Thưởng giới thiệu CTV', 'money', 'Người giới thiệu (CTV hoặc đại lý) nhận khi người mới kích hoạt gói. Khoản này không tính là thu nhập để tuyến trên hưởng.'],
+    ['pkgPoints', 'Điểm nhận khi kích hoạt', 'money', 'Cộng vào ví điểm mua hàng. Khi tiêu số điểm này vào đơn hàng thì phần đó không tính hoa hồng nữa.'],
+    ['refRate', 'Thưởng giới thiệu CTV', 'pct', 'Phần trăm giá gói, người giới thiệu (CTV hoặc đại lý) nhận vào ví tiền mặt khi người mới kích hoạt gói. Khi rút về ngân hàng trừ thuế thu nhập. Khoản này không tính là thu nhập để tuyến trên hưởng.'],
+    ['ctvOverRate', 'Thu nhập của CTV từ tuyến dưới', 'pct', 'CTV nhận % hoa hồng bán hàng của người mình giới thiệu trực tiếp (1 tầng), vào ví tiền mặt, khi đủ điều kiện hoạt động như đại lý.'],
     ['ctvRate', 'Hoa hồng của CTV', 'pct', 'Trên mọi đơn mua hàng của người mình giới thiệu trực tiếp (khách hàng, CTV hay đại lý), trả khi công ty đã nhận tiền (đơn Đã thanh toán).'],
     ['agentRate', 'Hoa hồng của đại lý', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp.'],
     ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập từ đơn mua hàng của đại lý và CTV mình giới thiệu, tính dồn lên các đại lý tuyến trên. Thưởng giới thiệu CTV không tính.'],
     ['overrideShop', 'Phần vào ví mua hàng', 'pct', 'Tỉ lệ của khoản thu nhập trên vào ví mua hàng, còn lại vào ví điểm thưởng.'],
-    ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng và khi chuyển điểm thưởng sang khả dụng.'],
+    ['taxRate', 'Thuế thu nhập', 'pct', 'Trừ khi rút ví hoa hồng, khi chuyển điểm thưởng sang khả dụng, và khi rút về ngân hàng phần tiền mặt chưa chịu thuế (thưởng giới thiệu, thu nhập CTV).'],
     ['agentThreshold', 'Mốc lên đại lý', 'money', 'Tổng tiền mua đã thanh toán cộng dồn để tự lên đại lý.'],
     ['pkgCountsAs', 'Phần của gói tính vào doanh số mua hàng', 'money', 'Khi tính mốc lên đại lý, mỗi gói kích hoạt được tính số tiền này. Để 0 là gói không tính vào doanh số.'],
     ['activeDays', 'Chu kỳ xét điều kiện đại lý', 'days', 'Trong số ngày này, đại lý phải có đơn tự mua hoặc đơn bán (theo quy tắc bên dưới) mới nhận thu nhập từ đại lý tuyến dưới.'],
@@ -318,7 +319,7 @@
           bank: { name: v('bankName'), account: v('bankAccount'), owner: v('bankOwner') }, social: { facebook: v('facebook'), zalo: v('zaloOA'), youtube: v('youtube'), tiktok: v('tiktok') } };
         const t0 = Date.now();
         try { localStorage.setItem('psq_site_v1', JSON.stringify(site)); } catch (er) {}
-        ADB.log(d2, 'Thiết lập hệ thống', `Gói ${money(plan.pkgPrice)} (${money(plan.pkgPoints)} PS); giới thiệu ${money(plan.refBonus)}; CTV ${plan.ctvRate}%, đại lý ${plan.agentRate}%, thu nhập đại lý ${plan.overrideRate}% (${plan.overrideShop}% vào ví mua hàng); thuế ${plan.taxRate}%; lên đại lý ${money(plan.agentThreshold)}; gói tính vào doanh số ${money(plan.pkgCountsAs)}; rút tối thiểu ${money(mw)}`); ADB.save(d2);
+        ADB.log(d2, 'Thiết lập hệ thống', `Gói ${money(plan.pkgPrice)} (${money(plan.pkgPoints)} PS); giới thiệu ${plan.refRate}% gói, CTV tuyến dưới ${plan.ctvOverRate}%; CTV ${plan.ctvRate}%, đại lý ${plan.agentRate}%, thu nhập đại lý ${plan.overrideRate}% (${plan.overrideShop}% vào ví mua hàng); thuế ${plan.taxRate}%; lên đại lý ${money(plan.agentThreshold)}; gói tính vào doanh số ${money(plan.pkgCountsAs)}; rút tối thiểu ${money(mw)}`); ADB.save(d2);
         if (API.failAt >= t0) return;
         toast('Đã lưu thiết lập hệ thống');
       });

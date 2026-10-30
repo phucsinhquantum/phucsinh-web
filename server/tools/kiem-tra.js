@@ -16,6 +16,7 @@ const net = require('net');
 const ROOT = path.resolve(__dirname, '..', '..');
 const SEED = process.argv[2];
 let P;   // sản phẩm dùng để thử
+let ENG; // bộ tính toán (ADB) để đối chiếu số dư, quỹ điểm
 let failed = 0;
 const ok = (cond, msg) => { console.log((cond ? '  đúng  ' : '  SAI   ') + msg); if (!cond) failed++; return cond; };
 const freePort = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
@@ -97,7 +98,9 @@ async function flow() {
     }
     let db = (await owner.req('GET', '/api/admin/db')).json.db;
     const com = (u, kind) => (db.commissions || []).filter(c => c.user === u && c.kind === kind);
-    ok(com(A.r.me.id, 'ref').some(c => c.amount === plan.refBonus), `A nhận thưởng giới thiệu ${plan.refBonus}đ khi B kích hoạt CTV`);
+    const refAmt = Math.round(plan.pkgPrice * plan.refRate / 100), cashOf = (u, t) => (db.wallet || []).filter(w => w.user === u && w.wallet === 'cash' && w.type === t);
+    ok(plan.pkgPoints === plan.pkgPrice && (db.wallet || []).some(w => w.user === B.r.me.id && w.wallet === 'shop' && w.type === 'package' && w.amount === plan.pkgPoints), `gói CTV nhận đủ ${plan.pkgPoints} PS vào ví mua hàng`);
+    ok(com(A.r.me.id, 'ref').some(c => c.amount === refAmt) && cashOf(A.r.me.id, 'referral').some(w => w.amount === refAmt && w.taxable), `A nhận thưởng giới thiệu ${plan.refRate}% gói = ${refAmt}đ vào ví tiền mặt khi B kích hoạt CTV`);
 
     // A mua đủ mốc lên đại lý
     const info = { name: 'Đại lý A', phone: '0912345678', address: '1 Đường Thử, Quận 1', pay: 'bank' };
@@ -128,6 +131,43 @@ async function flow() {
     const aOv = com(A.r.me.id, 'override').find(c => c.order === ocId);
     const wantOv = Math.round(want * plan.overrideRate / 100);
     ok(aOv && aOv.amount === wantOv && aOv.status === 'paid', `A (đại lý) nhận ${plan.overrideRate}% thu nhập của B = ${wantOv}đ` + (aOv ? ` (thực tế ${aOv.amount}, ${aOv.status})` : ''));
+
+    // chính sách CTV 30/10: tuyến trên là CTV hưởng 10% hoa hồng bán hàng; tiêu điểm gói không tính hoa hồng lần 2; rút tiền mặt trừ thuế phần chưa chịu thuế
+    {
+      const D = await reg('CTV D', 'ktd', B.r.me.code), Ek = await reg('Khách E', 'kte', D.r.me && D.r.me.code);
+      let n1 = s.log().length; const rd = await D.c.act('buyPackage', {});
+      await confirm(s, owner, n1, 'D gói CTV', D.c, ((rd.result || {}).order || {}).id);
+      ok(((await D.c.boot()).me || {}).tier === 'ctv', 'D lên CTV ngay khi gói được xác nhận, chưa cần mua hàng');
+      n1 = s.log().length; const oe = await Ek.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'Khách E', phone: '0987650001' }) });
+      const oeId = ((oe.result || {}).order || {}).id; await confirm(s, owner, n1, 'đơn của E', Ek.c, oeId);
+      db = (await owner.req('GET', '/api/admin/db')).json.db;
+      const dDir = com(D.r.me.id, 'direct').find(c => c.order === oeId), bOv = com(B.r.me.id, 'override').find(c => c.order === oeId && c.ctv);
+      ok(dDir && bOv && bOv.amount === Math.round(dDir.amount * plan.ctvOverRate / 100) && bOv.status === 'paid' && cashOf(B.r.me.id, 'override').some(w => w.amount === bOv.amount && w.taxable), `B (CTV) nhận ${plan.ctvOverRate}% hoa hồng bán hàng của D = ${bOv ? bOv.amount : '?'}đ vào ví tiền mặt`);
+      ok(!com(A.r.me.id, 'override').some(c => c.order === oeId), 'thu nhập CTV 10% chỉ 1 tầng, không tính tiếp lên đại lý A');
+      // D tiêu 686.000 PS của gói vào đơn: B chỉ nhận hoa hồng trên phần trả thêm
+      n1 = s.log().length; const od = await D.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'CTV D', phone: '0987650002' }), useShop: plan.pkgPoints });
+      const odId = ((od.result || {}).order || {}).id; ok(!od.error, 'D đặt đơn dùng điểm gói' + (od.error ? ': ' + od.error : ''));
+      await confirm(s, owner, n1, 'đơn của D', D.c, odId);
+      db = (await owner.req('GET', '/api/admin/db')).json.db;
+      const odO = db.orders.find(o => o.id === odId) || {}, bD = com(B.r.me.id, 'direct').find(c => c.order === odId), wantD = Math.round(Math.round(P.price * (P.price - plan.pkgPoints) / P.price) * plan.ctvRate / 100);
+      ok(odO.pkgPaid === plan.pkgPoints && bD && bD.amount === wantD, `đơn trả bằng điểm gói: B chỉ nhận ${plan.ctvRate}% phần trả thêm = ${wantD}đ (thực tế ${bD ? bD.amount : 'không có'})`);
+      // gói do quản trị cấp: lên CTV, không có thưởng giới thiệu
+      const G = await reg('CTV cấp G', 'ktg', B.r.me.code);
+      ok(!(await owner.act('ctvGrant', { id: G.r.me.id, note: 'Thử cấp' })).error && ((await G.c.boot()).me || {}).tier === 'ctv', 'chủ sở hữu cấp gói CTV: lên CTV ngay');
+      db = (await owner.req('GET', '/api/admin/db')).json.db;
+      ok(!com(B.r.me.id, 'ref').some(c => c.from === G.r.me.id), 'gói CTV do quản trị cấp không trả thưởng giới thiệu');
+      // rút tiền mặt: thuế chỉ trên phần chưa chịu thuế (thưởng giới thiệu, thu nhập CTV); tiền từ ví hoa hồng đã trừ thuế
+      const bb = ENG.ADB.balances(db, B.r.me.id); if (bb.sales > 0) await B.c.act('wallet', { kind: 'tocash', amount: bb.sales });
+      db = (await owner.req('GET', '/api/admin/db')).json.db;
+      const cash = ENG.ADB.balances(db, B.r.me.id).cash, taxable = (db.wallet || []).filter(w => w.user === B.r.me.id && w.wallet === 'cash' && w.taxable).reduce((x, w) => x + w.amount, 0);
+      n1 = s.log().length; const rw0 = await B.c.act('wallet', { kind: 'withdraw', amount: cash, bank: 'Ngân hàng Thử', account: '0123 CTV B' }), rw = Object.assign({}, rw0.result, rw0);
+      const wantTax = Math.round(taxable * plan.taxRate / 100);
+      ok(!rw.error && rw.tax === wantTax && rw.net === cash - wantTax, `rút ${cash}đ tiền mặt: thuế ${plan.taxRate}% trên ${taxable}đ chưa chịu thuế = ${wantTax}đ, chuyển khoản ${cash - wantTax}đ` + (rw.error ? ': ' + rw.error : ` (thực tế thuế ${rw.tax})`));
+      ok(new RegExp('Khách rút: ' + cash.toLocaleString('vi-VN') + 'đ[\\s\\S]*Trừ thuế[\\s\\S]*Công ty chuyển khoản: ' + (cash - wantTax).toLocaleString('vi-VN') + 'đ').test(s.log().slice(n1)), 'tin báo rút tiền ghi rõ số khách rút, thuế, số công ty chuyển khoản');
+      db = (await owner.req('GET', '/api/admin/db')).json.db;
+      const wd = db.wallet.find(w => w.user === B.r.me.id && w.type === 'withdraw' && w.status === 'pending');
+      if (wd) { wd.status = 'done'; const f = ENG.ADB.fund(db); ok(!f.diff && f.thue >= wantTax, 'quỹ điểm cân đối sau khi duyệt rút, thuế giữ lại ghi vào dòng thuế' + (f.diff ? ' (lệch ' + f.diff + ')' : '')); }
+    }
 
     // giá tính thưởng (PS) riêng cho hàng đối tác: hoa hồng tính trên PS, đơn giữ PS lúc đặt
     {
@@ -368,7 +408,7 @@ async function seed() {
 (async () => {
   // sản phẩm dùng để thử: sản phẩm đang bán có giá từ 1 triệu (lấy từ js/data.js qua bộ tính toán)
   const { createEngine } = require('../engine');
-  const E = createEngine({ webRoot: ROOT, content: () => null, state: () => ({}), actor: () => null });
+  const E = ENG = createEngine({ webRoot: ROOT, content: () => null, state: () => ({}), actor: () => null });
   P = E.PRODUCTS.filter(p => p.price >= 1e6 && p.active !== false && p.id !== E.ADB.PKG_ID && p.id !== E.ADB.AGENT_PKG_ID).sort((a, b) => a.price - b.price)[0];
   ok(!(E.sandbox.DEALERS || []).length, 'không còn đại lý mẫu (mã mẫu đã trùng thành viên thật)');
   try { await flow(); await seed(); }
