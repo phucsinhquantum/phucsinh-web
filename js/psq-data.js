@@ -199,7 +199,8 @@
           note: ok ? '' : status === 'hold' ? 'Đang giữ, chờ đủ điều kiện nhận' : 'Chưa đủ điều kiện nhận (' + (P.activeRule === 'all' ? 'tự mua và có đơn bán' : 'tự mua hoặc có đơn bán') + ' trong ' + P.activeDays + ' ngày)' });
       }
     }
-    if (c.kind !== 'ref' && !c.ctv) {
+    // khoản 10% CTV nhận từ tuyến dưới cũng là thu nhập: đại lý tuyến trên hưởng 40% và tính tiếp lên (anh Tuân chọn 30/10)
+    if (c.kind !== 'ref') {
       const r = ADB.user(d, c.user), P = plan(d), depth = (c.depth || 0) + 1, amount = pct(c.amount, P.overrideRate), date = c.paidAt || c.date;
       let up = r && r.sponsor && ADB.user(d, r.sponsor), hops = 0;
       // chuyển lên trên: bỏ qua đại lý chưa đủ điều kiện

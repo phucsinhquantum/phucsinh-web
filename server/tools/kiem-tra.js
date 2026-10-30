@@ -143,7 +143,8 @@ async function flow() {
       db = (await owner.req('GET', '/api/admin/db')).json.db;
       const dDir = com(D.r.me.id, 'direct').find(c => c.order === oeId), bOv = com(B.r.me.id, 'override').find(c => c.order === oeId && c.ctv);
       ok(dDir && bOv && bOv.amount === Math.round(dDir.amount * plan.ctvOverRate / 100) && bOv.status === 'paid' && cashOf(B.r.me.id, 'override').some(w => w.amount === bOv.amount && w.taxable), `B (CTV) nhận ${plan.ctvOverRate}% hoa hồng bán hàng của D = ${bOv ? bOv.amount : '?'}đ vào ví tiền mặt`);
-      ok(!com(A.r.me.id, 'override').some(c => c.order === oeId), 'thu nhập CTV 10% chỉ 1 tầng, không tính tiếp lên đại lý A');
+      const aOv2 = com(A.r.me.id, 'override').find(c => c.order === oeId && c.from === B.r.me.id);
+      ok(bOv && aOv2 && aOv2.amount === Math.round(bOv.amount * plan.overrideRate / 100) && aOv2.status === 'paid', `đại lý A nhận ${plan.overrideRate}% trên khoản 10% của CTV B = ${aOv2 ? aOv2.amount : '?'}đ, tính tiếp lên trên`);
       // D tiêu 686.000 PS của gói vào đơn: B chỉ nhận hoa hồng trên phần trả thêm
       n1 = s.log().length; const od = await D.c.act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'CTV D', phone: '0987650002' }), useShop: plan.pkgPoints });
       const odId = ((od.result || {}).order || {}).id; ok(!od.error, 'D đặt đơn dùng điểm gói' + (od.error ? ': ' + od.error : ''));

@@ -226,7 +226,7 @@
     ['pkgPrice', 'Giá gói kích hoạt CTV', 'money', 'Khách mua gói này để trở thành cộng tác viên.'],
     ['pkgPoints', 'Điểm nhận khi kích hoạt', 'money', 'Cộng vào ví điểm mua hàng. Khi tiêu số điểm này vào đơn hàng thì phần đó không tính hoa hồng nữa.'],
     ['refRate', 'Thưởng giới thiệu CTV', 'pct', 'Phần trăm giá gói, người giới thiệu (CTV hoặc đại lý) nhận vào ví tiền mặt khi người mới kích hoạt gói. Khi rút về ngân hàng trừ thuế thu nhập. Khoản này không tính là thu nhập để tuyến trên hưởng.'],
-    ['ctvOverRate', 'Thu nhập của CTV từ tuyến dưới', 'pct', 'CTV nhận % hoa hồng bán hàng của người mình giới thiệu trực tiếp (1 tầng), vào ví tiền mặt, khi đủ điều kiện hoạt động như đại lý.'],
+    ['ctvOverRate', 'Thu nhập của CTV từ tuyến dưới', 'pct', 'CTV nhận % hoa hồng bán hàng của người mình giới thiệu trực tiếp, vào ví tiền mặt, khi đủ điều kiện hoạt động như đại lý. Đại lý tuyến trên của CTV đó hưởng tiếp % thu nhập từ khoản này.'],
     ['ctvRate', 'Hoa hồng của CTV', 'pct', 'Trên mọi đơn mua hàng của người mình giới thiệu trực tiếp (khách hàng, CTV hay đại lý), trả khi công ty đã nhận tiền (đơn Đã thanh toán).'],
     ['agentRate', 'Hoa hồng của đại lý', 'pct', 'Trên đơn của người mình giới thiệu trực tiếp.'],
     ['overrideRate', 'Thu nhập từ đại lý tuyến dưới', 'pct', 'Đại lý nhận % thu nhập từ đơn mua hàng của đại lý và CTV mình giới thiệu, tính dồn lên các đại lý tuyến trên. Thưởng giới thiệu CTV không tính.'],
