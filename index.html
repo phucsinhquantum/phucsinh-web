@@ -18,10 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261030b">
-<script src="js/lang.js?v=20261030b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261030c">
+<script src="js/lang.js?v=20261030c"></script>
 <link rel="stylesheet" href="css/intro.css">
-<script src="js/intro.js?v=20261030b"></script>
+<script src="js/intro.js?v=20261030c"></script>
 </head>
 <body data-page="home">
 <div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
@@ -102,14 +102,28 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261030b"></script>
-<script src="js/api.js?v=20261030b"></script>
-<script src="js/data.js?v=20261030b"></script>
-<script src="js/app.js?v=20261030b"></script>
-<script src="js/psq-data.js?v=20261030b"></script>
+<script src="js/patch.js?v=20261030c"></script>
+<script src="js/api.js?v=20261030c"></script>
+<script src="js/data.js?v=20261030c"></script>
+<script src="js/app.js?v=20261030c"></script>
+<script src="js/psq-data.js?v=20261030c"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, productCard, area, modal } = PSQ;
+  // dải thẻ tự đảo mỗi 4 giây để ai cũng thấy các trang; dừng khi rê chuột, chạm, bấm nút trượt hoặc tab đang ẩn
+  function autoRotate(row, nav) {
+    let hold = 0; const pause = () => { hold = Date.now() + 8000; };
+    ['pointerenter', 'touchstart', 'focusin', 'wheel'].forEach(ev => row.addEventListener(ev, pause, { passive: true })); if (nav) nav.addEventListener('click', pause);
+    row.addEventListener('pointerleave', () => { hold = Date.now() + 1500; });
+    if (row.children.length < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    setInterval(() => {
+      if (document.hidden || Date.now() < hold) return;
+      const c = row.firstElementChild, w = c.offsetWidth + 14;
+      if (row.scrollWidth > row.clientWidth + 4) {
+        if (row.scrollLeft >= row.scrollWidth - row.clientWidth - 2) row.scrollTo({ left: 0, behavior: 'smooth' }); else row.scrollBy({ left: w, behavior: 'smooth' });
+      } else { c.style.opacity = '0'; setTimeout(() => { row.appendChild(c); c.style.opacity = ''; }, 300); }
+    }, 4000);
+  }
   /* ---------- fanpage thành viên ---------- */
   const FN = PSQ.fans.list(), fanRow = $('#fans');
   $('#fanBadges').innerHTML = ['facebook', 'tiktok', 'zalo'].map(k => `<span class="fan-${k}">${PSQ.fans.ico(k)}</span>`).join('');
@@ -124,6 +138,7 @@
       if (dir < 0 && fanRow.scrollLeft <= 2) return fanRow.scrollTo({ left: max + 2, behavior: 'smooth' });
       fanRow.scrollBy({ left: dir * w, behavior: 'smooth' });
     });
+    autoRotate(fanRow, fanNav);
   } else {
     fanRow.className = ''; fanRow.innerHTML = `<div class="card glow-mix fan-empty"><p>Khu vực này giới thiệu fanpage Facebook, TikTok, Zalo của các thành viên Phúc Sinh QuanTum. Anh chị là thành viên? Gửi link fanpage trong trang Tài khoản để được hiển thị tại đây.</p><a class="btn btn-gold" href="thanh-vien.html#ho-so">Gửi fanpage của tôi</a></div>`;
   }
@@ -198,6 +213,7 @@
       if (dir < 0 && dlRow.scrollLeft <= 2) return dlRow.scrollTo({ left: max + 2, behavior: 'smooth' });
       dlRow.scrollBy({ left: dir * w, behavior: 'smooth' });
     });
+    autoRotate(dlRow, dlNav);
   }
   $('#best').innerHTML = PSQ.shopList().sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0)).slice(0, 8).map(productCard).join('');
   const months = ['T11', 'T12', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10'];
