@@ -403,7 +403,7 @@ async function flow() {
       const d2 = (await own2.boot()).db, mem = (d2.users || []).filter(u => u.role !== 'admin' && !u.deleted);
       ok(mem.length && mem.every(u => u.tier === 'daily'), 'làm mới: mọi thành viên lên Đại lý');
       ok(!(d2.orders || []).length && !(d2.commissions || []).length && !(d2.wallet || []).length && !(d2.fundbook || []).length && !(d2.coupons || []).length && !(d2.promos || []).length, 'làm mới: không còn đơn, hoa hồng, giao dịch ví, sổ quỹ, voucher, khuyến mãi');
-      ok(((d2.wheel || {}).settings || {}).enabled === false && ((d2.settings || {}).welcome || {}).enabled === false, 'làm mới: tắt cả hai vòng quay');
+      ok(mem.every(u => u.welcomeSpun), 'làm mới: tài khoản cũ không quay vòng chào mừng được nữa');
       const on = await client(s2.port).act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: Object.assign({}, info, { name: 'Khách mới', phone: '0987650099' }) });
       ok(on.result && on.result.order && +String(on.result.order.id).replace(/\D/g, '') > maxOld, 'làm mới: số đơn mới tiếp nối số cũ, không cấp lại' + (on.result ? ' (' + on.result.order.id + ' / ' + maxOld + ')' : ': ' + JSON.stringify(on).slice(0, 200)));
       ok(!/TypeError|ReferenceError|SyntaxError|\[lỗi/.test(s2.log()), 'làm mới: nhật ký máy chủ không có lỗi');
