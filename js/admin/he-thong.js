@@ -269,6 +269,7 @@
           <div class="ht-sec full mt-2">Kế hoạch trả thưởng</div>
           <p class="dim full" style="font-size:12.5px;margin:0">1 điểm PS = 1 đồng. Thay đổi chỉ áp dụng cho đơn hàng ghi nhận sau khi lưu, không tính lại các khoản đã trả.</p>
           ${PLAN_FIELDS.map(([k, label, kind, help]) => pf(k, label, P[k], kind, help)).join('')}
+          <label class="check full" style="padding:10px 12px;border:1px solid rgba(243,199,107,.35);border-radius:12px;background:rgba(243,199,107,.06)"><input type="checkbox" name="p_activeOn"${+(P.activeOn ?? 1) ? ' checked' : ''}${dis}> <span><b>Bật điều kiện nhận thu nhập từ tuyến dưới</b><br><small class="dim">Bật: đại lý, CTV phải tự mua hoặc có đơn bán trong chu kỳ mới nhận thu nhập từ người mình giới thiệu. Tắt: không cần điều kiện, ai cũng nhận đủ (áp dụng cho khoản phát sinh sau khi lưu).</small></span></label>
           <div class="field"><label for="hs-p_activeRule">Quy tắc điều kiện đại lý</label><select class="input" id="hs-p_activeRule" name="p_activeRule"${dis}>${[['any', 'Chỉ cần 1 trong 2: tự mua hoặc có đơn bán'], ['all', 'Phải có cả tự mua và đơn bán']].map(([k, l]) => `<option value="${k}"${(P.activeRule || 'any') === k ? ' selected' : ''}>${l}</option>`).join('')}</select><small class="dim ht-help">Xét trong chu kỳ ở trên.</small></div>
           <label class="check" style="align-self:end;padding-bottom:10px"><input type="checkbox" name="p_agentPkgOn"${P.agentPkgOn ? ' checked' : ''}${dis}> Cho phép đăng ký đại lý ngay bằng gói đại lý</label>
           <div class="field"><label for="hs-p_overrideMode">Đại lý chưa đủ điều kiện</label><select class="input" id="hs-p_overrideMode" name="p_overrideMode"${dis}>${MODES.map(([k, l]) => `<option value="${k}"${P.overrideMode === k ? ' selected' : ''}>${l}</option>`).join('')}</select><small class="dim ht-help">Cách xử lý khoản thu nhập từ đại lý tuyến dưới khi đại lý chưa đủ điều kiện.</small></div>
@@ -306,7 +307,7 @@
         if (plan.pkgPoints > plan.pkgPrice) return fail('Điểm nhận khi kích hoạt không được lớn hơn giá gói.', 'p_pkgPoints');
         if (plan.ctvRate > plan.agentRate) return fail('Hoa hồng của cộng tác viên đang cao hơn của đại lý. Anh chị kiểm tra lại.', 'p_ctvRate');
         if (plan.agentPkgPoints > plan.agentPkgPrice) return fail('Điểm nhận của gói đại lý không được lớn hơn giá gói.', 'p_agentPkgPoints');
-        plan.overrideMode = form.p_overrideMode.value; plan.activeRule = form.p_activeRule.value; plan.agentPkgOn = form.p_agentPkgOn.checked ? 1 : 0;
+        plan.overrideMode = form.p_overrideMode.value; plan.activeRule = form.p_activeRule.value; plan.activeOn = form.p_activeOn.checked ? 1 : 0; plan.agentPkgOn = form.p_agentPkgOn.checked ? 1 : 0;
         err.textContent = '';
         const d2 = ADB.load();
         d2.settings = Object.assign({}, ADB.DEFAULT_SETTINGS, d2.settings || {}, {

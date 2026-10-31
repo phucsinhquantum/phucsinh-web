@@ -221,6 +221,7 @@
   const KC = { ref: 'gold', direct: 'ship', override: 'violet', missed: 'failed' };
   // đại lý chưa đủ điều kiện nhận thu nhập từ đại lý tuyến dưới (tự mua và có đơn bán trong N ngày)
   function agentAct(d) {
+    if (!+ADB.plan(d).activeOn) return `<div class="card mt-2"><p class="dim" style="margin:0;font-size:13.5px">Điều kiện nhận thu nhập từ tuyến dưới đang <b>tắt</b>: mọi đại lý, CTV đều nhận đủ. Bật lại ở Thiết lập hệ thống.</p></div>`;
     const P = ADB.plan(d), A = d.users.filter(u => u.role !== 'admin' && u.tier === 'daily').map(u => ({ u, a: ADB.activity(d, u.id), held: (d.commissions || []).filter(c => c.user === u.id && c.status === 'hold').reduce((s, c) => s + c.amount, 0) }));
     const bad = A.filter(x => !x.a.ok || x.a.left <= 7).sort((x, y) => (x.a.ok - y.a.ok) || (x.a.left - y.a.left));
     const cell = p => p.ok ? `<span class="green nowrap">${fdate(p.last)}</span><br><small class="dim">còn ${p.left} ngày</small>` : '<span class="badge failed">Thiếu</span>';

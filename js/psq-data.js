@@ -127,6 +127,7 @@
     agentBy: 'ps',                                 // mốc đại lý cộng theo: ps (giá tính thưởng) · money (tiền khách trả)
     pkgCountsAs: 0,                                // phần của gói tính vào doanh số mua hàng (mốc đại lý): gói không tính
     // điều kiện để đại lý nhận thu nhập từ đại lý tuyến dưới: trong activeDays ngày gần nhất có đơn tự mua và đơn bán
+    activeOn: 1,                                   // 0: tắt điều kiện, ai cũng nhận thu nhập tuyến dưới (anh Tuân 31/10)
     activeDays: 30, activeMinBuy: 0, activeMinSell: 0, activeRule: 'any', // any: 1 trong 2 việc · all: cả hai
     holdDays: 30,                                  // khoản bị giữ chờ quá số ngày này mà chưa đủ điều kiện thì hủy
     // gói đại lý: mua một lần để lên đại lý ngay, nhận điểm vào ví mua hàng để lấy hàng dần (không tính hoa hồng trên gói,
@@ -330,7 +331,9 @@
     tierOf(u) { return TIERS[(u && u.tier) || 'khach'] || TIERS.khach; },
     // điều kiện nhận thu nhập từ đại lý tuyến dưới tính tại ngày asOf: có đơn tự mua và đơn bán (người mình giới thiệu mua) trong activeDays ngày
     activity(d, id, asOf) {
-      const P = plan(d), at = new Date((asOf || now()) + 'T00:00:00'), dd = s => Math.floor((at - new Date(String(s).slice(0, 10) + 'T00:00:00')) / 864e5);
+      const P = plan(d);
+      if (!+P.activeOn) { const on = { ok: true, last: '', count: 0, amount: 0, left: 999 }; return { ok: true, off: true, all: false, buy: Object.assign({ label: 'Tự mua hàng' }, on), sell: Object.assign({ label: 'Có đơn bán từ người mình giới thiệu' }, on), left: 999, days: P.activeDays, minBuy: 0, minSell: 0, missing: [] }; }
+      const at = new Date((asOf || now()) + 'T00:00:00'), dd = s => Math.floor((at - new Date(String(s).slice(0, 10) + 'T00:00:00')) / 864e5);
       const inWin = o => PAID(o) && o.date && dd(o.date) >= 0 && dd(o.date) < P.activeDays;
       const lastOf = list => list.map(o => String(o.date).slice(0, 10)).sort().pop() || '';
       const buys = d.orders.filter(o => o.userId === id && inWin(o) && o.total >= (P.activeMinBuy || 0));

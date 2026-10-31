@@ -478,6 +478,15 @@ async function seed() {
     const got = u => d.commissions.filter(c => c.user === u && c.order === 'vd10' && c.status === 'paid' && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
     ok(got('D') === 1000000 && got('C') === 100000 && got('B') === 40000 && got('A') === 4000, `ví dụ 4 tầng: D 1.000.000, C 100.000, B 40.000, A 4.000 (thực tế ${['D', 'C', 'B', 'A'].map(got).join(', ')})`);
   }
+  // nút bật/tắt điều kiện (anh Tuân 31/10): tuyến trên không tự mua, không có đơn bán thì bật = không nhận, tắt = nhận đủ
+  for (const on of [1, 0]) {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: { plan: { activeOn: on } } }; X.plan(d);
+    const day = new Date().toISOString().slice(0, 10);
+    [['A', 'ctv', null], ['B', 'daily', 'A'], ['C', 'ctv', 'B'], ['D', 'ctv', 'C'], ['K', 'khach', 'D']].forEach(([id, tier, sponsor]) => d.users.push({ id, name: id, tier, sponsor, role: 'member' }));
+    const o = { id: 'dk', userId: 'K', status: 'paid', total: 10000000, items: [{ id: 'vong', price: 10000000, qty: 1 }], date: day }; d.orders.push(o); X.settleOrder(d, o);
+    const got = u => d.commissions.filter(c => c.user === u && c.status === 'paid' && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
+    ok(on ? got('B') === 0 && got('A') === 0 && got('D') === 1000000 : got('B') === 40000 && got('A') === 4000 && got('C') === 100000, `điều kiện nhận thu nhập tuyến dưới ${on ? 'bật: B, A chưa đủ điều kiện nên không nhận' : 'tắt: B 40.000, A 4.000 dù không mua'} (thực tế ${['D', 'C', 'B', 'A'].map(got).join(', ')})`);
+  }
   try { await flow(); await seed(); }
   catch (e) { ok(false, 'lỗi khi kiểm tra: ' + (e.stack || e.message)); }
   console.log(failed ? `\nCÓ ${failed} BƯỚC SAI, KHÔNG ĐƯA LÊN.` : '\nTẤT CẢ ĐỀU ĐÚNG.');
