@@ -489,6 +489,15 @@ async function seed() {
     if (self) ok(got('B') === 2500000 && cash('B') === 2500000 && got('A') === 1000000 && got('C') === 100000, `đại lý tự mua 10tr: B 2.500.000 vào tiền mặt, A 1.000.000, C 100.000 (thực tế ${['B', 'A', 'C'].map(got).join(', ')})`);
     else ok(got('B') === 0 && got('A') === 2500000, `tắt đại lý tự mua: người giới thiệu A nhận 2.500.000 như cũ (thực tế B ${got('B')}, A ${got('A')})`);
   }
+  // CTV tự mua (anh Tuân 04/11): B CTV mua 10tr nhận 10% = 1.000.000; A đại lý (giới thiệu B) 40% = 400.000; C CTV (trên A) 10% = 40.000
+  {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: {} }; X.plan(d);
+    const day = new Date().toISOString().slice(0, 10), mk = (id, tier, sponsor) => { d.users.push({ id, name: id, tier, sponsor, role: 'member' }); d.orders.push({ id: 'tu-' + id, userId: id, status: 'done', settled: true, total: 100000, items: [{ id: 'x', price: 100000, qty: 1 }], date: day }); };
+    mk('C', 'ctv', null); mk('A', 'daily', 'C'); mk('B', 'ctv', 'A');
+    const o = { id: 'tc10', userId: 'B', status: 'paid', total: 10000000, items: [{ id: 'vong', price: 10000000, qty: 1 }], date: day }; d.orders.push(o); X.settleOrder(d, o);
+    const got = u => d.commissions.filter(c => c.user === u && c.order === 'tc10' && c.status === 'paid' && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
+    ok(got('B') === 1000000 && got('A') === 400000 && got('C') === 40000, `CTV tự mua 10tr: B 1.000.000, A 400.000, C 40.000 (thực tế ${['B', 'A', 'C'].map(got).join(', ')})`);
+  }
   // nút bật/tắt điều kiện (anh Tuân 31/10): tuyến trên không tự mua, không có đơn bán thì bật = không nhận, tắt = nhận đủ
   for (const on of [1, 0]) {
     const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: { plan: { activeOn: on } } }; X.plan(d);

@@ -241,11 +241,14 @@
       if (buyer.tier === 'khach') buyer.ctvPending = date;
       return true;
     }
+    const tier0 = buyer.tier;   // cấp lúc đặt đơn: đơn đầu tiên (đang Khách, đơn này mới lên CTV/đại lý) vẫn tính cho người giới thiệu
     if (buyer.agentPending) { if (buyer.tier !== 'daily') { if (buyer.tier === 'khach') buyer.activated = date; buyer.tier = 'daily'; buyer.agentSince = date; } delete buyer.agentPending; }
     if (buyer.ctvPending) { if (buyer.tier === 'khach') { buyer.tier = 'ctv'; buyer.activated = date; } delete buyer.ctvPending; }
     // đại lý tự mua hàng: chính người mua nhận agentRate (25%) vào ví tiền mặt, tầng trên nhận 40% (đại lý) hoặc 10% (CTV) khoản đó,
     // tính nối tầng như thu nhập bình thường; người giới thiệu không nhận thêm 25% của đơn này (anh Tuân chọn 04/11). plan.selfAgent = 0 để tắt.
-    if (buyer.tier === 'daily' && +(P.selfAgent ?? 1)) { const base = psBase(o); if (base > 0 && P.agentRate) addCommission(d, { kind: 'direct', self: true, order: o.id, user: buyer.id, from: buyer.id, rate: P.agentRate, base, amount: pct(base, P.agentRate), date, note: 'Đại lý tự mua hàng' }); }
+    // CTV tự mua cũng vậy: nhận ctvRate (10%), tầng trên tính tiếp (anh Tuân 04/11)
+    const selfRate = tier0 === 'daily' ? P.agentRate : tier0 === 'ctv' ? P.ctvRate : 0;
+    if (selfRate && +(P.selfAgent ?? 1)) { const base = psBase(o); if (base > 0) addCommission(d, { kind: 'direct', self: true, order: o.id, user: buyer.id, from: buyer.id, rate: selfRate, base, amount: pct(base, selfRate), date, note: tier0 === 'daily' ? 'Đại lý tự mua hàng' : 'CTV tự mua hàng' }); }
     else if (sp) directCommission(d, o, buyer, sp, psBase(o), date);   // hoa hồng tính trên giá tính thưởng (PS), trừ theo tỉ lệ mã giảm giá; đơn trả bằng điểm (kể cả điểm gói) vẫn tính (anh Tuân chốt 30/10)
     // lên đại lý khi tổng mua cộng dồn đủ mốc
     if (buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = date; }
