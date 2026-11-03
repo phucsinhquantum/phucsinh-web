@@ -1038,18 +1038,24 @@ html.reduce-motion .nav a.promo-on, html.reduce-motion .nav a.promo-on svg { ani
 /* hướng dẫn từng bước */
 .guide-hand { position: fixed; z-index: 9000; pointer-events: none; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .guide-hand.up { transform: translate(-50%, 0); flex-direction: column-reverse; }
-.guide-hand .gh-hand { font-size: 34px; line-height: 1; filter: drop-shadow(0 0 8px rgba(243, 199, 107, .9)); animation: ghBounce 1s ease-in-out infinite; }
-.guide-hand.up .gh-hand { animation-name: ghBounceUp; }
+.guide-hand .gh-hand { position: relative; font-size: 36px; line-height: 1; filter: drop-shadow(0 0 8px rgba(243, 199, 107, .9)); transform-origin: 50% 90%; animation: ghTap 1.2s cubic-bezier(.3, .6, .4, 1) infinite; }
+.guide-hand .gh-hand::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; border: 2px solid rgba(243, 199, 107, .95); opacity: 0; animation: ghRing 1.2s ease-out infinite; }
+.guide-hand.up .gh-hand::after { bottom: auto; top: -6px; }
+.guide-hand.up .gh-hand { transform-origin: 50% 10%; animation-name: ghTapUp; }
 .guide-hand .gh-tip { max-width: min(260px, 80vw); padding: 5px 11px; border-radius: 10px; font-size: 13px; font-weight: 700; line-height: 1.35; text-align: center; color: #1d1507; background: linear-gradient(135deg, #ffe09a, #f3c76b); box-shadow: 0 4px 16px rgba(0, 0, 0, .5), 0 0 14px rgba(243, 199, 107, .6); }
 .guide-bar { position: fixed; z-index: 9000; left: 50%; transform: translateX(-50%); bottom: 18px; max-width: calc(100vw - 32px); padding: 9px 16px; border: 0; border-radius: 999px; font: 700 13.5px/1.35 inherit; font-family: inherit; color: #1d1507; background: linear-gradient(135deg, #ffe09a, #f3c76b); box-shadow: 0 6px 20px rgba(0, 0, 0, .55), 0 0 16px rgba(243, 199, 107, .7); cursor: pointer; animation: ghPulse 1.6s ease-in-out infinite; }
 @media (max-width: 899px) { .guide-bar { bottom: 92px; } }
 .guide-toggle { display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 999px; border: 1px solid rgba(243, 199, 107, .45); background: rgba(243, 199, 107, .08); color: var(--gold); font: 600 12.5px/1.4 inherit; font-family: inherit; cursor: pointer; }
 .guide-toggle[aria-pressed="false"] { color: var(--text-3); border-color: var(--line-2); background: none; }
+/* bàn tay nhấp nhấp 2 lần rồi nghỉ, kèm vòng sáng loang ra ở đầu ngón tay */
+@keyframes ghTap { 0%, 60%, 100% { transform: translateY(0) scale(1); } 12%, 40% { transform: translateY(10px) scale(.88); } 26% { transform: translateY(0) scale(1); } }
+@keyframes ghTapUp { 0%, 60%, 100% { transform: translateY(0) scale(1); } 12%, 40% { transform: translateY(-10px) scale(.88); } 26% { transform: translateY(0) scale(1); } }
+@keyframes ghRing { 0%, 10% { opacity: 0; transform: scale(.4); } 14% { opacity: 1; transform: scale(.5); } 36% { opacity: 0; transform: scale(1.8); } 40% { opacity: 1; transform: scale(.5); } 62%, 100% { opacity: 0; transform: scale(1.8); } }
 @keyframes ghBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
 @keyframes ghBounceUp { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @keyframes ghPulse { 50% { box-shadow: 0 6px 20px rgba(0, 0, 0, .55), 0 0 26px rgba(243, 199, 107, 1); } }
-html.reduce-motion .guide-hand .gh-hand, html.reduce-motion .guide-bar { animation: none; }
-@media (prefers-reduced-motion: reduce) { .guide-hand .gh-hand, .guide-bar { animation: none; } }
+html.reduce-motion .guide-bar { animation: none; }
+@media (prefers-reduced-motion: reduce) { .guide-bar { animation: none; } }
 
 /* ---------- fanpage thành viên ---------- */
 .fan-head { display: flex; align-items: end; gap: 12px; margin: 34px 2px 16px; }
@@ -1160,3 +1166,7 @@ html.reduce-motion .story-track .story-card { animation: none; }
 .ev-note .ev-x { position: absolute; right: 6px; top: 6px; }
 @media (max-width: 1099px) { .ev-note { left: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); } }
 @media (min-width: 1100px) { .ev-note { left: calc(var(--rail-w, 92px) + 34px); } }
+
+.ev-note .ev-live { display: inline-flex; align-items: center; gap: 6px; color: #ff8f8f; }
+.ev-note .ev-live i { width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a; box-shadow: 0 0 0 0 rgba(255, 90, 90, .7); animation: evDot 1.4s ease-out infinite; }
+@keyframes evDot { 70% { box-shadow: 0 0 0 8px rgba(255, 90, 90, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 90, 90, 0); } }

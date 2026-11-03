@@ -7,7 +7,7 @@ const path = require('path');
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ';
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 10);   // ngày giờ Việt Nam
 
 // ctx: { webRoot, content(key) -> giá trị nội dung đã lưu, state() -> dữ liệu, actor() -> người đang thao tác }
 function createEngine(ctx) {

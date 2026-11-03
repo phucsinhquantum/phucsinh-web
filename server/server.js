@@ -218,6 +218,10 @@ async function api(req, res, url) {
   if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
   if (req.method === 'GET' && route.startsWith('/api/media/')) return serveMedia(res, route.slice(11));
   // người xem vòng quay sự kiện hỏi nhẹ xem đã có người trúng mới chưa (không tải lại cả dữ liệu)
+  if (req.method === 'GET' && route === '/api/su-kien-live') {
+    const nm = id => (D.users.find(u => u.id === id) || {}).name;
+    return send(res, 200, { events: ((D.wheel || {}).events || []).filter(e => e.live).map(e => ({ id: e.id, name: e.name, kind: e.kind, date: e.date, liveAt: e.liveAt || '', prizes: (e.prizes || []).map(p => ({ name: p.name, qty: p.qty })), won: (e.winners || []).length, spinNames: (e.spinners || []).map(nm).filter(Boolean) })) });
+  }
   if (req.method === 'GET' && route === '/api/su-kien') {
     const ev = ((D.wheel || {}).events || []).find(e => e.id === url.searchParams.get('id'));
     return send(res, 200, ev ? { n: (ev.winners || []).length, at: ev.spinAt || '' } : { n: -1 });

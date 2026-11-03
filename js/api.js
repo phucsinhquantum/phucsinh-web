@@ -90,6 +90,13 @@
       if (r.error) return { error: r.error };
       return r.result || { ok: true };
     },
+    // như act nhưng không chặn trình duyệt (dùng khi đang chạy hiệu ứng, ví dụ vòng quay)
+    actAsync(name, args) {
+      return fetch('/api/act', { method: 'POST', headers: { 'x-psq': '1', 'content-type': 'application/json' }, body: JSON.stringify({ name, args: args || {} }) })
+        .then(x => x.json().catch(() => ({ error: 'Máy chủ trả lời lỗi (' + x.status + '), anh chị thử lại.' })))
+        .catch(() => ({ error: OFFLINE }))
+        .then(r => { if (r.db) put(r); if (r.error) return { error: r.error }; return r.result || { ok: true }; });
+    },
     logout() { const r = call('POST', '/api/logout', {}); API.me = null; API.imp = null; API.boot(); return r; },
     saveContent(key, value) {
       const r = call('POST', '/api/admin/content', { key, value });

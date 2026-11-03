@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261104c">
-<script src="js/lang.js?v=20261104c"></script>
+<link rel="stylesheet" href="css/app.css?v=20261104d">
+<script src="js/lang.js?v=20261104d"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -216,7 +216,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   .cp-item > div { flex: 1; min-width: 160px; } .cp-item small { display: block; color: var(--text-3); font-size: 12px; } .cp-item.off { opacity: .6; }
   .modal.ww-modal { width: min(420px, 100%); }
   .ww { position: relative; width: 300px; max-width: 100%; margin: 6px auto 0; }
-  .ww-face { display: block; width: 100%; height: auto; }
+  .ww-face { display: block; width: 100%; height: auto; will-change: transform; transform: translateZ(0); backface-visibility: hidden; }
   .ww-ptr { position: absolute; left: 50%; top: -4px; transform: translateX(-50%); width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent; border-top: 26px solid #f3c76b; z-index: 2; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
   .ww-win h3 { margin: 4px 0; font-size: 22px; } .ww-code { display: inline-block; margin: 6px 0; padding: 8px 18px; border-radius: 10px; border: 2px dashed #f3c76b; font-size: 22px; font-weight: 800; letter-spacing: 2px; color: #f3c76b; }
   .fr-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; } .fr-head label { margin: 0; }
@@ -240,11 +240,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261104c"></script>
-<script src="js/api.js?v=20261104c"></script>
-<script src="js/data.js?v=20261104c"></script>
-<script src="js/app.js?v=20261104c"></script>
-<script src="js/psq-data.js?v=20261104c"></script>
+<script src="js/patch.js?v=20261104d"></script>
+<script src="js/api.js?v=20261104d"></script>
+<script src="js/data.js?v=20261104d"></script>
+<script src="js/app.js?v=20261104d"></script>
+<script src="js/psq-data.js?v=20261104d"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -452,21 +452,40 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       <div id="wwOut" class="center mt-2"><button class="btn btn-gold" type="button" id="wwGo">${icon('sparkle')} Quay ngay</button><div class="dim mt-1" style="font-size:12.5px">Anh chị có thể đóng lại và quay sau ở mục Tổng quan.</div></div>`);
     md.el.querySelector('.modal').classList.add('ww-modal');
     const go = md.el.querySelector('#wwGo'), faceEl = md.el.querySelector('.ww-face'), out = md.el.querySelector('#wwOut');
+    // quay mượt: bấm là quay ngay (tăng tốc dần), hỏi máy chủ không chặn trình duyệt; có kết quả thì giảm tốc êm, dừng đúng ô trúng
+    let rot = 0, v = 0, t0 = 0, last = 0, stopAt = null;
+    const VMAX = 0.9;   // độ mỗi mili giây khi quay nhanh nhất
+    const frame = t => {
+      const dt = last ? Math.min(100, t - last) : 16; last = t;
+      if (!stopAt) { v = Math.min(VMAX, v + dt * 0.0012); rot += v * dt; }
+      else { const p = Math.min(1, (t - stopAt.t) / stopAt.T); rot = stopAt.from + stopAt.D * (1 - Math.pow(1 - p, 3)); if (p >= 1) { faceEl.style.transform = `rotate(${rot}deg)`; return stopAt.done(); } }
+      faceEl.style.transform = `rotate(${rot}deg)`;
+      requestAnimationFrame(frame);
+    };
     go.addEventListener('click', () => {
       go.disabled = true;
-      const r = API.act('welcomeSpin', {});
-      if (r.error) { out.innerHTML = `<p class="red">${esc(r.error)}</p>`; return; }
+      let mu = {}; try { mu = (ADB.wheel(ADB.load()).settings) || {}; } catch (e) {}
+      if (mu.musicOn !== false && window.PSQSpinMusic) PSQSpinMusic.start(mu.music || '');
+      requestAnimationFrame(frame);
+      const minSpin = new Promise(res => setTimeout(res, 900));
+      Promise.all([API.actAsync('welcomeSpin', {}), minSpin]).then(([r]) => {
+      if (r.error) { stopAt = { t: performance.now(), T: 600, from: rot, D: 30, done: () => {} }; if (window.PSQSpinMusic) PSQSpinMusic.stop(); out.innerHTML = `<p class="red">${esc(r.error)}</p>`; return; }
       const k = Math.max(0, segs.findIndex(p => p.id === r.prize.id)), seg = 360 / n;
-      const deg = 360 * 6 + (360 - (k + .5) * seg) + (Math.random() - .5) * seg * .6;
-      faceEl.style.transition = 'transform 4.2s cubic-bezier(.17,.67,.12,1)'; faceEl.style.transform = `rotate(${deg}deg)`;
-      setTimeout(() => {
+      const want = (((360 - (k + .5) * seg) + (Math.random() - .5) * seg * .6) % 360 + 360) % 360;
+      // giảm tốc kiểu ease-out bậc 3: tốc độ đầu = 3D/T, chọn D để nối liền tốc độ đang quay và dừng đúng góc
+      const T0 = 4200, Dmin = Math.max(720, v * T0 / 3), end0 = rot + Dmin, D = Dmin + (((want - end0) % 360) + 360) % 360;
+      stopAt = { t: performance.now(), T: Math.max(2600, 3 * D / Math.max(v, .2)), from: rot, D, done: () => {
+        if (window.PSQSpinMusic) PSQSpinMusic.stop();
+        (() => {
         const c = r.coupon;
         out.innerHTML = c ? `<div class="ww-win"><div class="dim">Chúc mừng anh chị đã trúng</div><h3 class="gold">${esc(r.prize.label)}</h3><div class="ww-code">${esc(c.code)}</div><div class="dim" style="font-size:12.5px">${esc(cpOff(c))}${c.minOrder ? ' · đơn từ ' + money(c.minOrder) : ''}${c.expires ? ' · dùng đến ' + fdate(c.expires) : ''}</div>
           <div class="row mt-2" style="justify-content:center;gap:8px"><button class="btn" type="button" data-cpc="${esc(c.code)}">${icon('copy')} Sao chép mã</button><a class="btn btn-gold" href="san-pham.html">${icon('cart')} Mua hàng ngay</a></div></div>` : `<div class="ww-win"><h3 class="gold">${esc(r.prize.label)}</h3><div class="dim">Cảm ơn anh chị đã tham gia.</div></div>`;
         const b = out.querySelector('[data-cpc]'); if (b) b.addEventListener('click', () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.cpc).catch(() => {}); toast('Đã sao chép mã ' + b.dataset.cpc); });
         md.el.addEventListener('click', e => { if (e.target === md.el || e.target.closest('[data-close]')) render(); });
         render();
-      }, 4400);
+        })();
+      } };
+      });
     });
   }
 

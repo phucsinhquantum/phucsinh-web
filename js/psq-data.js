@@ -34,7 +34,9 @@
   ];
 
   let n = 0; const uid = p => p + Date.now().toString(36) + (n++).toString(36);
-  const daysAgo = k => { const d = new Date(); d.setDate(d.getDate() - k); return d.toISOString().slice(0, 10); };
+  // ngày giờ theo giờ Việt Nam (UTC+7), dù máy chủ hay trình duyệt đặt múi giờ nào (đơn đặt 5h sáng ngày 4 trước đây ghi ngày 3)
+  const vnISO = () => new Date(Date.now() + 7 * 36e5).toISOString();
+  const daysAgo = k => new Date(Date.now() + 7 * 36e5 - k * 864e5).toISOString().slice(0, 10);
 
   /* ---------- dữ liệu trống ban đầu (máy chủ tạo một lần khi cài đặt) ---------- */
   function migrate(d) {
@@ -60,8 +62,8 @@
     me() { const u = PSQ.auth.user(); return u ? ADB.user(ADB.load(), u.id) : null; },
     // ghi nhật ký thao tác (chưa lưu, gọi ADB.save sau)
     log(d, action, detail) {
-      const u = PSQ.auth.user(); const now = new Date();
-      (d.logs = d.logs || []).unshift({ id: uid('nk'), date: now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5), actor: u ? u.name : 'Hệ thống', action, detail: detail || '' });
+      const u = PSQ.auth.user(); const t = vnISO();
+      (d.logs = d.logs || []).unshift({ id: uid('nk'), date: t.slice(0, 10) + ' ' + t.slice(11, 16), actor: u ? u.name : 'Hệ thống', action, detail: detail || '' });
     },
     // thành viên tuyến dưới trực tiếp trên cây
     children(d, id) { return d.users.filter(u => u.role !== 'admin' && u.placed && u.parent === id); },
@@ -163,7 +165,7 @@
   const itemsPs = o => (o.items || []).reduce((s, x) => s + psOf(x) * x.qty, 0);
   // gốc tính hoa hồng của đơn: tổng PS, giảm theo đúng tỉ lệ mã giảm giá
   const psBase = o => { const t = itemsTotal(o), ps = itemsPs(o); return t > 0 ? Math.round(ps * Math.max(0, t - (o.discount || 0)) / t) : 0; };
-  const now = () => { const t = new Date(); return t.toISOString().slice(0, 10); };
+  const now = () => vnISO().slice(0, 10);
   const nowAt = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };   // giờ VN, để biết đơn đặt bao lâu rồi
 
   function credit(d, user, wallet, type, amount, note, ref, extra) {
@@ -329,7 +331,7 @@
       if (!M) return { error: 'Thao tác không hợp lệ.' };
       if (M[0] === 'ph' && amount > r.ph) return { error: 'Quỹ phát hành chỉ còn ' + PSQ.money(r.ph) + '.' };
       if (M[0] === 'kt' && amount > r.kt) return { error: 'Quỹ kế toán chỉ còn ' + PSQ.money(r.kt) + '.' };
-      const t = new Date(), e = { id: uid('qd'), date: now(), time: t.toTimeString().slice(0, 5), from: M[0], to: M[1], amount, note: String(note).trim(), actor: u.name, actorId: u.id };
+      const e = { id: uid('qd'), date: now(), time: vnISO().slice(11, 16), from: M[0], to: M[1], amount, note: String(note).trim(), actor: u.name, actorId: u.id };
       (d.fundbook = d.fundbook || []).push(e); return { entry: e };
     },
     // số dư quỹ kế toán hiện tại (để chặn khoản cộng tay vượt quỹ)
@@ -636,7 +638,7 @@
     do { c = 'PSQ-'; for (let i = 0; i < 6; i++) c += CODE_CH[Math.floor(Math.random() * CODE_CH.length)]; } while (taken.has(c));
     return c;
   }
-  const stampNow = () => { const t = new Date(); return t.toISOString().slice(0, 10) + ' ' + t.toTimeString().slice(0, 5); };
+  const stampNow = () => { const t = vnISO(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };
   const inStock = p => p.active !== false && (p.stock == null || p.stock > 0);
   const normName = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
   // cài đặt vòng quay khách hàng: chỉ cấp mã cho người giới thiệu thuộc các cấp bậc trong tiers (mặc định chỉ Khách hàng)

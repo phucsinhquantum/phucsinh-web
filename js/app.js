@@ -20,7 +20,7 @@
   const REF_KEY = 'psq_ref_v1', REF_DAYS = 90;
   const refCode = () => { try { const v = JSON.parse(localStorage.getItem(REF_KEY)); return v && v.code && Date.now() - v.at < REF_DAYS * 864e5 ? v.code : ''; } catch (e) { return ''; } };
   { const c = String(qs('ref') || '').trim().toUpperCase().slice(0, 30); if (/^[A-Z0-9._]{3,30}$/.test(c) && !refCode()) try { localStorage.setItem(REF_KEY, JSON.stringify({ code: c, at: Date.now() })); } catch (e) {} }
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 10);   // ngày theo giờ Việt Nam
   const fdate = iso => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
 
   /* ---------- biểu tượng (nét mảnh) ---------- */
@@ -489,11 +489,19 @@
     const day = today(), list = (window.API && API.db && API.db.promos) || [];
     return list.filter(p => p && p.active !== false && (!p.start || p.start <= day) && (!p.end || p.end >= day));
   }
+  // sự kiện vòng quay đang mở: bật thông báo, chưa quá ngày, còn giải (mới nhất trước)
+  function liveEvents() {
+    const day = today(), W = (window.API && API.db && API.db.wheel) || {};
+    return (W.events || []).filter(e => e && (e.live || (e.announce !== false && (!e.date || e.date >= day))))
+      .filter(e => { const slots = (e.prizes || []).reduce((n, p) => n + (+p.qty || 0), 0); return e.live || !slots || (e.winners || []).length < slots; })
+      .sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
+  }
   function shell() {
     const page = $('#page'); if (!page) return;
+    const evLive = liveEvents().length > 0;
     const cur = document.body.dataset.page, u = auth.user();
     const promoOn = promos().length > 0;
-    const link = (n, i = 9) => `<a href="${n.href}" style="--i:${i}" class="${n.id === cur ? 'active' : ''}${n.icon === 'gift' ? ' gift-blink' : ''}${n.promo ? (promoOn ? ' promo-on' : ' promo-off') : ''}"${n.id === cur ? ' aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span>${n.promo && promoOn ? '<span class="badge promo-badge">HOT</span>' : ''}${n.cart ? '<span class="badge gold" data-cart-count hidden>0</span>' : ''}</a>`;
+    const link = (n, i = 9) => `<a href="${n.href}" style="--i:${i}" class="${n.id === cur ? 'active' : ''}${n.icon === 'gift' ? ' gift-blink' : ''}${n.promo ? (promoOn ? ' promo-on' : ' promo-off') : ''}"${n.id === cur ? ' aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span>${n.promo && promoOn ? '<span class="badge promo-badge">HOT</span>' : ''}${n.id === 'wheel' && evLive ? '<span class="badge promo-badge">MỚI</span>' : ''}${n.cart ? '<span class="badge gold" data-cart-count hidden>0</span>' : ''}</a>`;
     const app = document.createElement('div'); app.className = 'app';
     try { if (localStorage.getItem('psq_side_pin') === '1') app.classList.add('side-pinned'); } catch (e) {}
     app.innerHTML = `
@@ -772,7 +780,8 @@
     }
     return { start, stop };
   })();
-  window.PSQ = { partnerCat, isPartner, shopCats, pv, variantOf, priceLabel, prices, badgesOf, isHot, imagesOf, BADGES, rich, richText, richProd, richYt, isHtml, fans, guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  const stampVN = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };
+  window.PSQ = { liveEvents, stampVN, partnerCat, isPartner, shopCats, pv, variantOf, priceLabel, prices, badgesOf, isHot, imagesOf, BADGES, rich, richText, richProd, richYt, isHtml, fans, guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {
@@ -791,28 +800,39 @@
 
   shell();
   ambient();
-  // sự kiện vòng quay mới: hiện thông báo một lần cho mỗi sự kiện (mọi trang trừ quản trị và trang vòng quay)
-  function eventNotice() {
-    const pg = document.body.dataset.page; if (pg === 'admin' || /vong-quay\.html$/.test(location.pathname)) return;
-    const W = (API.db && API.db.wheel) || {}, today = new Date().toISOString().slice(0, 10);
-    const seen = store.get('psq_ev_seen', []);
-    const E = (W.events || []).filter(e => e && e.announce !== false && !seen.includes(e.id) && (!e.date || e.date >= today))
-      .filter(e => { const slots = (e.prizes || []).reduce((n, p) => n + (+p.qty || 0), 0); return !slots || (e.winners || []).length < slots; })[0];
-    if (!E) return;
-    // chưa bấm đóng thì mỗi lần mở web (phiên mới) nhắc lại một lần, không hiện lặp ở mọi trang
-    try { const k = 'psq_ev_shown_' + E.id; if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) {}
-    const box = document.createElement('div'); box.className = 'ev-note card glow-gold'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Sự kiện mới');
+  /* sự kiện vòng quay ĐANG DIỄN RA (quản trị bấm Bắt đầu): ai vào web là hiện ngay bảng thông báo; người đang mở web sẵn
+     thì trình duyệt hỏi máy chủ mỗi 25 giây, có sự kiện mới bắt đầu là bảng tự bật, không cần tải lại. Bấm đóng thì thôi hiện sự kiện đó. */
+  let evBox = null, evShown = '';
+  const evKey = e => e.id + '@' + (e.liveAt || '');
+  function evShow(E) {
+    if (evBox && evShown === evKey(E)) return;
+    if (evBox) evBox.remove();
+    const box = evBox = document.createElement('div'); evShown = evKey(E);
+    box.className = 'ev-note card glow-gold'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Sự kiện đang diễn ra');
     const who = (E.spinNames || []).length ? `<small class="dim">Người quay: ${esc(E.spinNames.join(', '))}</small>` : '';
-    box.innerHTML = `<span class="ev-ico">${icon('gift')}</span><div class="ev-body"><span class="eyebrow">Sự kiện mới</span><b>${esc(E.name)}</b><small class="dim">${E.kind === 'online' ? 'Zoom online' : 'Offline'}${E.date ? ' · ' + fdate(E.date) : ''}${(E.prizes || []).length ? ' · ' + E.prizes.map(p => esc(p.name) + ' × ' + (+p.qty || 0)).join(', ') : ''}</small>${who}
-      <div class="row" style="gap:8px;margin-top:8px"><a class="btn btn-sm btn-gold" href="vong-quay.html?ev=${encodeURIComponent(E.id)}#su-kien">${icon('sparkle')} Xem vòng quay</a><button class="btn btn-sm btn-ghost" type="button" data-ev-x>Để sau</button></div></div>
+    box.innerHTML = `<span class="ev-ico">${icon('gift')}</span><div class="ev-body"><span class="eyebrow ev-live"><i></i>Sự kiện đang diễn ra</span><b>${esc(E.name)}</b><small class="dim">${E.kind === 'online' ? 'Zoom online' : 'Offline'}${(E.prizes || []).length ? ' · ' + E.prizes.map(p => esc(p.name) + ' × ' + (+p.qty || 0)).join(', ') : ''}</small>${who}
+      <div class="row" style="gap:8px;margin-top:8px"><a class="btn btn-sm btn-gold" href="vong-quay.html?ev=${encodeURIComponent(E.id)}#su-kien">${icon('sparkle')} Vào xem vòng quay</a><button class="btn btn-sm btn-ghost" type="button" data-ev-x>Đóng</button></div></div>
       <button class="icon-btn ev-x" type="button" data-ev-x aria-label="Đóng">${icon('close')}</button>`;
-    const done = () => { const L = store.get('psq_ev_seen', []); if (!L.includes(E.id)) L.push(E.id); store.set('psq_ev_seen', L.slice(-50)); };
-    box.addEventListener('click', e => { if (e.target.closest('a')) done(); if (e.target.closest('[data-ev-x]')) { done(); box.classList.remove('open'); setTimeout(() => box.remove(), 300); } });
+    const done = () => { const L = store.get('psq_ev_seen', []); if (!L.includes(evShown)) L.push(evShown); store.set('psq_ev_seen', L.slice(-50)); };
+    box.addEventListener('click', e => { if (e.target.closest('a')) done(); if (e.target.closest('[data-ev-x]')) { done(); evHide(); } });
     document.body.appendChild(box);
-    // trang chủ đang chạy intro thì chờ intro tắt mới hiện
-    const show = () => { if (document.querySelector('body > .intro')) return setTimeout(show, 800); setTimeout(() => box.classList.add('open'), 1200); };
+    const show = () => { if (!box.isConnected) return; if (document.querySelector('body > .intro')) return setTimeout(show, 800); requestAnimationFrame(() => box.classList.add('open')); if (window.PSQSpinMusic && !evShow.rang) { evShow.rang = 1; try { const ac = new (window.AudioContext || window.webkitAudioContext)(); [0, 140, 280].forEach((ms, i) => { const t = ac.currentTime + ms / 1000, o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = [784, 988, 1319][i]; g.gain.setValueAtTime(.08, t); g.gain.exponentialRampToValueAtTime(.0001, t + .4); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + .45); }); } catch (e) {} } };
     show();
   }
+  function evHide() { if (!evBox) return; const b = evBox; evBox = null; evShown = ''; b.classList.remove('open'); setTimeout(() => b.remove(), 300); }
+  function evCheck(list) {
+    const seen = store.get('psq_ev_seen', []), here = qs('ev');
+    const E = (list || []).filter(e => !seen.includes(evKey(e)) && !(/vong-quay\.html$/.test(location.pathname) && here === e.id))[0];
+    if (E) evShow(E); else if (evBox && !(list || []).some(e => evKey(e) === evShown)) evHide();
+  }
+  function eventNotice() {
+    if (document.body.dataset.page === 'admin' || location.protocol === 'file:') return;
+    const W = (API.db && API.db.wheel) || {};
+    evCheck((W.events || []).filter(e => e && e.live));
+    const poll = () => { if (document.hidden) return; fetch('/api/su-kien-live', { headers: { 'x-psq': '1' }, cache: 'no-store' }).then(r => r.json()).then(r => { if (r && Array.isArray(r.events)) { liveCache = r.events; evCheck(r.events); } }).catch(() => {}); };
+    setInterval(poll, 25000); document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+  }
+  let liveCache = null;
   if (document.readyState !== 'loading') setTimeout(eventNotice, 300); else document.addEventListener('DOMContentLoaded', () => setTimeout(eventNotice, 300));
   document.addEventListener('DOMContentLoaded', reveal);
   if (document.readyState !== 'loading') setTimeout(reveal);
