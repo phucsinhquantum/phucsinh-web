@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261031b">
-<script src="js/lang.js?v=20261031b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261104a">
+<script src="js/lang.js?v=20261104a"></script>
 </head>
 <body data-page="wheel">
 <div id="page" data-title="Vòng quay may mắn" data-crumb="Vòng quay may mắn">
@@ -99,11 +99,11 @@
 
 </div>
 
-<script src="js/patch.js?v=20261031b"></script>
-<script src="js/api.js?v=20261031b"></script>
-<script src="js/data.js?v=20261031b"></script>
-<script src="js/app.js?v=20261031b"></script>
-<script src="js/psq-data.js?v=20261031b"></script>
+<script src="js/patch.js?v=20261104a"></script>
+<script src="js/api.js?v=20261104a"></script>
+<script src="js/data.js?v=20261104a"></script>
+<script src="js/app.js?v=20261104a"></script>
+<script src="js/psq-data.js?v=20261104a"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, toast, modal, fdate, auth } = PSQ;
@@ -131,6 +131,10 @@
       o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + (strong ? .4 : .06));
     } catch (e) {}
   }
+  // nhạc khi quay: bật theo Cài đặt vòng quay (quản trị), người xem tắt bằng nút loa
+  const musicOn = () => { if (!sound || !window.PSQSpinMusic) return; let S = {}; try { S = ADB.wheel(ADB.load()).settings || {}; } catch (e) {} if (S.musicOn === false) return; PSQSpinMusic.start(S.music || ''); };
+  const musicOff = () => { if (window.PSQSpinMusic) PSQSpinMusic.stop(); };
+  document.addEventListener('click', e => { if (e.target.closest('[data-wh-sound]') && !sound) musicOff(); });
   function fanfare() { if (!sound) return; [0, 120, 240, 420].forEach((ms, i) => setTimeout(() => { try { ac = ac || new AudioContext(); const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = [523, 659, 784, 1047][i]; g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.0001, t + .5); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + .55); } catch (e) {} }, ms)); }
 
   /* ---------- vòng quay (SVG, nét sắc ở mọi độ phân giải) ---------- */
@@ -240,7 +244,7 @@
     }
     function spinTo(index, o = {}) {
       if (spinning || !segs.length) return Promise.resolve(false);
-      spinning = true; host.classList.add('spinning');
+      spinning = true; host.classList.add('spinning'); musicOn();
       const a = A(), f = .2 + Math.random() * .6, target = (index + f) * a;
       const start = rotation, turns = reduce ? 3 : (o.turns || 8), dur = reduce ? 2600 : (o.duration || 6200);
       const delta = (((-target - start) % 360) + 360) % 360;
@@ -257,7 +261,7 @@
           if (p < 1) requestAnimationFrame(frame);
           else {
             setRot(end % 360); spinning = false; host.classList.remove('spinning');
-            const landed = idxAt(rotation); host.dataset.landed = landed; tick(true);
+            const landed = idxAt(rotation); host.dataset.landed = landed; musicOff(); tick(true);
             res(landed);
           }
         }
@@ -405,7 +409,10 @@
       $('#whQuick').innerHTML = `<div class="wh-evinfo"><div><small>Người tham dự</small><b>${(E.participants || []).length}</b></div><div><small>Giải thưởng</small><b>${slots.length || 'Không giới hạn'}</b></div><div><small>Đã trao</small><b>${winners.length}</b></div></div>
         ${slots.length ? `<div class="wh-slots">${(E.prizes || []).map(p => `<span class="chip">${esc(p.name)} × ${+p.qty || 0}</span>`).join('')}</div>` : ''}`;
       $('#whRemove').checked = !!E.removeWinners; $('#whRemove').disabled = !admin;
-      $('#whEvNote').textContent = admin ? 'Anh chị đang đăng nhập quản trị nên quay được sự kiện này. Danh sách và giải thưởng sửa ở trang Quản trị, mục Vòng quay may mắn.' : 'Người tổ chức (tài khoản quản trị) sẽ quay sự kiện này trong buổi giao lưu. Anh chị theo dõi kết quả tại đây.';
+      const who = (E.spinNames || []).length ? E.spinNames.join(', ') : 'người tổ chức';
+      $('#whEvNote').textContent = admin ? 'Anh chị đang đăng nhập quản trị nên quay được sự kiện này. Danh sách, giải thưởng và người được bấm quay sửa ở trang Quản trị, mục Vòng quay may mắn.'
+        : E.canSpin ? 'Anh chị được cấp quyền quay sự kiện này. Bấm QUAY khi chương trình bắt đầu, mọi người đang xem trang sẽ thấy vòng quay chạy và kết quả.'
+        : `Người quay: ${who}. Anh chị giữ trang này mở, khi có người trúng vòng quay sẽ tự chạy và hiện kết quả.`;
     } else {
       pool = quick.remove ? quick.names.filter(n => !quick.winners.some(w => w.name === n)) : quick.names.slice();
       winners = quick.winners; prizeNow = quick.prize;
@@ -439,7 +446,7 @@
     // sau khi quay xong vẫn giữ vòng cũ để mọi người thấy kim chỉ đúng người trúng; lượt sau mới bỏ người đã trúng
     if (!keepWheel) { evDraw(); $('#whNow').textContent = pool.length ? shown(pool[ev.index()] ?? pool[0]) : '...'; }
     $('#whNowLbl').textContent = prizeNow ? 'Đang quay: ' + clean(prizeNow) : 'Đang chỉ vào';
-    const canSpin = !E || admin;
+    const canSpin = !E || admin || !!E.canSpin;
     ev.hub.disabled = !canSpin || !pool.length; ev.hub.classList.toggle('wh-armed', canSpin && pool.length > 0);
     status($('#whEvStatus'), !pool.length ? (E ? 'Không còn người tham dự trong vòng.' : 'Tạo vòng quay ở khung bên cạnh.') : canSpin ? `Bấm <b class="gold">QUAY</b> để chọn người may mắn${prizeNow ? ' nhận <b class="gold">' + esc(clean(prizeNow)) + '</b>' : ''}.` : 'Đang chờ người tổ chức quay.');
     $('#whWinSub').textContent = winners.length ? winners.length + ' người' + (slots.length ? ' / ' + slots.length + ' giải' : '') : 'Chưa có ai';
@@ -464,9 +471,14 @@
     const d = ADB.load(), E = curEvent(d);
     let name, index, prize = '';
     if (E) {
-      if (!isAdmin()) { toast('Chỉ người tổ chức quay được sự kiện này.'); return; }
-      const r = ADB.wheelEventDraw(d, E.id); if (r.error) { toast(r.error); return; }
-      ADB.log(d, 'Quay sự kiện', `${E.name}: ${shown(r.name)}${r.winner.prize ? ' trúng ' + r.winner.prize : ''}`); ADB.save(d);
+      let r;
+      if (isAdmin()) {
+        r = ADB.wheelEventDraw(d, E.id); if (r.error) { toast(r.error); return; }
+        ADB.log(d, 'Quay sự kiện', `${E.name}: ${shown(r.name)}${r.winner.prize ? ' trúng ' + r.winner.prize : ''}`); ADB.save(d);
+      } else if (E.canSpin) {
+        r = API.act('eventSpin', { id: E.id }); if (r.error) { toast(r.error, 'err'); return; }
+      } else { toast('Chỉ người được cấp quyền quay được sự kiện này.'); return; }
+      seenN[E.id] = (E.winners || []).length + 1;
       pool = r.pool; evDraw();
       name = r.name; index = r.index; prize = r.winner.prize;
     } else {
@@ -486,6 +498,30 @@
       evRender(true);
     });
   }
+
+  /* ---------- người xem: có người trúng mới thì vòng quay tự chạy tới đúng người đó ---------- */
+  const seenN = {};
+  setInterval(() => {
+    if (ev.spinning || document.hidden || evSel === 'quick' || $('[data-wh-pane="su-kien"]').hidden) return;
+    const E0 = ((API.db.wheel || {}).events || []).find(e => e.id === evSel); if (!E0) return;
+    if (seenN[E0.id] == null) seenN[E0.id] = (E0.winners || []).length;
+    fetch('/api/su-kien?id=' + encodeURIComponent(E0.id), { headers: { 'x-psq': '1' }, cache: 'no-store' }).then(r => r.json()).then(r => {
+      if (!(r.n > seenN[E0.id]) || ev.spinning) return;
+      const before = ADB.wheelEventPool(E0);
+      seenN[E0.id] = r.n; API.boot();
+      const E1 = ((API.db.wheel || {}).events || []).find(e => e.id === E0.id); if (!E1) return;
+      const w = (E1.winners || [])[r.n - 1]; if (!w) return evRender();
+      const idx = before.indexOf(w.name);
+      if (idx < 0) return evRender();
+      pool = before; evDraw();
+      status($('#whEvStatus'), 'Vòng quay đang chạy...', 'run');
+      ev.spinTo(idx, { duration: 6800, turns: 9 }).then(() => {
+        $('#whNow').textContent = shown(w.name); confetti(); fanfare();
+        winModal('Xin chúc mừng', shown(w.name), w.prize ? `Trúng <b class="gold">${esc(w.prize)}</b>` : 'Người may mắn của vòng quay');
+        evRender(true);
+      });
+    }).catch(() => {});
+  }, 4000);
 
   /* ---------- toàn màn hình (chiếu lên Zoom, máy chiếu) ---------- */
   function fs(on) {

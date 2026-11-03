@@ -1138,3 +1138,25 @@ html.reduce-motion .guide-hand .gh-hand, html.reduce-motion .guide-bar { animati
 .shop-tabs button { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .02); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; }
 .shop-tabs button.on, .shop-tabs button:hover { color: var(--gold); border-color: rgba(243, 199, 107, .5); background: rgba(243, 199, 107, .08); }
 .shop-tabs button small { color: var(--text-3); margin-left: 4px; }
+
+/* chân trang chừa chỗ cho 3 nút liên hệ nổi bên phải, không che chữ cột Liên hệ */
+body:has(.contact-dock) .foot { padding-right: 84px; }
+@media (max-width: 1099px) { body:has(.contact-dock) .foot { padding-right: 64px; padding-bottom: 24px; } }
+/* video khách hàng tự đổi: mờ dần rồi hiện 3 video mới */
+.story-track .story-card { transition: transform .35s, border-color .35s, box-shadow .35s, opacity .26s; }
+.story-track.swap .story-card { opacity: 0; transform: translateY(8px) scale(.97); }
+.story-track:not(.swap) .story-card { animation: storyIn .45s ease backwards; }
+.story-track .story-card:nth-child(2) { animation-delay: .07s; } .story-track .story-card:nth-child(3) { animation-delay: .14s; }
+@keyframes storyIn { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
+html.reduce-motion .story-track .story-card { animation: none; }
+
+/* thông báo sự kiện vòng quay mới */
+.ev-note { position: fixed; left: 18px; bottom: 22px; z-index: 75; width: min(380px, calc(100vw - 100px)); display: flex; gap: 12px; align-items: flex-start; padding: 14px 40px 14px 14px; opacity: 0; transform: translateY(16px); transition: opacity .3s, transform .3s; pointer-events: none; }
+.ev-note.open { opacity: 1; transform: none; pointer-events: auto; }
+.ev-note .ev-ico { flex: none; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(145deg, #ffe7a8, var(--gold) 55%, #b88332); color: #2a1a05; animation: giftBlink 1.2s ease-in-out infinite; }
+.ev-note .ev-ico svg { width: 22px; height: 22px; }
+.ev-note .ev-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ev-note .ev-body b { font-size: 15px; }
+.ev-note .ev-x { position: absolute; right: 6px; top: 6px; }
+@media (max-width: 1099px) { .ev-note { left: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); } }
+@media (min-width: 1100px) { .ev-note { left: calc(var(--rail-w, 92px) + 34px); } }

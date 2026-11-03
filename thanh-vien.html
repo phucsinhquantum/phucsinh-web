@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261031b">
-<script src="js/lang.js?v=20261031b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261104a">
+<script src="js/lang.js?v=20261104a"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -240,11 +240,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261031b"></script>
-<script src="js/api.js?v=20261031b"></script>
-<script src="js/data.js?v=20261031b"></script>
-<script src="js/app.js?v=20261031b"></script>
-<script src="js/psq-data.js?v=20261031b"></script>
+<script src="js/patch.js?v=20261104a"></script>
+<script src="js/api.js?v=20261104a"></script>
+<script src="js/data.js?v=20261104a"></script>
+<script src="js/app.js?v=20261104a"></script>
+<script src="js/psq-data.js?v=20261104a"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -600,7 +600,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
         ${nx ? `<div class="mt-2" style="font-size:13px"><div class="row between"><span>Thành viên nhóm</span><span class="dim">${L.team}/${nx.minTeam}</span></div><div class="progress mt-1"><i style="width:${pc(L.team, nx.minTeam)}%"></i></div>
           <div class="row between mt-2"><span>Doanh số nhóm</span><span class="dim">${short(L.sales)}/${short(nx.minSales)}</span></div><div class="progress mt-1"><i style="width:${pc(L.sales, nx.minSales)}%"></i></div>
           <p class="dim mt-1">Để lên <b style="color:${nx.color}">${esc(nx.name)}</b>: còn ${[nx.minTeam > L.team ? (nx.minTeam - L.team) + ' người trong nhóm' : '', nx.minSales > L.sales ? money(nx.minSales - L.sales) + ' doanh số nhóm' : ''].filter(Boolean).join(' và ')}.</p></div>` : '<p class="gold mt-2">Anh chị đang ở cấp bậc cao nhất.</p>'}</div>
-      <div class="card glow-gold">${ranks.map(r => `<div class="rank-line"><span class="rank-gem" style="color:${r.color}">${icon('star')}</span><b style="color:${r.color}">${esc(r.name)}${r.id === L.rank.id ? ' <span class="badge gold">Hiện tại</span>' : ''}</b><span class="dim" style="font-size:13px">${r.minTeam ? 'Từ ' + r.minTeam + ' người, doanh số nhóm ' + short(r.minSales) : 'Khi tham gia'}${r.bonus ? ' · thưởng ' + r.bonus + '%' : ''} (mẫu)</span></div>`).join('')}</div></div>`;
+      <div class="card glow-gold">${ranks.map(r => `<div class="rank-line"><span class="rank-gem" style="color:${r.color}">${icon('star')}</span><b style="color:${r.color}">${esc(r.name)}${r.id === L.rank.id ? ' <span class="badge gold">Hiện tại</span>' : ''}</b><span class="dim" style="font-size:13px">${r.minTeam ? 'Từ ' + r.minTeam + ' người, doanh số nhóm ' + short(r.minSales) : 'Khi tham gia'}${r.bonus ? ' · thưởng ' + r.bonus + '%' : ''}</span></div>`).join('')}</div></div>`;
   }
 
   /* ---------- ĐƠN HÀNG ---------- */

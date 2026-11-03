@@ -10,6 +10,9 @@
   const uname = (d, id) => { const u = ADB.user(d, id); return u ? u.name : '(đã xóa)'; };
   const commit = (d, action, detail, msg) => { ADB.log(d, action, detail); ADB.save(d); if (msg) toast(msg); };
   let cur = 'prizes';
+  // tìm thành viên theo mã PS, số điện thoại, tên đăng nhập hoặc email (kể cả mã cũ đã đổi)
+  const findMember = (d, q) => { const k = String(q || '').trim().toLowerCase(), ph = k.replace(/\D/g, ''); if (!k) return null;
+    return d.users.find(u => u.role !== 'admin' && ((u.code || '').toLowerCase() === k || (u.oldCodes || []).some(c => String(c).toLowerCase() === k) || (u.username || '').toLowerCase() === k || (u.email || '').toLowerCase() === k || (ph.length >= 9 && String(u.phone || '').replace(/\D/g, '').endsWith(ph.slice(-9))))) || null; };
 
   function mini(prizes) {
     const L = prizes.filter(p => p.active !== false && (p.stock == null || p.stock > 0)); const n = L.length;
@@ -147,7 +150,8 @@
       ${E.length ? `<div class="grid g-2">${E.map(ev => { const slots = ADB.wheelEventSlots(ev), pool = ADB.wheelEventPool(ev); return `<div class="card wh-evcard">
         <div class="row between wrap" style="gap:8px"><b style="font-size:15px">${esc(ev.name)}</b><span class="badge ${ev.kind === 'online' ? 'ship' : 'gold'}">${KIND[ev.kind] || ''}</span></div>
         <div class="dim" style="font-size:13px">${ev.date ? fdate(ev.date) + ' · ' : ''}${(ev.participants || []).length} người tham dự · ${pool.length} còn trong vòng · ${slots.length || 'không giới hạn'} giải</div>
-        <div class="row wrap" style="gap:6px">${ev.mode === 'fixed' ? `<span class="badge violet">Chỉ định người trúng (${(ev.fixedWinners || []).length})</span>` : '<span class="badge ok">Ngẫu nhiên</span>'}${ev.removeWinners ? '<span class="badge">Loại người đã trúng</span>' : ''}</div>
+        <div class="row wrap" style="gap:6px">${ev.mode === 'fixed' ? `<span class="badge violet">Chỉ định người trúng (${(ev.fixedWinners || []).length})</span>` : '<span class="badge ok">Ngẫu nhiên</span>'}${ev.removeWinners ? '<span class="badge">Loại người đã trúng</span>' : ''}${ev.announce !== false ? '<span class="badge gold">Thông báo trên web</span>' : ''}</div>
+        <div style="font-size:13px"><span class="dim">Người được bấm quay:</span> ${(ev.spinners || []).length ? ev.spinners.map(id => `<b>${esc(uname(d, id))}</b>`).join(', ') : 'chỉ quản trị'}</div>
         ${(ev.winners || []).length ? `<div style="font-size:13px"><span class="dim">Đã trúng:</span> ${ev.winners.map(w => `<b>${esc(w.name)}</b>${w.prize ? ' <span class="gold">(' + esc(w.prize) + ')</span>' : ''}`).join(', ')}</div>` : '<div class="dim" style="font-size:13px">Chưa quay</div>'}
         <div class="row wrap" style="gap:8px"><a class="btn btn-sm btn-gold" href="vong-quay.html?ev=${encodeURIComponent(ev.id)}#su-kien" target="_blank" rel="noopener">${icon('sparkle')} Mở vòng quay</a><button class="btn btn-sm" type="button" data-we-edit="${ev.id}">${icon('edit')} Sửa</button><button class="btn btn-sm btn-ghost" type="button" data-we-reset="${ev.id}">Quay lại từ đầu</button><button class="btn btn-sm btn-ghost" type="button" data-we-del="${ev.id}" aria-label="Xóa">${icon('trash')}</button></div></div>`; }).join('')}</div>` : `<div class="empty">${icon('users')}Chưa có sự kiện nào.</div>`}</div>`;
     box.onclick = e => {
@@ -170,11 +174,16 @@
         <div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" id="weR" ${!ev || ev.removeWinners ? 'checked' : ''}> Loại người đã trúng khỏi vòng</label></div>
         <div class="field full"><label for="weZ">Giải thưởng theo thứ tự quay (mỗi dòng: Tên giải | số lượng)</label><textarea class="input" id="weZ" rows="3" placeholder="Nụ trầm | 3&#10;Vòng tay trầm hương | 1">${esc((ev ? ev.prizes : []).map(p => p.name + ' | ' + p.qty).join('\n'))}</textarea></div>
         <div class="field full"><label>Cách chọn người trúng</label><div class="choice"><label><input type="radio" name="weM" value="random" ${!ev || ev.mode !== 'fixed' ? 'checked' : ''}> <span><b>Ngẫu nhiên</b><br><small class="dim">Vòng quay chọn ngẫu nhiên trong danh sách còn lại</small></span></label><label><input type="radio" name="weM" value="fixed" ${ev && ev.mode === 'fixed' ? 'checked' : ''}> <span><b>Chỉ định người trúng</b><br><small class="dim">Vòng quay dừng lần lượt đúng người trong danh sách bên dưới, hết danh sách thì quay ngẫu nhiên</small></span></label></div></div>
+        <div class="field full"><label for="weS">Thành viên được bấm quay (mã PS hoặc số điện thoại, cách nhau dấu phẩy)</label><input class="input" id="weS" placeholder="Ví dụ: PS1004, 0931133199" value="${esc((ev ? ev.spinners || [] : []).map(id => (ADB.user(ADB.load(), id) || {}).code || '').filter(Boolean).join(', '))}"><small class="dim" id="weSN">Để trống thì chỉ tài khoản quản trị quay được. Người được cấp quyền đăng nhập, mở trang Vòng quay, mục Sự kiện là bấm quay được.</small></div>
+        <label class="check field full"><input type="checkbox" id="weA" ${!ev || ev.announce !== false ? 'checked' : ''}> Thông báo sự kiện mới cho mọi thành viên và khách khi vào web</label>
         <div class="field full" id="weFBox"><label for="weF">Người trúng chỉ định theo thứ tự (mỗi dòng một tên, đúng như trong danh sách tham dự)</label><textarea class="input" id="weF" rows="3">${esc((ev ? ev.fixedWinners || [] : []).join('\n'))}</textarea></div>
         <div class="field full"><button class="btn btn-gold" type="submit">${icon('check')} Lưu sự kiện</button></div></form>`);
     m.el.querySelector('.modal').classList.add('wh-wide');
     const sync = () => { $('#weFBox', m.el).hidden = m.el.querySelector('[name=weM]:checked').value !== 'fixed'; };
     $$('[name=weM]', m.el).forEach(r => r.onchange = sync); sync();
+    const spinList = () => { const d0 = ADB.load(); return $('#weS', m.el).value.split(/[,;\n]/).map(x => x.trim()).filter(Boolean).map(q => ({ q, u: findMember(d0, q) })); };
+    $('#weS', m.el).addEventListener('input', () => { const L = spinList(); $('#weSN', m.el).innerHTML = L.length ? L.map(x => x.u ? `<b class="green">${esc(x.u.name)} (${esc(x.u.code || '')})</b>` : `<b class="red">Không tìm thấy "${esc(x.q)}"</b>`).join(', ') : 'Để trống thì chỉ tài khoản quản trị quay được.'; });
+    if ($('#weS', m.el).value) $('#weS', m.el).dispatchEvent(new Event('input'));
     $('#weForm', m.el).addEventListener('submit', e => {
       e.preventDefault();
       const seen = new Set(), names = $('#weP', m.el).value.split('\n').map(s => s.trim().replace(/\s+/g, ' ')).filter(s => s && !seen.has(s.toLowerCase()) && seen.add(s.toLowerCase()));
@@ -186,10 +195,13 @@
       const fixedWinners = $('#weF', m.el).value.split('\n').map(s => s.trim()).filter(Boolean);
       const low = new Set(participants.map(p => p.toLowerCase())), miss = fixedWinners.filter(n => !low.has(n.toLowerCase()));
       if (mode === 'fixed' && miss.length) return toast('Không có trong danh sách tham dự: ' + miss.slice(0, 3).join(', '));
-      const v = { name: $('#weN', m.el).value.trim(), kind: $('#weK', m.el).value, date: $('#weD', m.el).value, participants, prizes, mode, fixedWinners, removeWinners: $('#weR', m.el).checked };
+      const SL = spinList(), bad = SL.filter(x => !x.u);
+      if (bad.length) return toast('Không tìm thấy thành viên: ' + bad.map(x => x.q).slice(0, 3).join(', '));
+      const spinners = [...new Set(SL.map(x => x.u.id))];
+      const v = { name: $('#weN', m.el).value.trim(), kind: $('#weK', m.el).value, date: $('#weD', m.el).value, participants, prizes, mode, fixedWinners, removeWinners: $('#weR', m.el).checked, spinners, announce: $('#weA', m.el).checked };
       const d = ADB.load(), W = ADB.wheel(d);
       if (ev) Object.assign(W.events.find(x => x.id === ev.id) || {}, v); else W.events.unshift({ id: ADB.uid('sk'), winners: [], ...v });
-      commit(d, ev ? 'Sửa sự kiện vòng quay' : 'Tạo sự kiện vòng quay', `${v.name}: ${participants.length} người, ${mode === 'fixed' ? 'chỉ định ' + fixedWinners.length + ' người trúng' : 'ngẫu nhiên'}`, 'Đã lưu sự kiện');
+      commit(d, ev ? 'Sửa sự kiện vòng quay' : 'Tạo sự kiện vòng quay', `${v.name}: ${participants.length} người, ${mode === 'fixed' ? 'chỉ định ' + fixedWinners.length + ' người trúng' : 'ngẫu nhiên'}${spinners.length ? '; người quay: ' + SL.map(x => x.u.name).join(', ') : ''}`, 'Đã lưu sự kiện');
       m.close(); draw();
     });
   }
@@ -206,18 +218,39 @@
           <small class="dim">Mặc định chỉ khách hàng. Cộng tác viên và đại lý đã hưởng hoa hồng nên không nhận mã. Chỉ áp dụng cho người đăng ký từ lúc lưu trở đi.</small></div>
         <div class="field"><label for="wsN">Số mã cho mỗi người đăng ký thành công</label><input class="input" id="wsN" type="number" min="1" max="10" step="1" value="${+S.perRef || 1}"${dis}></div>
         <div class="field"><label for="wsE">Hạn dùng mã (ngày, 0 là không hạn)</label><input class="input" id="wsE" type="number" min="0" max="365" step="1" value="${+S.expireDays || 0}"${dis}></div>
+        <div class="field full"><label>Nhạc khi bấm quay (cả vòng quay khách hàng và sự kiện)</label>
+          <div class="row wrap" style="gap:10px;align-items:center"><label class="check"><input type="checkbox" id="wsMu"${S.musicOn !== false ? ' checked' : ''}${dis}> Bật nhạc</label>
+          ${edit ? `<button class="btn btn-sm" type="button" id="wsMuUp">${icon('upload')} Tải nhạc MP3 riêng</button>` : ''}<span class="dim" id="wsMuName" style="font-size:13px">${S.music ? 'Đang dùng nhạc đã tải lên' : 'Đang dùng nhạc có sẵn'}</span>
+          <button class="btn btn-sm btn-ghost" type="button" id="wsMuPlay">${icon('play')} Nghe thử</button>${S.music && edit ? '<button class="btn btn-sm btn-ghost" type="button" id="wsMuDel">Dùng nhạc có sẵn</button>' : ''}</div>
+          <small class="dim">Nhạc phát khi bấm QUAY và tắt khi vòng dừng. Người xem bấm biểu tượng loa trên trang để tắt tiếng. Tệp MP3 tối đa 10 MB.</small></div>
         <div class="field full"><label for="wsR">Thể lệ chương trình (hiện trên trang vòng quay)</label><textarea class="input" id="wsR" rows="5" maxlength="2000" placeholder="Thời gian chương trình, cơ cấu giải, cách nhận quà, liên hệ khi có thắc mắc">${esc(S.rules || '')}</textarea></div>
       </div>
       <p class="red mt-1" id="wsErr" style="font-size:13px;min-height:1em"></p>
       ${edit ? `<div class="row" style="justify-content:flex-end"><button class="btn btn-gold" type="submit">${icon('check')} Lưu cài đặt</button></div>` : '<p class="dim" style="font-size:13px">Vai trò của anh chị chỉ được xem.</p>'}</form>`;
+    let music = S.music || '', au = null;
+    $('#wsMuPlay', box).onclick = () => { if (au) { au.pause(); au = null; return; } if (music) { au = new Audio(music); au.play().catch(() => toast('Trình duyệt chặn phát nhạc, anh chị bấm lại.')); setTimeout(() => { if (au) { au.pause(); au = null; } }, 8000); } else if (window.PSQSpinMusic) { PSQSpinMusic.start(); setTimeout(() => PSQSpinMusic.stop(), 6000); } };
     if (!edit) return;
+    const muDel = $('#wsMuDel', box); if (muDel) muDel.onclick = () => { music = ''; $('#wsMuName', box).textContent = 'Sẽ dùng nhạc có sẵn (bấm Lưu cài đặt)'; muDel.hidden = true; };
+    $('#wsMuUp', box).onclick = () => {
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'audio/mpeg,.mp3';
+      inp.onchange = () => { const f = inp.files[0]; if (!f) return; if (f.size > 10 * 1024 * 1024) return toast('Tệp nhạc tối đa 10 MB.', 'err');
+        $('#wsMuName', box).textContent = 'Đang tải ' + f.name + '...';
+        const rd = new FileReader(); rd.onload = () => {
+          const data = String(rd.result).replace(/^data:[^;]*;/i, 'data:audio/mpeg;');
+          fetch('/api/admin/media', { method: 'POST', headers: { 'x-psq': '1', 'content-type': 'application/json' }, body: JSON.stringify({ data }) }).then(r => r.json()).then(r => {
+            if (r.error || !r.url) { $('#wsMuName', box).textContent = r.error || 'Tải nhạc chưa được.'; return; }
+            music = r.url; $('#wsMuName', box).textContent = 'Đã tải ' + f.name + ' (bấm Lưu cài đặt)';
+          }).catch(() => { $('#wsMuName', box).textContent = 'Không kết nối được máy chủ.'; });
+        }; rd.readAsDataURL(f); };
+      inp.click();
+    };
     $('#wsForm', box).addEventListener('submit', e => {
       e.preventDefault();
       const tiers = $$('[name=wsT]:checked', box).map(x => x.value), n = Math.round(+$('#wsN', box).value), ex = Math.round(+$('#wsE', box).value);
       if (!(n >= 1 && n <= 10)) return $('#wsErr', box).textContent = 'Số mã mỗi người từ 1 đến 10.';
       if (!(ex >= 0 && ex <= 365)) return $('#wsErr', box).textContent = 'Hạn dùng từ 0 đến 365 ngày.';
       const dd = ADB.load(), W = ADB.wheel(dd);
-      W.settings = Object.assign({}, W.settings, { enabled: $('#wsOn', box).checked, tiers, perRef: n, expireDays: ex, rules: $('#wsR', box).value.trim() });
+      W.settings = Object.assign({}, W.settings, { enabled: $('#wsOn', box).checked, tiers, perRef: n, expireDays: ex, rules: $('#wsR', box).value.trim(), musicOn: $('#wsMu', box).checked, music });
       commit(dd, 'Cài đặt vòng quay', `${W.settings.enabled ? 'Bật' : 'Tắt'}; nhận mã: ${tiers.map(k => (TI.find(t => t[0] === k) || [])[1]).join(', ') || 'không ai'}; ${n} mã/người; hạn ${ex || 'không giới hạn'}${ex ? ' ngày' : ''}`, 'Đã lưu cài đặt vòng quay');
     });
   }

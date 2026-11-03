@@ -57,7 +57,8 @@ function scopeFor(d, me, A) {
     .sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8).forEach(({ x }) => addU(x, PUBLIC_USER));
   // vòng quay: quà, cài đặt, người trúng gần đây (tên che bớt ở giao diện)
   const W = A.wheel(d);
-  out.wheel = { prizes: W.prizes, settings: W.settings, rv: W.rv, events: (W.events || []).map(e => Object.assign({}, e, { fixedWinners: [] })), forced: {}, seen: {}, codes: [], spins: W.spins.slice(0, 12).map(s => pick(s, ['id', 'user', 'prize', 'prizeName', 'date'])) };
+  // sự kiện: không gửi danh sách chỉ định người trúng; người được bấm quay chỉ gửi tên, máy chủ kiểm tra quyền khi quay
+  out.wheel = { prizes: W.prizes, settings: W.settings, rv: W.rv, events: (W.events || []).map(e => Object.assign({}, e, { fixedWinners: [], spinners: [], spinNames: (e.spinners || []).map(id => (A.user(d, id) || {}).name).filter(Boolean), canSpin: !!(me && (e.spinners || []).includes(me.id)) })), forced: {}, seen: {}, codes: [], spins: W.spins.slice(0, 12).map(s => pick(s, ['id', 'user', 'prize', 'prizeName', 'date'])) };
   out.wheel.spins.forEach(s => addU(A.user(d, s.user), ['id', 'name']));
   if (me) {
     addU(me);
@@ -555,6 +556,16 @@ const ACTIONS = {
     const r = c.A.wheelSpin(c.d, c.args.code, c.me); if (r.error) return r;
     c.log('Quay thưởng', `${c.me.name} dùng mã ${r.spin.code}: ${r.prize.name}`);
     return { prize: r.prize, index: r.index, spin: r.spin, segments: r.segments };
+  } },
+
+  // vòng quay sự kiện: thành viên được quản trị cấp quyền bấm quay (ev.spinners)
+  eventSpin: { auth: 'member', run(c) {
+    const ev = c.A.wheel(c.d).events.find(e => e.id === String(c.args.id || ''));
+    if (!ev) return err('Không tìm thấy sự kiện.');
+    if (c.me.role !== 'admin' && !(ev.spinners || []).includes(c.me.id)) return err('Anh chị chưa được cấp quyền quay sự kiện này.');
+    const r = c.A.wheelEventDraw(c.d, ev.id); if (r.error) return r;
+    c.log('Quay sự kiện', `${ev.name}: ${c.me.name} quay, ${r.name}${r.winner.prize ? ' trúng ' + r.winner.prize : ''}`);
+    return { name: r.name, index: r.index, pool: r.pool, winner: r.winner };
   } },
 
   // vòng quay chào mừng: mỗi thành viên quay 1 lần sau khi đăng ký, trúng là nhận mã giảm giá

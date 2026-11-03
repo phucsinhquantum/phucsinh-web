@@ -255,7 +255,7 @@
           <p class="dim full" style="font-size:12.5px;margin:0">Lưu xong, thông tin dưới đây đổi ở mọi nơi trên web: chân trang, trang Liên hệ, nút gọi và Zalo, thông tin chuyển khoản ở trang đặt hàng và ví.</p>
           ${f('shopName', 'Tên cửa hàng', S.shopName || SITE.brand)}${f('hotline', 'Hotline', S.hotline || SITE.phone, 'tel')}
           ${f('zalo', 'Số Zalo', SITE.zalo, 'tel')}${f('email', 'Email liên hệ', S.email || SITE.email, 'email')}
-          ${f('hours', 'Giờ mở cửa', SITE.hours)}${f('mailSender', 'Người gửi thư tự động', S.mailSender)}
+          ${f('hours', 'Giờ mở cửa', SITE.hours)}${f('hoursNote', 'Ghi chú dưới giờ mở cửa', SITE.hoursNote || '', 'text', ' placeholder="Kể cả ngày lễ"')}${f('mailSender', 'Người gửi thư tự động', S.mailSender)}
           <div class="field full"><label for="hs-address">Địa chỉ</label><input class="input" id="hs-address" name="address" value="${esc(S.address || SITE.address)}"${dis}></div>
           <div class="field full"><label for="hs-mapEmbed">Link nhúng Google Maps (không bắt buộc)</label><input class="input" id="hs-mapEmbed" name="mapEmbed" value="${esc(SITE.mapEmbed || '')}" placeholder="https://www.google.com/maps/embed?..."${dis}></div>
           <div class="ht-sec full mt-2">Tài khoản nhận chuyển khoản</div>
@@ -263,9 +263,12 @@
           ${f('bankOwner', 'Chủ tài khoản', SITE.bank.owner)}
           <div class="ht-sec full mt-2">Link mạng xã hội</div>
           <p class="dim full" style="font-size:12.5px;margin:0">Để trống mục nào thì mục đó hiện "sắp ra mắt" ở trang Liên hệ và ẩn ở chân trang.</p>
-          ${f('facebook', 'Facebook', SITE.social.facebook, 'url', ' placeholder="https://facebook.com/..."')}${f('messenger', 'Messenger (tên trang hoặc link m.me)', SITE.messenger)}
+          ${f('facebook', 'Facebook', SITE.social.facebook, 'url', ' placeholder="https://facebook.com/..."')}${f('messenger', 'Messenger (mã trang, tên trang không dấu hoặc link m.me)', SITE.messenger, 'text', ' placeholder="770088739523660"')}
           ${f('zaloOA', 'Zalo OA', SITE.social.zalo, 'url', ' placeholder="https://zalo.me/..."')}${f('youtube', 'YouTube', SITE.social.youtube, 'url', ' placeholder="https://youtube.com/@..."')}
           ${f('tiktok', 'TikTok', SITE.social.tiktok, 'url', ' placeholder="https://tiktok.com/@..."')}
+          <div class="ht-sec full mt-2">Chính sách mua sắm (trang Liên hệ, mục "Mua sắm an tâm")</div>
+          <p class="dim full" style="font-size:12.5px;margin:0">Mỗi ô là một thẻ chính sách. Nội dung: mỗi dòng là một ý.</p>
+          ${SITE.policies.map((p, i) => `<div class="field"><label for="hs-pol${i}t">Thẻ ${i + 1}: tiêu đề</label><input class="input" id="hs-pol${i}t" name="pol${i}t" value="${esc(p.t)}"${dis}><textarea class="input mt-1" name="pol${i}d" rows="4" aria-label="Thẻ ${i + 1}: nội dung"${dis}>${esc((p.d || []).join('\n'))}</textarea></div>`).join('')}
           <div class="ht-sec full mt-2">Kế hoạch trả thưởng</div>
           <p class="dim full" style="font-size:12.5px;margin:0">1 điểm PS = 1 đồng. Thay đổi chỉ áp dụng cho đơn hàng ghi nhận sau khi lưu, không tính lại các khoản đã trả.</p>
           ${PLAN_FIELDS.map(([k, label, kind, help]) => pf(k, label, P[k], kind, help)).join('')}
@@ -290,6 +293,8 @@
         if (v('hotline') && !/^[0-9 +.]{8,15}$/.test(v('hotline'))) return fail('Số hotline chưa đúng.', 'hotline');
         if (!v('mailSender')) return fail('Anh chị nhập người gửi thư tự động.', 'mailSender');
         if (v('zalo') && !/^[0-9 +.]{8,15}$/.test(v('zalo'))) return fail('Số Zalo chưa đúng.', 'zalo');
+        if (v('messenger') && !SITE.messOf(v('messenger'))) return fail('Ô Messenger chỉ nhận mã trang (dãy số, ví dụ 770088739523660), tên trang không dấu không khoảng trắng, hoặc link m.me / facebook.com.', 'messenger');
+        for (let i = 0; i < 4; i++) if (!v('pol' + i + 't')) return fail(`Anh chị nhập tiêu đề thẻ chính sách ${i + 1}.`, 'pol' + i + 't');
         for (const k of ['facebook', 'zaloOA', 'youtube', 'tiktok']) if (v(k) && !/^https?:\/\/\S+$/i.test(v(k))) return fail('Link phải bắt đầu bằng https://', k);
         if (v('mapEmbed') && !/^https:\/\/www\.google\.com\/maps\/embed\S*$/i.test(v('mapEmbed'))) return fail('Link nhúng bản đồ phải bắt đầu bằng https://www.google.com/maps/embed', 'mapEmbed');
         const mw = +v('minWithdraw');
@@ -315,7 +320,8 @@
           minWithdraw: Math.round(mw),
           plan: Object.assign({}, ADB.PLAN, (d2.settings || {}).plan || {}, plan)
         });
-        const site = { brand: v('shopName'), phone: v('hotline'), zalo: v('zalo'), email: v('email'), address: v('address'), hours: v('hours'), mapEmbed: v('mapEmbed'), messenger: v('messenger'),
+        const site = { brand: v('shopName'), phone: v('hotline'), zalo: v('zalo'), email: v('email'), address: v('address'), hours: v('hours'), hoursNote: v('hoursNote'), mapEmbed: v('mapEmbed'), messenger: v('messenger'),
+          policies: [0, 1, 2, 3].map(i => ({ t: v('pol' + i + 't'), d: v('pol' + i + 'd').split('\n').map(x => x.trim()).filter(Boolean) })),
           bank: { name: v('bankName'), account: v('bankAccount'), owner: v('bankOwner') }, social: { facebook: v('facebook'), zalo: v('zaloOA'), youtube: v('youtube'), tiktok: v('tiktok') } };
         const t0 = Date.now();
         try { localStorage.setItem('psq_site_v1', JSON.stringify(site)); } catch (er) {}

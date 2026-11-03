@@ -52,8 +52,8 @@ if (!store.getJSON('mig:anan')) {
 /* ---------- ảnh tải lên trong quản trị (bài viết, đánh giá, đại lý, ảnh đại diện): lưu thành tệp, dữ liệu chỉ giữ đường dẫn.
    Trước đây ảnh nhúng base64 vào dữ liệu nên mỗi lần mở trang phải tải hơn 1MB. ---------- */
 const MEDIA_DIR = path.join(DATA_DIR, 'media');
-const MEDIA_EXT = { jpeg: 'jpg', jpg: 'jpg', png: 'png', webp: 'webp', gif: 'gif' };
-const MEDIA_MIME = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
+const MEDIA_EXT = { jpeg: 'jpg', jpg: 'jpg', png: 'png', webp: 'webp', gif: 'gif', mpeg: 'mp3', mp3: 'mp3' };
+const MEDIA_MIME = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', mp3: 'audio/mpeg' };
 const DATA_IMG = /data:image\/(jpeg|jpg|png|webp|gif);base64,([A-Za-z0-9+/=]{200,})/g;
 function mediaFile(type, b64) {
   const buf = Buffer.from(b64, 'base64'), ext = MEDIA_EXT[type];
@@ -70,7 +70,7 @@ function externalize(v) {
   return v;
 }
 function serveMedia(res, f) {
-  const m = /^[a-f0-9]{24}\.(jpg|png|webp|gif)$/.exec(f || ''); if (!m) return send(res, 404, { error: 'Không có ảnh.' });
+  const m = /^[a-f0-9]{24}\.(jpg|png|webp|gif|mp3)$/.exec(f || ''); if (!m) return send(res, 404, { error: 'Không có ảnh.' });
   fs.readFile(path.join(MEDIA_DIR, f), (e, buf) => {
     if (e) return send(res, 404, { error: 'Không có ảnh.' });
     res.writeHead(200, { 'content-type': MEDIA_MIME[m[1]], 'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff' }); res.end(buf);
@@ -217,6 +217,11 @@ async function api(req, res, url) {
   if (req.method === 'GET' && route === '/api/tai-lieu/slide') return slidePage(res, me);
   if (req.method === 'GET' && route === '/api/bill') return serveBill(req, res, url, me);
   if (req.method === 'GET' && route.startsWith('/api/media/')) return serveMedia(res, route.slice(11));
+  // người xem vòng quay sự kiện hỏi nhẹ xem đã có người trúng mới chưa (không tải lại cả dữ liệu)
+  if (req.method === 'GET' && route === '/api/su-kien') {
+    const ev = ((D.wheel || {}).events || []).find(e => e.id === url.searchParams.get('id'));
+    return send(res, 200, ev ? { n: (ev.winners || []).length, at: ev.spinAt || '' } : { n: -1 });
+  }
   if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
   if (route === '/api/bot/lookup' || route === '/api/bot/products' || route === '/api/bot/fanpages') return botApi(req, res, url, route.split('/').pop());
   if (req.method !== 'POST') return send(res, 405, { error: 'Sai phương thức.' });
@@ -291,6 +296,8 @@ async function api(req, res, url) {
     if (route === '/api/admin/slide') return saveSlide(res, me, body);
     // tải ảnh lên (sản phẩm, bài viết, khuyến mãi...): nhận ảnh base64 đã thu nhỏ ở trình duyệt, trả đường dẫn tệp
     if (route === '/api/admin/media') {
+      const au = /^data:audio\/(mpeg|mp3);base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data || ''));
+      if (au) { if (au[2].length > 14e6) return send(res, 400, { error: 'Tệp nhạc tối đa khoảng 10 MB.' }); return send(res, 200, { url: mediaFile(au[1], au[2]) }); }
       const m = /^data:image\/(jpeg|jpg|png|webp|gif);base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data || ''));
       if (!m || m[2].length > 8e6) return send(res, 400, { error: 'Ảnh chưa đúng (JPG, PNG, WEBP, GIF, tối đa khoảng 6 MB).' });
       return send(res, 200, { url: mediaFile(m[1], m[2]) });

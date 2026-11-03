@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261031b">
-<script src="js/lang.js?v=20261031b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261104a">
+<script src="js/lang.js?v=20261104a"></script>
 <style>
   .topbar > div:nth-child(2) { min-width: 0; }
   .topbar h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -117,10 +117,10 @@
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261031b"></script>
-<script src="js/api.js?v=20261031b"></script>
-<script src="js/data.js?v=20261031b"></script>
-<script src="js/app.js?v=20261031b"></script>
+<script src="js/patch.js?v=20261104a"></script>
+<script src="js/api.js?v=20261104a"></script>
+<script src="js/data.js?v=20261104a"></script>
+<script src="js/app.js?v=20261104a"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, productCard, qs, cart, toast } = PSQ;
@@ -213,7 +213,7 @@
     <div class="section-title"><div><span class="eyebrow">Có thể anh chị thích</span><h2>Sản phẩm liên quan</h2></div><a class="card-link" href="san-pham.html?cat=${p.cat}">Xem thêm</a></div>
     <section class="p-grid" id="related"></section>`;
 
-  const others = PSQ.shopList(p.partner).filter(x => x.id !== p.id);
+  const others = PSQ.shopList(PSQ.isPartner(p)).filter(x => x.id !== p.id);
   const related = [...others.filter(x => x.cat === p.cat), ...others.filter(x => x.cat !== p.cat).sort((a, b) => (b.hot ? 1 : 0) - (a.hot ? 1 : 0))].slice(0, 4);
   $('#related').innerHTML = related.map(productCard).join('');
 

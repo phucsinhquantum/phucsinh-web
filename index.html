@@ -18,10 +18,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261031b">
-<script src="js/lang.js?v=20261031b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261104a">
+<script src="js/lang.js?v=20261104a"></script>
 <link rel="stylesheet" href="css/intro.css">
-<script src="js/intro.js?v=20261031b"></script>
+<script src="js/intro.js?v=20261104a"></script>
 </head>
 <body data-page="home">
 <div id="page" data-title="Trang chủ" data-crumb="Trang chủ">
@@ -103,11 +103,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261031b"></script>
-<script src="js/api.js?v=20261031b"></script>
-<script src="js/data.js?v=20261031b"></script>
-<script src="js/app.js?v=20261031b"></script>
-<script src="js/psq-data.js?v=20261031b"></script>
+<script src="js/patch.js?v=20261104a"></script>
+<script src="js/api.js?v=20261104a"></script>
+<script src="js/data.js?v=20261104a"></script>
+<script src="js/app.js?v=20261104a"></script>
+<script src="js/psq-data.js?v=20261104a"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, productCard, area, modal } = PSQ;
@@ -152,7 +152,7 @@
   } else {
     fanRow.className = ''; fanRow.innerHTML = `<div class="card glow-mix fan-empty"><p>Khu vực này giới thiệu fanpage Facebook, TikTok, Zalo của các thành viên Phúc Sinh QuanTum. Anh chị là thành viên? Gửi link fanpage trong trang Tài khoản để được hiển thị tại đây.</p><a class="btn btn-gold" href="thanh-vien.html#ho-so">Gửi fanpage của tôi</a></div>`;
   }
-  $('#cats').innerHTML = CATEGORIES.map((c, i) => {
+  $('#cats').innerHTML = PSQ.shopCats().map((c, i) => {
     const n = PSQ.shopList().filter(p => p.cat === c.id).length, p = PSQ.shopList().find(x => x.cat === c.id);
     return `<a class="card ${['glow-cyan', 'glow-gold', 'glow-mix'][i % 3]} cat-item" href="san-pham.html?cat=${c.id}"><div class="p-img">${p ? PSQ.art(p) : ''}<span class="cat-go">Xem sản phẩm ${icon('arrow')}</span></div><div class="cat-name"><h3>${esc(c.name)}</h3><span>${n} sản phẩm</span></div></a>`;
   }).join('');
@@ -167,10 +167,30 @@
   const isAdmin = (PSQ.auth.user && PSQ.auth.user() || {}).role === 'admin';
   const play = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>';
   const local = location.protocol === 'file:';
-  if (vids.length) {
-    track.innerHTML = vids.map((v, i) => `<button class="story-card${i ? '' : ' hot'}" type="button" data-v="${i}" aria-label="Xem video: ${esc(v.name || v.title || 'chia sẻ của khách hàng')}">
-      <img src="${V.thumb(v.id)}" alt="" loading="${i < 4 ? 'eager' : 'lazy'}"><span class="story-play">${play}</span>
-      <span class="story-cap">${esc(v.name || v.title || 'Khách hàng Phúc Sinh')}</span></button>`).join('');
+  const vcard = (i, k) => { const v = vids[i]; return `<button class="story-card${k ? '' : ' hot'}" type="button" data-v="${i}" aria-label="Xem video: ${esc(v.name || v.title || 'chia sẻ của khách hàng')}">
+      <img src="${V.thumb(v.id)}" alt="" loading="${k < 4 ? 'eager' : 'lazy'}"><span class="story-play">${play}</span>
+      <span class="story-cap">${esc(v.name || v.title || 'Khách hàng Phúc Sinh')}</span></button>`; };
+  // từ 4 video trở lên: mỗi lần hiện 3 video, 5 giây đổi sang 3 video khác, thứ tự xáo ngẫu nhiên
+  const ROT = vids.length > 3;
+  const mix = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  let queue = [], shown = [], hist = [];
+  const nextSet = () => {
+    const out = [];
+    while (out.length < 3) {
+      if (!queue.length) queue = mix(vids.map((_, i) => i).filter(i => !shown.includes(i) || vids.length < 6));
+      const i = queue.shift(); if (!out.includes(i)) out.push(i);
+    }
+    return out;
+  };
+  const showSet = (set, anim) => {
+    shown = set;
+    const draw = () => { track.innerHTML = set.map(vcard).join(''); track.scrollLeft = 0; track.classList.remove('swap'); };
+    if (!anim || matchMedia('(prefers-reduced-motion: reduce)').matches) return draw();
+    track.classList.add('swap'); setTimeout(draw, 260);
+  };
+  if (ROT) showSet(nextSet());
+  else if (vids.length) {
+    track.innerHTML = vids.map((_, i) => vcard(i, i)).join('');
   } else {
     // chưa có video: khung chờ, quản trị thấy hướng dẫn thêm video
     const ph = ['img/intro/canh-1-may-nui-ngay.jpg', 'img/intro/phuc-sinh-canh-nen-ngay.jpg', 'img/intro/canh-1-may-nui-ngay.jpg'];
@@ -188,6 +208,12 @@
   // nút lướt video: luôn hiện khi có từ 2 video. Hết danh sách thì quay vòng lại đầu;
   // nếu số video vừa khít khung (không cuộn được) thì xoay vòng thứ tự thẻ để khách vẫn lướt được.
   const step = dir => {
+    if (ROT) {
+      if (dir > 0) { hist.push(shown); if (hist.length > 20) hist.shift(); showSet(nextSet(), 1); }
+      else if (hist.length) showSet(hist.pop(), 1);
+      else showSet(nextSet(), 1);
+      return;
+    }
     const c = track.querySelector('.story-card'), w = (c ? c.offsetWidth : 200) + 14, max = track.scrollWidth - track.clientWidth - 2;
     if (max <= 0) {
       if (dir > 0) track.appendChild(track.firstElementChild); else track.prepend(track.lastElementChild);
@@ -199,6 +225,18 @@
   };
   const arrows = () => { $$('#story [data-dir]').forEach(b => { b.disabled = false; }); $('#story').classList.toggle('no-scroll', vids.length < 2); };
   track.addEventListener('scroll', arrows, { passive: true }); addEventListener('resize', arrows); setTimeout(arrows, 50);
+  if (ROT) {
+    let hold = false, last = Date.now();
+    const box = $('#story');
+    box.addEventListener('pointerenter', () => { hold = true; }); box.addEventListener('pointerleave', () => { hold = false; last = Date.now(); });
+    box.addEventListener('focusin', () => { hold = true; }); box.addEventListener('focusout', () => { hold = false; });
+    setInterval(() => {
+      if (hold || document.hidden || document.querySelector('.modal-back, .modal')) return;
+      if (Date.now() - last < 4800) return;
+      last = Date.now(); hist.push(shown); if (hist.length > 20) hist.shift(); showSet(nextSet(), 1);
+    }, 500);
+    box.addEventListener('click', e => { if (e.target.closest('[data-dir]')) last = Date.now(); }, true);
+  }
   $('#story').addEventListener('click', e => {
     const d = e.target.closest('[data-dir]'); if (d) return step(+d.dataset.dir);
     const c = e.target.closest('[data-v]'); if (c) openVideo(+c.dataset.v);

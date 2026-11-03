@@ -78,6 +78,7 @@
     bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     download: '<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>',
     upload: '<path d="M12 20V9M7 14l5-5 5 5M4 4h16"/>',
+    play: '<path d="M8 5.5v13l11-6.5z" fill="currentColor"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.6 13H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 5 7.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.5 3.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/>',
     zalo: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h4l-4 4h4M14 9v4M16.5 9a1.5 2 0 1 1 0 4 1.5 2 0 0 1 0-4z"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/>',
@@ -192,7 +193,11 @@
   const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
   // giá tính thưởng (PS): chưa đặt thì bằng giá bán. Hàng đối tác nằm ở trang riêng.
   const psOf = p => (p && p.ps != null && p.ps !== '' && +p.ps >= 0) ? Math.round(+p.ps) : (p ? p.price : 0);
-  const shopList = partner => PRODUCTS.filter(p => !!p.partner === !!partner);
+  // danh mục tên có chữ "đối tác" cũng tính là hàng đối tác: chỉ hiện ở mục Sản phẩm đối tác, không lên trang chủ
+  const partnerCat = id => { const c = (window.CATEGORIES || []).find(x => x.id === id); return !!c && /doi ?tac/.test(fold(c.name)); };
+  const isPartner = p => !!(p && (p.partner || partnerCat(p.cat)));
+  const shopList = partner => PRODUCTS.filter(p => isPartner(p) === !!partner);
+  const shopCats = () => (window.CATEGORIES || []).filter(c => !partnerCat(c.id));
   /* ---------- phân loại (dòng sản phẩm), ảnh, nhãn ----------
      p.variants [{ id, name, price, old, ps, image }]: mỗi dòng giá, ảnh riêng; p.images: bộ ảnh (ảnh đầu là ảnh đại diện);
      p.badges ['hot','love','new','limited','gift','sale'] + p.badgeText (nhãn tự đặt); p.short: mô tả ngắn; p.desc: mô tả (HTML). */
@@ -500,7 +505,7 @@
           ${u && u.role === 'admin' && u.status !== 'locked' ? `<div class="nav-label">Quản lý</div>
           <nav class="nav">${link({ id: 'admin', href: 'quan-tri.html', label: 'Quản trị', icon: 'grid' })}</nav>` : ''}
           <div class="nav-label nav-cats">Danh mục</div>
-          <nav class="nav nav-cats">${CATEGORIES.slice(0, 4).map((c, i) => `<a href="san-pham.html?cat=${c.id}"><span class="dot" style="color:${['#4fe6df', '#b98cff', '#45e08f', '#f3c76b'][i]}"></span><span>${esc(c.name)}</span></a>`).join('')}</nav>
+          <nav class="nav nav-cats">${shopCats().slice(0, 4).map((c, i) => `<a href="san-pham.html?cat=${c.id}"><span class="dot" style="color:${['#4fe6df', '#b98cff', '#45e08f', '#f3c76b'][i]}"></span><span>${esc(c.name)}</span></a>`).join('')}</nav>
           <div class="side-promo"><div class="card glow-cyan" style="padding:16px">
             <div class="row" style="gap:8px;font-weight:600">${icon('sparkle', 'gold')}<span>Thành viên PSQ</span></div>
             <p class="dim" style="font-size:12px;margin:6px 0 12px">Kích hoạt cộng tác viên, lên đại lý để nhận hoa hồng và điểm thưởng.</p>
@@ -729,7 +734,45 @@
     };
   })();
 
-  window.PSQ = { pv, variantOf, priceLabel, prices, badgesOf, isHot, imagesOf, BADGES, rich, richText, richProd, richYt, isHtml, fans, guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
+  /* ---------- nhạc khi bấm quay (vòng quay khách hàng và sự kiện) ----------
+     Có tệp MP3 quản trị tải lên thì phát tệp đó (lặp lại), không thì tự tạo nhạc vui bằng WebAudio, không cần tệp. */
+  window.PSQSpinMusic = (function () {
+    let ac = null, timer = null, gain = null, au = null, step = 0;
+    const N = [523.25, 659.25, 783.99, 1046.5, 880, 783.99, 659.25, 783.99, 587.33, 698.46, 880, 1174.66, 987.77, 880, 783.99, 698.46];
+    const B = [130.81, 130.81, 174.61, 196];
+    function note(f, t, len, type, vol) {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g); g.connect(gain); o.start(t); o.stop(t + len + 0.02);
+    }
+    function start(url) {
+      stop(true);
+      if (url) {
+        try { au = new Audio(url); au.loop = true; au.volume = 0.75; au.play().catch(() => { au = null; start(); }); return; } catch (e) { au = null; }
+      }
+      try {
+        ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume();
+        gain = ac.createGain(); gain.gain.value = 0.9; gain.connect(ac.destination); step = 0;
+        const beat = 0.13;
+        const tickFn = () => {
+          const t = ac.currentTime + 0.02;
+          note(N[step % N.length], t, beat * 1.6, 'triangle', 0.09);
+          if (step % 4 === 0) note(B[(step / 4 | 0) % B.length], t, beat * 3.6, 'sine', 0.12);
+          if (step % 2 === 1) note(N[(step + 2) % N.length] * 2, t, beat * 0.6, 'square', 0.015);
+          step++;
+        };
+        tickFn(); timer = setInterval(tickFn, beat * 1000);
+      } catch (e) {}
+    }
+    function stop(now) {
+      if (timer) { clearInterval(timer); timer = null; }
+      if (au) { const a = au; au = null; if (now) a.pause(); else { let v = a.volume; const iv = setInterval(() => { v -= 0.08; if (v <= 0) { clearInterval(iv); a.pause(); } else a.volume = v; }, 60); } }
+      if (gain && ac) { const g = gain; gain = null; try { g.gain.setTargetAtTime(0.0001, ac.currentTime, now ? 0.02 : 0.25); setTimeout(() => g.disconnect(), 1500); } catch (e) {} }
+    }
+    return { start, stop };
+  })();
+  window.PSQ = { partnerCat, isPartner, shopCats, pv, variantOf, priceLabel, prices, badgesOf, isHot, imagesOf, BADGES, rich, richText, richProd, richYt, isHtml, fans, guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)
   function pwEyes(root) {
@@ -748,6 +791,29 @@
 
   shell();
   ambient();
+  // sự kiện vòng quay mới: hiện thông báo một lần cho mỗi sự kiện (mọi trang trừ quản trị và trang vòng quay)
+  function eventNotice() {
+    const pg = document.body.dataset.page; if (pg === 'admin' || /vong-quay\.html$/.test(location.pathname)) return;
+    const W = (API.db && API.db.wheel) || {}, today = new Date().toISOString().slice(0, 10);
+    const seen = store.get('psq_ev_seen', []);
+    const E = (W.events || []).filter(e => e && e.announce !== false && !seen.includes(e.id) && (!e.date || e.date >= today))
+      .filter(e => { const slots = (e.prizes || []).reduce((n, p) => n + (+p.qty || 0), 0); return !slots || (e.winners || []).length < slots; })[0];
+    if (!E) return;
+    // chưa bấm đóng thì mỗi lần mở web (phiên mới) nhắc lại một lần, không hiện lặp ở mọi trang
+    try { const k = 'psq_ev_shown_' + E.id; if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) {}
+    const box = document.createElement('div'); box.className = 'ev-note card glow-gold'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Sự kiện mới');
+    const who = (E.spinNames || []).length ? `<small class="dim">Người quay: ${esc(E.spinNames.join(', '))}</small>` : '';
+    box.innerHTML = `<span class="ev-ico">${icon('gift')}</span><div class="ev-body"><span class="eyebrow">Sự kiện mới</span><b>${esc(E.name)}</b><small class="dim">${E.kind === 'online' ? 'Zoom online' : 'Offline'}${E.date ? ' · ' + fdate(E.date) : ''}${(E.prizes || []).length ? ' · ' + E.prizes.map(p => esc(p.name) + ' × ' + (+p.qty || 0)).join(', ') : ''}</small>${who}
+      <div class="row" style="gap:8px;margin-top:8px"><a class="btn btn-sm btn-gold" href="vong-quay.html?ev=${encodeURIComponent(E.id)}#su-kien">${icon('sparkle')} Xem vòng quay</a><button class="btn btn-sm btn-ghost" type="button" data-ev-x>Để sau</button></div></div>
+      <button class="icon-btn ev-x" type="button" data-ev-x aria-label="Đóng">${icon('close')}</button>`;
+    const done = () => { const L = store.get('psq_ev_seen', []); if (!L.includes(E.id)) L.push(E.id); store.set('psq_ev_seen', L.slice(-50)); };
+    box.addEventListener('click', e => { if (e.target.closest('a')) done(); if (e.target.closest('[data-ev-x]')) { done(); box.classList.remove('open'); setTimeout(() => box.remove(), 300); } });
+    document.body.appendChild(box);
+    // trang chủ đang chạy intro thì chờ intro tắt mới hiện
+    const show = () => { if (document.querySelector('body > .intro')) return setTimeout(show, 800); setTimeout(() => box.classList.add('open'), 1200); };
+    show();
+  }
+  if (document.readyState !== 'loading') setTimeout(eventNotice, 300); else document.addEventListener('DOMContentLoaded', () => setTimeout(eventNotice, 300));
   document.addEventListener('DOMContentLoaded', reveal);
   if (document.readyState !== 'loading') setTimeout(reveal);
 })();

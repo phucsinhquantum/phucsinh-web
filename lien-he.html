@@ -18,8 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261031b">
-<script src="js/lang.js?v=20261031b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261104a">
+<script src="js/lang.js?v=20261104a"></script>
 <style>
   .c-card { display: grid; gap: 12px; align-content: start; transition: transform .3s; }
   a.c-card:hover { transform: translateY(-3px); }
@@ -110,22 +110,22 @@
         <div id="map"></div>
       </div>
       <div class="card reveal">
-        <div class="card-head"><h3>Kết nối với PSQ</h3><span class="sub">(mẫu)</span></div>
+        <div class="card-head"><h3>Kết nối với PSQ</h3></div>
         <div class="socials" id="socials"></div>
       </div>
     </aside>
   </section>
 
   <section id="chinh-sach">
-    <div class="section-title pol-title"><div><span class="eyebrow">Mua sắm an tâm</span><h2>Chính sách</h2></div><span class="sub dim" style="margin-left:auto;font-size:12px">Nội dung mẫu, cần thay theo chính sách thật</span></div>
+    <div class="section-title pol-title"><div><span class="eyebrow">Mua sắm an tâm</span><h2>Chính sách</h2></div></div>
     <div class="grid g-4" id="policies"></div>
   </section>
 </div>
 
-<script src="js/patch.js?v=20261031b"></script>
-<script src="js/api.js?v=20261031b"></script>
-<script src="js/data.js?v=20261031b"></script>
-<script src="js/app.js?v=20261031b"></script>
+<script src="js/patch.js?v=20261104a"></script>
+<script src="js/api.js?v=20261104a"></script>
+<script src="js/data.js?v=20261104a"></script>
+<script src="js/app.js?v=20261104a"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, toast, db } = PSQ;
@@ -141,7 +141,7 @@
   $('#info').innerHTML = info.map((x, i) => {
     const tag = x.href ? 'a' : 'div';
     const attr = x.href ? ` href="${esc(x.href)}"${x.ext ? ' target="_blank" rel="noopener"' : ''}` : '';
-    return `<${tag} class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} c-card reveal"${attr}><span class="stat-ico ${x.c}">${icon(x.ico)}</span><small>${x.k}</small><b>${esc(x.v)}</b>${x.go ? `<span class="go">${x.go} ›</span>` : '<span class="go" style="color:var(--text-3)">Kể cả ngày lễ (mẫu)</span>'}</${tag}>`;
+    return `<${tag} class="card ${i % 2 ? 'glow-cyan' : 'glow-gold'} c-card reveal"${attr}><span class="stat-ico ${x.c}">${icon(x.ico)}</span><small>${x.k}</small><b>${esc(x.v)}</b>${x.go ? `<span class="go">${x.go} ›</span>` : (S.hoursNote ? `<span class="go" style="color:var(--text-3)">${esc(S.hoursNote)}</span>` : '')}</${tag}>`;
   }).join('');
 
   // bản đồ
@@ -163,14 +163,9 @@
   $('#socials').innerHTML = socials.map(s => `<a href="${esc(s.u || '#')}"${s.u ? ' target="_blank" rel="noopener"' : ' data-soon'}>${icon(s.ico)}<span>${s.n}</span></a>`).join('');
   $('#socials').addEventListener('click', e => { if (e.target.closest('[data-soon]')) { e.preventDefault(); toast('Trang này sắp ra mắt, anh chị theo dõi Zalo nhé.'); } });
 
-  // chính sách (mẫu)
-  const pol = [
-    { ico: 'back', c: 'gold', t: 'Đổi trả trong 7 ngày', d: ['Đổi trả trong 7 ngày nếu sản phẩm lỗi do sản xuất hoặc giao sai mẫu.', 'Sản phẩm còn nguyên tem, hộp và giấy kiểm định.', 'Miễn phí vận chuyển khi lỗi từ phía PSQ.'] },
-    { ico: 'shield', c: '', t: 'Bảo hành', d: ['Bảo hành dây và khóa trong 12 tháng.', 'Thay dây miễn phí cho thành viên.', 'Đánh bóng, vệ sinh hạt trầm theo yêu cầu.'] },
-    { ico: 'truck', c: 'violet', t: 'Giao hàng', d: [S.shipFee ? 'Phí giao hàng theo khu vực.' : 'Miễn phí giao hàng toàn quốc.', 'Nội thành 1 đến 2 ngày, tỉnh khác 2 đến 5 ngày.', 'Được kiểm tra hàng trước khi thanh toán.'] },
-    { ico: 'wallet', c: 'green', t: 'Thanh toán', d: ['Thanh toán bằng ví điểm (nạp tiền vào ví tiền mặt).', 'Chuyển khoản ngân hàng hoặc quét mã QR.', 'Xuất hóa đơn theo yêu cầu.'] }
-  ];
-  $('#policies').innerHTML = pol.map((p, i) => `<div class="card ${['glow-gold', 'glow-cyan', 'glow-mix', 'glow-cyan'][i]} policy reveal"><span class="stat-ico ${p.c}">${icon(p.ico)}</span><h3>${p.t} <span class="dim" style="font-weight:400;font-size:12px">(mẫu)</span></h3><ul>${p.d.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
+  // chính sách: sửa ở Quản trị > Thiết lập hệ thống
+  const POL_ICO = [['back', 'gold'], ['shield', ''], ['truck', 'violet'], ['wallet', 'green']];
+  $('#policies').innerHTML = (S.policies || []).map((p, i) => `<div class="card ${['glow-gold', 'glow-cyan', 'glow-mix', 'glow-cyan'][i % 4]} policy reveal"><span class="stat-ico ${POL_ICO[i % 4][1]}">${icon(POL_ICO[i % 4][0])}</span><h3>${esc(p.t)}</h3><ul>${(p.d || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
 
   // biểu mẫu liên hệ
   const form = $('#cform');

@@ -12,10 +12,18 @@ window.SITE = {
   logo: 'img/logo-psq.png',
   phone: '0931 133 199',
   zalo: '0839153514',             // Zalo của bot An An chăm sóc khách hàng
-  messenger: 'phucsinhquantum',    // tên trang Facebook (m.me/ten-trang); bot An An trả lời tin nhắn trang này
+  messenger: '770088739523660',    // mã trang Facebook PHÚC SINH (m.me/<mã>); bot An An trả lời tin nhắn trang này
   email: 'phucsinhquantum@gmail.com',
   address: '41 Nguyễn Đình Chiểu, Phường Sài Gòn, TP. Hồ Chí Minh',
   hours: 'Thứ 2 đến Chủ nhật, 8:00 đến 20:00',
+  hoursNote: 'Kể cả ngày lễ',
+  // chính sách mua sắm (trang Liên hệ), sửa ở Quản trị > Thiết lập hệ thống
+  policies: [
+    { t: 'Đổi trả trong 7 ngày', d: ['Đổi trả trong 7 ngày nếu sản phẩm lỗi do sản xuất hoặc giao sai mẫu.', 'Sản phẩm còn nguyên tem, hộp và giấy kiểm định.', 'Miễn phí vận chuyển khi lỗi từ phía PSQ.'] },
+    { t: 'Bảo hành', d: ['Bảo hành dây và khóa trong 12 tháng.', 'Thay dây miễn phí cho thành viên.', 'Đánh bóng, vệ sinh hạt trầm theo yêu cầu.'] },
+    { t: 'Giao hàng', d: ['Miễn phí giao hàng toàn quốc.', 'Nội thành 1 đến 2 ngày, tỉnh khác 2 đến 5 ngày.', 'Được kiểm tra hàng trước khi thanh toán.'] },
+    { t: 'Thanh toán', d: ['Thanh toán bằng ví điểm (nạp tiền vào ví tiền mặt).', 'Chuyển khoản ngân hàng hoặc quét mã QR.', 'Xuất hóa đơn theo yêu cầu.'] }
+  ],
   website: 'phucsinhquantum.com',
   social: { facebook: '', youtube: '', tiktok: '', zalo: '' },   // link mạng xã hội thật (để trống = "sắp ra mắt")
   mapEmbed: '',                    // dán link nhúng Google Maps (https://www.google.com/maps/embed?...)
@@ -222,17 +230,27 @@ window.ABOUT_DEFAULT = JSON.parse(JSON.stringify({ about: window.ABOUT, team: wi
   try {
     const v = JSON.parse(localStorage.getItem('psq_site_v1')); if (!v || typeof v !== 'object') return;
     ['brand', 'phone', 'zalo', 'email', 'address', 'hours'].forEach(k => { if (typeof v[k] === 'string' && v[k].trim()) SITE[k] = v[k].trim(); });
-    ['messenger', 'mapEmbed'].forEach(k => { if (typeof v[k] === 'string') SITE[k] = v[k].trim(); });
+    ['messenger', 'mapEmbed', 'hoursNote'].forEach(k => { if (typeof v[k] === 'string') SITE[k] = v[k].trim(); });
+    if (Array.isArray(v.policies)) v.policies.slice(0, 4).forEach((p, i) => { if (p && typeof p.t === 'string' && p.t.trim()) SITE.policies[i] = { t: p.t.trim(), d: (Array.isArray(p.d) ? p.d : []).map(x => String(x).trim()).filter(Boolean) }; });
     if (v.bank) ['name', 'account', 'owner'].forEach(k => { if (typeof v.bank[k] === 'string' && v.bank[k].trim()) SITE.bank[k] = v.bank[k].trim(); });
     if (v.social) ['facebook', 'youtube', 'tiktok', 'zalo'].forEach(k => { if (typeof v.social[k] === 'string') SITE.social[k] = v.social[k].trim(); });
   } catch (e) {}
 })();
 // đường dẫn Messenger: nhận tên trang, link m.me hoặc link trang facebook.com/ten-trang (đổi sang m.me để mở thẳng khung chat)
-SITE.messLink = () => {
-  const m = String(SITE.messenger || '').trim(); if (!m) return '';
-  const fb = m.match(/^https?:\/\/(?:www\.|m\.)?facebook\.com\/([A-Za-z0-9.\-]+)\/?$/i);
-  return fb ? 'https://m.me/' + fb[1] : /^https?:\/\//i.test(m) ? m : 'https://m.me/' + m.replace(/^@/, '');
+// Gõ sai (có dấu, khoảng trắng như "Phúc Sinh") thì dùng mã trang PHÚC SINH để nút không bị hỏng.
+SITE.MESS_PAGE = '770088739523660';
+SITE.messOf = raw => {
+  const m = String(raw || '').trim(); if (!m) return '';
+  const pid = m.match(/facebook\.com\/profile\.php\?id=(\d+)/i);
+  if (pid) return 'https://m.me/' + pid[1];
+  const fb = m.match(/^https?:\/\/(?:www\.|m\.|web\.)?facebook\.com\/([A-Za-z0-9.\-]+)\/?(?:\?.*)?$/i);
+  if (fb) return 'https://m.me/' + fb[1];
+  if (/^https?:\/\/(m\.me|www\.messenger\.com|messenger\.com)\/\S+$/i.test(m)) return m;
+  if (/^(m\.me|messenger\.com)\/[A-Za-z0-9.\-]+\/?$/i.test(m)) return 'https://' + m;
+  const name = m.replace(/^@/, '');
+  return /^[A-Za-z0-9.\-]+$/.test(name) ? 'https://m.me/' + name : '';
 };
+SITE.messLink = () => String(SITE.messenger || '').trim() ? (SITE.messOf(SITE.messenger) || 'https://m.me/' + SITE.MESS_PAGE) : '';
 
 // Điều khoản sử dụng hiện ở form đăng ký. Sửa trong Quản trị > Trang web > Điều khoản (lưu psq_terms_v1).
 // Các chữ trong ngoặc nhọn tự thay bằng số liệu trong Thiết lập: {gia_goi} {diem_goi} {moc_dai_ly} {hh_ctv} {hh_daily}
