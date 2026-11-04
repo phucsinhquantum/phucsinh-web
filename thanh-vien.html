@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261104d">
-<script src="js/lang.js?v=20261104d"></script>
+<link rel="stylesheet" href="css/app.css?v=20261104e">
+<script src="js/lang.js?v=20261104e"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -215,6 +215,10 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   .cp-item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px; border: 1px dashed rgba(243, 199, 107, .45); background: rgba(243, 199, 107, .05); }
   .cp-item > div { flex: 1; min-width: 160px; } .cp-item small { display: block; color: var(--text-3); font-size: 12px; } .cp-item.off { opacity: .6; }
   .modal.ww-modal { width: min(420px, 100%); }
+  .tv-sup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+  .tv-sup > svg { width: 16px; height: 16px; color: var(--gold); flex: none; }
+  .tv-sup .badge { vertical-align: middle; }
+  .tv-sup .btn { padding: 3px 10px; min-height: 0; font-size: 12.5px; }
   .ww { position: relative; width: 300px; max-width: 100%; margin: 6px auto 0; }
   .ww-face { display: block; width: 100%; height: auto; will-change: transform; transform: translateZ(0); backface-visibility: hidden; }
   .ww-ptr { position: absolute; left: 50%; top: -4px; transform: translateX(-50%); width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent; border-top: 26px solid #f3c76b; z-index: 2; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
@@ -240,11 +244,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261104d"></script>
-<script src="js/api.js?v=20261104d"></script>
-<script src="js/data.js?v=20261104d"></script>
-<script src="js/app.js?v=20261104d"></script>
-<script src="js/psq-data.js?v=20261104d"></script>
+<script src="js/patch.js?v=20261104e"></script>
+<script src="js/api.js?v=20261104e"></script>
+<script src="js/data.js?v=20261104e"></script>
+<script src="js/app.js?v=20261104e"></script>
+<script src="js/psq-data.js?v=20261104e"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -254,6 +258,13 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   const ps = n => (Math.round(n) || 0).toLocaleString('vi-VN') + ' PS';
   const WST = { done: ['Hoàn tất', 'ok'], pending: ['Chờ duyệt', 'pending'], rejected: ['Từ chối', 'failed'] };
   const wB = s => `<span class="badge ${(WST[s] || [])[1] || ''}">${(WST[s] || [s])[0]}</span>`;
+  // người giới thiệu = người quản lý, hỗ trợ trực tiếp (CTV hoặc đại lý); không có thì công ty hỗ trợ
+  const supportLine = (d, me) => {
+    const sp = me.sponsor && ADB.user(d, me.sponsor), tel = p => String(p || '').replace(/[^\d+]/g, '');
+    if (!sp || sp.role === 'admin') return `<div class="tv-sup mt-1">${icon('shield')}<span>Người hỗ trợ trực tiếp: <b>${esc(SITE.brand)}</b></span>${SITE.phone ? `<a class="btn btn-sm btn-ghost" href="tel:${esc(tel(SITE.phone))}">${icon('phone')} ${esc(SITE.phone)}</a>` : ''}</div>`;
+    const p = tel(sp.phone);
+    return `<div class="tv-sup mt-1">${icon('users')}<span>Người giới thiệu, hỗ trợ trực tiếp: <b>${esc(sp.name)}</b> <span class="dim">(${esc(sp.code || '')})</span> ${sp.role === 'admin' ? '' : tierB(sp)}</span>${p ? `<a class="btn btn-sm btn-ghost" href="tel:${esc(p)}">${icon('phone')} Gọi</a><a class="btn btn-sm btn-ghost" href="https://zalo.me/${esc(p.replace(/^\+84/, '0'))}" target="_blank" rel="noopener">Zalo</a>` : ''}</div>`;
+  };
   const tierB = u => { const t = ADB.tierOf(u); return `<span class="badge tier-b" style="--c:${t.color}">${icon((u.tier || 'khach') === 'daily' ? 'award' : (u.tier || 'khach') === 'ctv' ? 'star' : 'user')} ${esc(t.name)}</span>`; };
   const wdot = k => `<span class="wdot" style="--c:${W[k].color}">${esc(W[k].short)}</span>`;
   // ảnh đại diện (nếu có) hoặc chữ viết tắt
@@ -403,7 +414,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
         ${av(me, 'lg g')}
         <div><h2>Xin chào, ${esc(me.name)}</h2>
           <div class="meta mt-1">@${esc(me.username || '')} · ${esc(me.email)}${me.phone ? ' · ' + esc(me.phone) : ''}</div>
-          <div class="row wrap mt-1" style="gap:8px">${tierB(me)}<span class="dim" style="font-size:12.5px">Mã giới thiệu <b class="gold">${esc(me.code || '')}</b></span></div>
+          <div class="row wrap mt-1" style="gap:8px">${me.role === 'admin' ? '<span class="badge gold">Quản trị</span>' : tierB(me)}<span class="dim" style="font-size:12.5px">Mã giới thiệu <b class="gold">${esc(me.code || '')}</b></span></div>
+          ${me.role === 'admin' ? '' : supportLine(d, me)}
 </div>
         <div class="acts"><a class="btn btn-sm btn-outline-gold" href="#don-hang">${icon('truck')} Đơn hàng</a><a class="btn btn-sm" href="#giao-dich">${icon('activity')} Giao dịch</a></div>
         <div style="grid-column:1 / -1;min-width:0"><div class="ref-mini" style="margin:0"><span class="ref-lbl">${icon('link')} Link giới thiệu</span><input class="input" id="ovRef" value="${esc(refLinkOf(me))}" readonly aria-label="Đường dẫn giới thiệu của tôi"><button class="btn btn-sm btn-gold" type="button" data-copy="ovRef">${icon('copy')} Sao chép</button>${navigator.share ? `<button class="btn btn-sm btn-outline-gold" type="button" data-share-ref>${icon('share')} Chia sẻ</button>` : ''}</div>${isKhach(me) ? khachNote() : ''}</div>
