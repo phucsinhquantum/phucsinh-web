@@ -507,6 +507,15 @@ async function seed() {
     const got = u => d.commissions.filter(c => c.user === u && c.status === 'paid' && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
     ok(on ? got('B') === 0 && got('A') === 0 && got('D') === 1000000 : got('B') === 40000 && got('A') === 4000 && got('C') === 100000, `điều kiện nhận thu nhập tuyến dưới ${on ? 'bật: B, A chưa đủ điều kiện nên không nhận' : 'tắt: B 40.000, A 4.000 dù không mua'} (thực tế ${['D', 'C', 'B', 'A'].map(got).join(', ')})`);
   }
+  // sự kiện vòng quay (anh Tuân 05/11): trao hết giải thì tự kết thúc, không còn hiện "đang diễn ra"
+  {
+    const X = E.ADB, d = { users: [], orders: [], settings: {} }, W = X.wheel(d);
+    const ev = { id: 'skt', name: 'Thử', live: true, participants: ['An', 'Bình', 'Chi', 'Dũng'], prizes: [{ name: 'Trà', qty: 2 }], winners: [] }; W.events.push(ev);
+    X.wheelEventDraw(d, 'skt'); const open1 = X.wheelEventOpen(ev); const r = X.wheelEventDraw(d, 'skt');
+    ok(open1 && r.done && ev.live === false && !!ev.endAt && !X.wheelEventOpen(ev), 'sự kiện trao đủ 2/2 giải thì tự kết thúc, không còn hiện bảng đang diễn ra');
+    const old = { id: 'sko', live: true, date: '2020-01-01', prizes: [], winners: [] };
+    ok(!X.wheelEventOpen(old), 'sự kiện đang bật nhưng đã qua ngày không còn hiện');
+  }
   try { await flow(); await seed(); }
   catch (e) { ok(false, 'lỗi khi kiểm tra: ' + (e.stack || e.message)); }
   console.log(failed ? `\nCÓ ${failed} BƯỚC SAI, KHÔNG ĐƯA LÊN.` : '\nTẤT CẢ ĐỀU ĐÚNG.');

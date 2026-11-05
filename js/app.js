@@ -492,8 +492,8 @@
   // sự kiện vòng quay đang mở: bật thông báo, chưa quá ngày, còn giải (mới nhất trước)
   function liveEvents() {
     const day = today(), W = (window.API && API.db && API.db.wheel) || {};
-    return (W.events || []).filter(e => e && (e.live || (e.announce !== false && (!e.date || e.date >= day))))
-      .filter(e => { const slots = (e.prizes || []).reduce((n, p) => n + (+p.qty || 0), 0); return e.live || !slots || (e.winners || []).length < slots; })
+    return (W.events || []).filter(e => e && (e.live || (e.announce !== false && !e.endAt && (!e.date || e.date >= day))))
+      .filter(e => { const slots = (e.prizes || []).reduce((n, p) => n + (+p.qty || 0), 0); return (!e.live || !e.date || e.date >= day) && (!slots || (e.winners || []).length < slots); })
       .sort((a, b) => (b.live ? 1 : 0) - (a.live ? 1 : 0));
   }
   function shell() {
@@ -828,7 +828,7 @@
   function eventNotice() {
     if (document.body.dataset.page === 'admin' || location.protocol === 'file:') return;
     const W = (API.db && API.db.wheel) || {};
-    evCheck((W.events || []).filter(e => e && e.live));
+    evCheck((W.events || []).filter(e => e && e.live && (() => { const n = (e.prizes || []).reduce((s, p) => s + (+p.qty || 0), 0); return (!e.date || e.date >= today()) && (!n || (e.winners || []).length < n); })()));
     const poll = () => { if (document.hidden) return; fetch('/api/su-kien-live', { headers: { 'x-psq': '1' }, cache: 'no-store' }).then(r => r.json()).then(r => { if (r && Array.isArray(r.events)) { liveCache = r.events; evCheck(r.events); } }).catch(() => {}); };
     setInterval(poll, 25000); document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
   }

@@ -740,6 +740,8 @@
     },
     wheelEventPool: eventPool,
     wheelEventSlots: eventSlots,
+    // sự kiện còn đang mở: đang bật và chưa trao hết giải
+    wheelEventOpen(ev) { const n = eventSlots(ev).length; return !!ev && !!ev.live && (!ev.date || ev.date >= vnISO().slice(0, 10)) && (!n || (ev.winners || []).length < n); },
     // quay một lượt sự kiện: trả về tên người trúng
     wheelEventDraw(d, eventId) {
       const ev = wheelData(d).events.find(e => e.id === eventId); if (!ev) return { error: 'Không tìm thấy sự kiện.' };
@@ -755,7 +757,8 @@
       if (name == null) name = pool[Math.floor(Math.random() * pool.length)];
       const w = { name, prize: slots[ev.winners.length] || '', at: stampNow() };
       ev.winners.push(w);
-      return { name, winner: w, index: pool.indexOf(name), pool, event: ev };
+      if (slots.length && ev.winners.length >= slots.length) { ev.live = false; ev.endAt = w.at; }
+      return { name, winner: w, index: pool.indexOf(name), pool, event: ev, done: !ev.live && !!ev.endAt };
     },
     wheelMask(name) {
       const w = String(name || '').trim().split(/\s+/); if (!w[0]) return 'Khách hàng';

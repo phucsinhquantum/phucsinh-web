@@ -161,9 +161,9 @@
       const lv = e.target.closest('[data-we-live]');
       if (lv) { const ev = W2.events.find(x => x.id === lv.dataset.weLive); if (!ev) return;
         if (ev.live && !confirm('Kết thúc sự kiện "' + ev.name + '"? Bảng thông báo trên web sẽ tắt.')) return;
-        ev.live = !ev.live; if (ev.live) ev.liveAt = PSQ.stampVN(); else ev.endAt = PSQ.stampVN();
-        commit(d2, ev.live ? 'Bắt đầu sự kiện vòng quay' : 'Kết thúc sự kiện vòng quay', ev.name, ev.live ? 'Đã bắt đầu: mọi người đang mở web sẽ thấy bảng thông báo trong khoảng nửa phút' : 'Đã kết thúc sự kiện'); draw(); return; }
-      if (rs) { const ev = W2.events.find(x => x.id === rs.dataset.weReset); if (!ev || !confirm('Xóa kết quả đã quay của "' + ev.name + '"?')) return; ev.winners = []; commit(d2, 'Đặt lại vòng quay sự kiện', ev.name, 'Đã xóa kết quả, có thể quay lại'); draw(); }
+        ev.live = !ev.live; if (ev.live) { ev.liveAt = PSQ.stampVN(); delete ev.endAt; delete ev.reported; } else ev.endAt = PSQ.stampVN();
+        commit(d2, ev.live ? 'Bắt đầu sự kiện vòng quay' : 'Kết thúc sự kiện vòng quay', ev.name, ev.live ? 'Đã bắt đầu: mọi người đang mở web sẽ thấy bảng thông báo trong khoảng nửa phút' : 'Đã kết thúc sự kiện' + ((ev.winners || []).length ? ', bot sẽ báo danh sách trúng thưởng lên Telegram' : '')); draw(); return; }
+      if (rs) { const ev = W2.events.find(x => x.id === rs.dataset.weReset); if (!ev || !confirm('Xóa kết quả đã quay của "' + ev.name + '"?')) return; ev.winners = []; delete ev.reported; delete ev.endAt; commit(d2, 'Đặt lại vòng quay sự kiện', ev.name, 'Đã xóa kết quả, có thể quay lại'); draw(); }
       if (del) { const ev = W2.events.find(x => x.id === del.dataset.weDel); if (!ev || !confirm('Xóa sự kiện "' + ev.name + '"?')) return; W2.events = W2.events.filter(x => x !== ev); commit(d2, 'Xóa sự kiện vòng quay', ev.name, 'Đã xóa sự kiện'); draw(); }
     };
   }

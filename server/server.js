@@ -110,7 +110,22 @@ D.users.filter(u => u.role === 'admin' && !u.pass).forEach(u => {
 
 const save = () => store.setJSON('db', D);
 const stamp = () => { const t = new Date(Date.now() + 7 * 36e5); return t.toISOString().slice(0, 10) + ' ' + t.toISOString().slice(11, 16); };
-function after() { try { A().placeAll(D); if (A().linkGuests(D)) A().agentSync(D); A().wheelSync(D); A().releaseHeld(D); A().settleSync(D); A().agentSync(D); } catch (e) { console.error(e); } save(); }
+// sự kiện vòng quay kết thúc (trao hết giải, hoặc quản trị bấm Kết thúc khi đã có người trúng): báo danh sách trúng thưởng 1 lần
+function eventDone() {
+  const W = D.wheel || {}; let ch = false;
+  (W.events || []).forEach(ev => {
+    const won = ev.winners || [], n = A().wheelEventSlots(ev).length;
+    if (ev.live && n && won.length >= n) { ev.live = false; ev.endAt = ev.endAt || stamp(); ch = true; }
+    if (ev.live || !won.length || ev.reported) return;
+    const last = String(ev.endAt || (won[won.length - 1] || {}).at || '');
+    ev.reported = stamp(); ch = true;
+    // sự kiện đã xong từ lâu (trước khi có tính năng này): chỉ đánh dấu, không báo
+    if (!last || Date.now() + 7 * 36e5 - Date.parse(last.replace(' ', 'T') + ':00Z') > 12 * 36e5) return;
+    tell(`🎉 Sự kiện vòng quay "${ev.name}" đã kết thúc${ev.date ? ' (' + ev.date + ')' : ''}.\nĐã trao ${won.length}${n ? '/' + n : ''} giải. Danh sách người trúng thưởng:\n${won.map((w, i) => `${i + 1}. ${w.name}${w.prize ? ' · ' + w.prize : ''}${w.at ? ' · ' + String(w.at).slice(11, 16) : ''}`).join('\n')}`);
+  });
+  return ch;
+}
+function after() { try { eventDone(); A().placeAll(D); if (A().linkGuests(D)) A().agentSync(D); A().wheelSync(D); A().releaseHeld(D); A().settleSync(D); A().agentSync(D); } catch (e) { console.error(e); } save(); }
 
 /* ---------- thư và báo tin ---------- */
 const mailCfg = () => TEST && !env.TEST_MAIL_TO ? null : store.getJSON('secret:mail');
@@ -220,7 +235,7 @@ async function api(req, res, url) {
   // người xem vòng quay sự kiện hỏi nhẹ xem đã có người trúng mới chưa (không tải lại cả dữ liệu)
   if (req.method === 'GET' && route === '/api/su-kien-live') {
     const nm = id => (D.users.find(u => u.id === id) || {}).name;
-    return send(res, 200, { events: ((D.wheel || {}).events || []).filter(e => e.live).map(e => ({ id: e.id, name: e.name, kind: e.kind, date: e.date, liveAt: e.liveAt || '', prizes: (e.prizes || []).map(p => ({ name: p.name, qty: p.qty })), won: (e.winners || []).length, spinNames: (e.spinners || []).map(nm).filter(Boolean) })) });
+    return send(res, 200, { events: ((D.wheel || {}).events || []).filter(e => A().wheelEventOpen(e)).map(e => ({ id: e.id, name: e.name, kind: e.kind, date: e.date, liveAt: e.liveAt || '', prizes: (e.prizes || []).map(p => ({ name: p.name, qty: p.qty })), won: (e.winners || []).length, spinNames: (e.spinners || []).map(nm).filter(Boolean) })) });
   }
   if (req.method === 'GET' && route === '/api/su-kien') {
     const ev = ((D.wheel || {}).events || []).find(e => e.id === url.searchParams.get('id'));
