@@ -507,6 +507,15 @@ async function seed() {
     const got = u => d.commissions.filter(c => c.user === u && c.status === 'paid' && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
     ok(on ? got('B') === 0 && got('A') === 0 && got('D') === 1000000 : got('B') === 40000 && got('A') === 4000 && got('C') === 100000, `điều kiện nhận thu nhập tuyến dưới ${on ? 'bật: B, A chưa đủ điều kiện nên không nhận' : 'tắt: B 40.000, A 4.000 dù không mua'} (thực tế ${['D', 'C', 'B', 'A'].map(got).join(', ')})`);
   }
+  // đại lý uy tín rớt khỏi trang chủ khi không có doanh số trực tiếp tháng này và tháng trước (anh Tuân 06/11)
+  {
+    const X = E.ADB, d = { users: [{ id: 'A', code: 'PS9001', tier: 'daily' }, { id: 'B', code: 'PS9002', tier: 'ctv', sponsor: 'A' }, { id: 'C', code: 'PS9003', tier: 'daily' }], orders: [], settings: {} }; X.plan(d);
+    d.orders.push({ id: 'o1', userId: 'B', status: 'paid', total: 1, items: [], date: '2026-12-05' });
+    ok(X.dealerSales(d, 'PS9003', '2026-11-20').ok, 'đại lý: tháng đầu áp dụng (11/2026) chưa xét, ai cũng hiện');
+    ok(X.dealerSales(d, 'PS9001', '2027-01-10').ok && !X.dealerSales(d, 'PS9001', '2027-02-01').ok, 'đại lý A có đơn của người mình giới thiệu tháng 12: hiện tới hết tháng 1, sang tháng 2 rớt');
+    ok(!X.dealerSales(d, 'PS9003', '2026-12-02').ok, 'đại lý C không có đơn nào: sang tháng 12 rớt');
+    d.settings.plan.dealerSales = 0; ok(X.dealerSales(d, 'PS9003', '2026-12-02').ok, 'tắt điều kiện doanh số: đại lý luôn hiện');
+  }
   // sự kiện vòng quay (anh Tuân 05/11): trao hết giải thì tự kết thúc, không còn hiện "đang diễn ra"
   {
     const X = E.ADB, d = { users: [], orders: [], settings: {} }, W = X.wheel(d);

@@ -142,7 +142,7 @@
   };
   const dealers = {
     all() { return (store.get(DL_KEY, null) || window.DEALERS || []).filter(x => x && x.name && !/^dl-mau-/.test(x.id || '')); },   // bỏ đại lý mẫu cũ còn lưu
-    list() { return dealers.all().filter(x => !x.hidden); },
+    list() { return dealers.all().filter(x => !x.hidden && !x.slow); },
     save(list) { store.set(DL_KEY, list); },
     tel: p => String(p || '').replace(/[^0-9+]/g, ''),
     card(x, i = 0) {

@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261105a">
-<script src="js/lang.js?v=20261105a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261106a">
+<script src="js/lang.js?v=20261106a"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -244,11 +244,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261105a"></script>
-<script src="js/api.js?v=20261105a"></script>
-<script src="js/data.js?v=20261105a"></script>
-<script src="js/app.js?v=20261105a"></script>
-<script src="js/psq-data.js?v=20261105a"></script>
+<script src="js/patch.js?v=20261106a"></script>
+<script src="js/api.js?v=20261106a"></script>
+<script src="js/data.js?v=20261106a"></script>
+<script src="js/app.js?v=20261106a"></script>
+<script src="js/psq-data.js?v=20261106a"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -377,6 +377,33 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     const box = $('#tvPane'); box.innerHTML = '';
     PANES[r](box, d, me, render);
     const al = actAlert(d, me); if (al) box.insertAdjacentHTML('afterbegin', al);
+    tvGuide();
+  }
+  /* bàn tay chỉ bước tiếp theo khi nạp tiền và khi gửi bill (nạp tiền, gói CTV, gói đại lý) */
+  function tvGuide() {
+    const G = PSQ.guide, box = $('#tvPane'); if (!G || !box) return;
+    tvGuideBind(box);
+    const pw = $('#payWait', box);
+    if (pw && !pw.classList.contains('paid')) {
+      const send = $('#pwSend'), pick = $('#pwBill .pw-pick'), claim = $('#pwClaim');
+      if (send) return G.point(send, 'Bấm Gửi bill cho công ty');
+      if (pick) return G.point(pick, 'Chuyển khoản xong, bấm vào đây chọn ảnh bill');
+      if (claim && !claim.hidden && !/lại/.test(claim.textContent)) return G.point(claim, 'Chuyển khoản xong, bấm nút này để gửi ảnh bill');
+      return G.point(null);
+    }
+    const f = $('#tpF', box);
+    if (f) {
+      const a = $('#tpA', f), bank = $('#tpM', f).value === 'Chuyển khoản';
+      if (!(+a.value >= 10000)) return G.point(a, 'Nhập số tiền muốn nạp, hoặc bấm chọn nhanh bên dưới');
+      return G.point($('#tpS', f), bank ? 'Chuyển khoản theo thông tin bên trên, xong bấm nút này' : 'Bấm để gửi yêu cầu nạp');
+    }
+    G.point(null);
+  }
+  let tvGt; const tvLater = ms => { clearTimeout(tvGt); tvGt = setTimeout(tvGuide, ms); };
+  function tvGuideBind(box) {
+    if (box.dataset.gObs) return; box.dataset.gObs = 1; PSQ.guide.refresh = tvGuide;
+    new MutationObserver(() => tvLater(150)).observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled', 'hidden'] });
+    ['input', 'change'].forEach(ev => box.addEventListener(ev, () => tvLater(250)));
   }
   const list = menu => menu.flatMap(g => g[1].map(x => x[0]));
 
@@ -733,7 +760,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       <div class="card glow-cyan">${head('Lịch sử nạp tiền', T.length + ' lần nạp')}
         ${T.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Số tiền</th><th>Hình thức</th><th>Vào ví</th><th>Trạng thái</th></tr></thead><tbody>${T.map(t => `<tr><td class="dim nowrap">${fdate(t.date)}</td><td class="gold nowrap"><b>${money(t.amount)}</b></td><td>${esc(t.method || '')}${t.auto ? '<br><small class="green">Tự động xác nhận</small>' : ''}</td><td class="nowrap">${wdot(t.wallet || 'shop')}</td><td>${wB(t.status)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('plus')}Chưa nạp tiền lần nào.</div>`}
       </div>
-      <form class="card glow-gold" id="tpF" novalidate>${head('Nạp tiền', 'Ví tiền mặt hiện có ' + money(bal))}
+      <form class="card glow-gold" id="tpF" novalidate>${head('Nạp tiền', 'Ví tiền mặt hiện có ' + money(bal), PSQ.guide ? PSQ.guide.toggle() : '')}
         <div class="field"><label for="tpA">Số tiền (đồng)</label><input class="input" id="tpA" name="amount" type="number" min="10000" step="10000" inputmode="numeric" required></div>
         <div class="chips mt-1" id="tpQ">${[500000, 1000000, 2000000, 5000000].map(v => `<button class="chip" type="button" data-v="${v}">${short(v)}</button>`).join('')}</div>
         <div class="field mt-2"><label for="tpM">Hình thức</label><select class="input" id="tpM" name="method">${['Chuyển khoản', 'Tiền mặt tại cửa hàng'].map(m => `<option>${m}</option>`).join('')}</select></div>

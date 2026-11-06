@@ -210,6 +210,12 @@ function bootPayload(me, imp) {
     if (!x || x.photoOwn || !x.code) return x; const k = String(x.code).toUpperCase();
     const u = D.users.find(u => u.avatar && ((u.code || '').toUpperCase() === k || (u.oldCodes || []).some(o => String(o).toUpperCase() === k)));
     return u ? Object.assign({}, x, { photo: u.avatar }) : x; });
+  // đại lý không có doanh số trực tiếp: rớt khỏi trang chủ (khách không thấy; quản trị thấy nhãn "Rớt"). Đại lý ghim (pin) luôn hiện
+  if (Array.isArray(c.psq_dealers_v1)) {
+    c.psq_dealers_v1 = c.psq_dealers_v1.map(x => { if (!x) return x; const y = Object.assign({}, x); delete y.slow; delete y.slowLast;
+      if (!y.code || y.pin) return y; const s = A().dealerSales(D, y.code); if (!s.ok) { y.slow = true; y.slowLast = s.last; } return y; });
+    if (!isAdmin(me)) c.psq_dealers_v1 = c.psq_dealers_v1.filter(x => !x || !x.slow);
+  }
   return { me: me ? clean(me) : null, db: scopeFor(D, me, A()), content: c, fans: fanList(D), at: Date.now(), ...(TEST ? { mode: 'thu' } : {}), ...(imp ? { imp: { name: imp.name } } : {}) };
 }
 

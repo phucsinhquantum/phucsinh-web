@@ -131,6 +131,7 @@
     // điều kiện để đại lý nhận thu nhập từ đại lý tuyến dưới: trong activeDays ngày gần nhất có đơn tự mua và đơn bán
     activeOn: 1,                                   // 0: tắt điều kiện, ai cũng nhận thu nhập tuyến dưới (anh Tuân 31/10)
     selfAgent: 1,                                  // 1: đại lý tự mua nhận 25%, tầng trên nhận 40% khoản đó (anh Tuân 04/11)
+    dealerSales: 1, dealerFrom: '2026-11',         // đại lý uy tín trên trang chủ phải có doanh số trực tiếp theo tháng (anh Tuân 06/11); tháng đầu áp dụng chưa xét
     activeDays: 30, activeMinBuy: 0, activeMinSell: 0, activeRule: 'any', // any: 1 trong 2 việc · all: cả hai
     holdDays: 30,                                  // khoản bị giữ chờ quá số ngày này mà chưa đủ điều kiện thì hủy
     // gói đại lý: mua một lần để lên đại lý ngay, nhận điểm vào ví mua hàng để lấy hàng dần (không tính hoa hồng trên gói,
@@ -352,6 +353,18 @@
       const all = P.activeRule === 'all', ok = all ? buy.ok && sell.ok : buy.ok || sell.ok;
       const left = !ok ? 0 : all ? Math.min(buy.left, sell.left) : Math.max(buy.ok ? buy.left : 0, sell.ok ? sell.left : 0);
       return { ok, all, buy, sell, left, days: P.activeDays, minBuy: P.activeMinBuy || 0, minSell: P.activeMinSell || 0, missing: ok ? [] : [buy, sell].filter(x => !x.ok) };
+    },
+    /* đại lý uy tín còn được hiện không: có doanh số trực tiếp (đơn đã thanh toán của chính mình hoặc người mình giới thiệu trực tiếp)
+       trong tháng này hoặc tháng trước. Hết tháng mà không có đơn nào thì sang tháng sau rớt; có đơn mới là hiện lại ngay. */
+    dealerSales(d, code, asOf) {
+      const P = plan(d), k = String(code || '').toUpperCase(), day = asOf || now(), cur = day.slice(0, 7);
+      const u = k && d.users.find(x => (x.code || '').toUpperCase() === k || (x.oldCodes || []).some(o => String(o).toUpperCase() === k));
+      if (!u) return { ok: true, none: true, last: '' };
+      const p = new Date(cur + '-01T00:00:00Z'); p.setUTCMonth(p.getUTCMonth() - 1); const prev = p.toISOString().slice(0, 7);
+      const mine = (d.orders || []).filter(o => PAID(o) && o.date && (o.userId === u.id || (o.userId ? (ADB.user(d, o.userId) || {}).sponsor === u.id : o.refBy === u.id)));
+      const months = new Set(mine.map(o => String(o.date).slice(0, 7))), last = mine.map(o => String(o.date).slice(0, 10)).sort().pop() || '';
+      const grace = cur <= String(P.dealerFrom || '');
+      return { ok: !+(P.dealerSales ?? 1) || grace || months.has(cur) || months.has(prev), grace, last, month: months.has(cur) };
     },
     // nhả các khoản đang giữ khi đại lý đủ điều kiện; quá hạn thì hủy. Trả về true nếu có thay đổi
     releaseHeld(d) {

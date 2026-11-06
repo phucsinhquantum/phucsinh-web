@@ -35,11 +35,11 @@
   const findCode = c => ADB.load().users.find(u => (u.code || '').toUpperCase() === c && u.role !== 'admin');
 
   function render(el) {
-    const edit = ADMIN.can('content'), list = D.all(), shown = list.filter(x => !x.hidden).length;
+    const edit = ADMIN.can('content'), list = D.all(), shown = list.filter(x => !x.hidden && !x.slow).length, slow = list.filter(x => !x.hidden && x.slow).length;
     const f = PSQ.fold(q), rows = list.map((x, i) => ({ x, i })).filter(({ x }) => !f || PSQ.fold([x.name, x.code, x.area, x.address, x.phone].join(' ')).includes(f));
     el.innerHTML = `
       <div class="card glow-gold">
-        <div class="card-head"><div><h3>Đại lý uy tín</h3><div class="sub">${list.length} đại lý · ${shown} đang hiện trên web. Thứ tự ở đây là thứ tự hiện ở trang chủ.</div></div>
+        <div class="card-head"><div><h3>Đại lý uy tín</h3><div class="sub">${list.length} đại lý · ${shown} đang hiện trên web${slow ? `, ${slow} đang rớt vì chưa có doanh số trực tiếp tháng này và tháng trước (có đơn là tự hiện lại)` : ''}. Thứ tự ở đây là thứ tự hiện ở trang chủ.</div></div>
           <a class="card-link" href="dai-ly.html" target="_blank" rel="noopener">Xem trang đại lý ${icon('arrow')}</a></div>
         <div class="dla-tools">
           <input class="input" id="dlaQ" type="search" placeholder="Tìm tên, khu vực, số điện thoại" value="${esc(q)}">
@@ -51,7 +51,7 @@
             <td><div class="who"><span class="dla-ph">${x.photo ? `<img src="${esc(x.photo)}" alt="">` : esc(ini(x.name))}</span><div><b>${esc(x.name)}</b><small>${esc(x.address || '')}</small></div></div></td>
             <td>${x.code ? `<b class="cyan">${esc(x.code)}</b>` : '<span class="dim">Chưa có</span>'}${x.area ? `<br><small class="dim">${esc(x.area)}</small>` : ''}</td>
             <td>${esc(x.phone || '')}</td>
-            <td>${x.hidden ? '<span class="badge">Đang ẩn</span>' : '<span class="badge ship">Đang hiện</span>'}</td>
+            <td>${x.hidden ? '<span class="badge">Đang ẩn</span>' : x.slow ? `<span class="badge pending">Rớt: chưa có doanh số</span><br><small class="dim">${x.slowLast ? 'Đơn gần nhất ' + esc(x.slowLast.split('-').reverse().join('/')) : 'Chưa có đơn'}</small>` : '<span class="badge ship">Đang hiện</span>'}${x.pin ? '<br><small class="gold">📌 Luôn hiện</small>' : ''}</td>
             <td>${edit ? `<div class="dla-acts">
               <button class="btn btn-ghost btn-sm dla-up" type="button" data-dla="up" data-i="${i}" ${i && !q ? '' : 'disabled'} aria-label="Lên">${icon('arrow')}</button>
               <button class="btn btn-ghost btn-sm dla-down" type="button" data-dla="down" data-i="${i}" ${i < list.length - 1 && !q ? '' : 'disabled'} aria-label="Xuống">${icon('arrow')}</button>
@@ -134,6 +134,7 @@
         <div class="field full"><label for="dlaM">Link Google Maps (không bắt buộc)</label><input class="input" id="dlaM" maxlength="400" value="${esc(x.map || '')}" placeholder="Để trống thì nút Bản đồ tự tìm theo địa chỉ"></div>
         <div class="field full"><label for="dlaT">Giới thiệu ngắn</label><textarea class="input" id="dlaT" rows="2" maxlength="200" style="min-height:70px">${esc(x.note || '')}</textarea></div>
         <div class="field full"><label class="check"><input type="checkbox" id="dlaH" ${x.hidden ? '' : 'checked'}> Hiện trên trang web</label></div>
+        <div class="field full"><label class="check"><input type="checkbox" id="dlaPin" ${x.pin ? 'checked' : ''}> 📌 Luôn hiện, không xét doanh số tháng</label></div>
         <p class="err full" id="dlaE" style="color:var(--red);font-size:13px;min-height:1em;margin:0"></p>
         <div class="field full"><button class="btn btn-gold" type="submit">${icon('check')} Lưu đại lý</button></div>
       </form>
@@ -162,7 +163,7 @@
       const code = v('dlaC').toUpperCase();
       if (code && !findCode(code)) { $('#dlaE', m.el).textContent = 'Mã số đại lý chưa đúng: chưa có thành viên nào dùng mã này.'; return; }
       if (code && D.all().some((d2, j) => j !== idx && (d2.code || '').toUpperCase() === code)) { $('#dlaE', m.el).textContent = 'Mã này đã gắn với một đại lý khác trong danh sách.'; return; }
-      const it = { id: x.id || uid(), code, name: v('dlaN'), area: v('dlaA'), phone: v('dlaP'), address: v('dlaD'), map: v('dlaM'), note: v('dlaT'), photo, photoOwn: own, hidden: !$('#dlaH', m.el).checked };
+      const it = { id: x.id || uid(), code, name: v('dlaN'), area: v('dlaA'), phone: v('dlaP'), address: v('dlaD'), map: v('dlaM'), note: v('dlaT'), photo, photoOwn: own, hidden: !$('#dlaH', m.el).checked, pin: $('#dlaPin', m.el).checked };
       if (!it.name) { $('#dlaE', m.el).textContent = 'Anh chị nhập tên đại lý.'; return; }
       if (it.phone && !/^[0-9 +.]{8,15}$/.test(it.phone)) { $('#dlaE', m.el).textContent = 'Số điện thoại chưa đúng.'; return; }
       const cur = D.all(); if (idx != null) cur[idx] = it; else cur.push(it);
