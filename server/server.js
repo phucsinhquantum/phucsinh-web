@@ -139,6 +139,14 @@ function mail(to, subject, type, html, opt = {}) {
   if (!mailCfg()) { m.error = TEST ? 'Bản thử không gửi thư cho khách' : 'Chưa cấu hình email gửi thư'; return; }
   sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { m.status = 'sent'; }, e => { m.status = 'failed'; m.error = e.message; console.error('[thư lỗi]', to, e.message); }).finally(save);
 }
+// AI đọc bill: trả null khi chưa bật hoặc đọc lỗi (khi đó gửi bill như cũ, không chặn khách)
+const BILL_AI = require('./bill-ai');
+const aiCfg = () => { const s = store.getJSON('secret:ai') || {}; return s.key ? s : env.ANTHROPIC_API_KEY ? { key: env.ANTHROPIC_API_KEY } : null; };
+async function billCheck(bill, exp) {
+  const cfg = aiCfg(); if (!cfg) return null;
+  try { const read = await BILL_AI.read(cfg, bill.buf, bill.type); return Object.assign(BILL_AI.compare(Object.assign({ account: (E.SITE.bank || {}).account || '' }, exp), read), { read }); }
+  catch (e) { console.error('[AI đọc bill]', e.message); return null; }
+}
 function tell(text, confirm, photo) {
   let url = null;
   if (confirm) url = `${BASE}/api/confirm?t=${store.newToken('confirm', confirm.kind + ':' + confirm.ref, 24 * 14)}`;
@@ -224,6 +232,7 @@ function ctxFor(me, args, sid) {
   return {
     d: D, me, args, A: A(), site: E.SITE, products: E.PRODUCTS, store, base: BASE, sid, today, stamp, e: esc, media: externalize,
     log: (action, detail, actor) => { const u = actor || me; (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: u ? u.name : 'Khách', action, detail: detail || '' }); if (D.logs.length > 5000) D.logs.length = 5000; },
+    cur: () => D, aiEnv: !!env.ANTHROPIC_API_KEY, billCheck,
     mail, mailReady: () => !!mailCfg(), notify: (text, confirm, photo) => tell(text, confirm, photo), saveBill, BILL_TYPES, stale: { list: staleList, send: staleSend }, botOn: !!botKeyOf(store), notifyNow: text => notify(env, { text }), remindShip, notifyReady: !!(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
     sendNow: (to, subject, type, html) => sendMail(mailCfg(), Object.assign(mailTo(to, subject), { html })).then(() => { (D.mails = D.mails || []).unshift({ id: A().uid('ml'), date: stamp(), to, subject, type, status: 'sent', html }); save(); })
   };

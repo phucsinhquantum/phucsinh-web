@@ -21,8 +21,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261106a">
-<script src="js/lang.js?v=20261106a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261106b">
+<script src="js/lang.js?v=20261106b"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -162,11 +162,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261106a"></script>
-<script src="js/api.js?v=20261106a"></script>
-<script src="js/data.js?v=20261106a"></script>
-<script src="js/app.js?v=20261106a"></script>
-<script src="js/psq-data.js?v=20261106a"></script>
+<script src="js/patch.js?v=20261106b"></script>
+<script src="js/api.js?v=20261106b"></script>
+<script src="js/data.js?v=20261106b"></script>
+<script src="js/app.js?v=20261106b"></script>
+<script src="js/psq-data.js?v=20261106b"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -382,7 +382,7 @@
   const payWait = () => PSQ.payWait.html();
   function watchPay(o) {
     PSQ.payWait.start({
-      send: bill => API.act('paidClaim', { id: o.id, phone: o.phone, bill }),
+      send: bill => API.actAsync('paidClaim', { id: o.id, phone: o.phone, bill }),
       check: () => { const x = API.act('trackOrder', { id: o.id, phone: o.phone }).order; return x && x.status; },
       paidTitle: 'Đã nhận thanh toán đơn ' + o.id, paidSub: 'Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.', open: true,
       onSent: () => { billSent = true; paySteps(3); const sc = $('.success'); if (sc) { $('.eyebrow', sc).textContent = 'Đã gửi bill'; $('h2', sc).textContent = 'Chờ công ty xác nhận'; const b = $('.badge', sc); if (b) b.outerHTML = statusBadge('pending'); } const a = $('#unpaid'); if (a) { a.classList.add('sent'); a.innerHTML = `<span class="ua-ico">${icon('check')}</span><div><b>Đã gửi bill, chờ công ty xác nhận</b><small>Anh chị giữ trang này, trang tự đổi khi công ty duyệt. Có thể đóng trang, đơn vẫn được xử lý.</small></div>`; } guideStep(); },

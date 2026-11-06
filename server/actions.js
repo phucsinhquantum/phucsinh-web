@@ -153,6 +153,13 @@ const wrapMail = (site, title, body) => `<div style="font-family:Arial,sans-seri
 
 /* ---------- các thao tác ---------- */
 // ảnh bill: data URL JPG/PNG/WebP, tối đa 1,5MB, kiểm tra cả phần đầu tệp
+// dòng đầu tin Telegram: kết quả AI đọc bill
+function billLabel(chk) {
+  if (!chk) return '';
+  const r = chk.read || {}, seen = r.amount ? `Bill ghi ${money(r.amount)}${r.time ? ', lúc ' + r.time : ''}` : '';
+  if (chk.ok) return `🤖 AI đã kiểm tra: KHỚP số tiền và thời gian.${seen ? ' ' + seen + '.' : ''}${chk.notes.length ? '\nℹ️ ' + chk.notes.join(' ') : ''}\n`;
+  return `⚠️ AI kiểm tra: CHƯA KHỚP, khách đã được báo kiểm tra lại.\n${chk.issues.map(x => '• ' + x).join('\n')}${chk.notes.length ? '\nℹ️ ' + chk.notes.join(' ') : ''}${seen ? '\n' + seen : ''}\n`;
+}
 function readBill(c, url) {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(url || ''));
   if (!m) return err('Anh chị chọn ảnh bill chuyển khoản (JPG, PNG) giúp em.');
@@ -310,34 +317,43 @@ const ACTIONS = {
     return o ? { order: pick(o, ['id', 'status', 'date', 'items', 'total']) } : { order: null };
   } },
   // khách bấm "Tôi đã chuyển khoản": nhắc chủ cửa hàng kiểm tra (mỗi đơn tối đa 3 lần)
-  paidClaim: { auth: 'guest', run(c) {
+  paidClaim: { auth: 'guest', async: true, async run(c) {
     // khách tra theo mã đơn + số điện thoại; thành viên gửi cho đơn của chính mình (gói CTV, gói đại lý)
-    const id = str(c.args.id, 30).toUpperCase(), ph = normPhone(c.args.phone), o = c.d.orders.find(x => x.id === id && ((c.me && x.userId === c.me.id) || (ph && normPhone(x.phone) === ph)));
+    const id = str(c.args.id, 30).toUpperCase(), ph = normPhone(c.args.phone), find = d => d.orders.find(x => x.id === id && ((c.me && x.userId === c.me.id) || (ph && normPhone(x.phone) === ph)));
+    let o = find(c.d);
     if (!o) return err('Không tìm thấy đơn hàng.');
     if (o.status !== 'pending') return { status: o.status };
-    if ((o.claims || 0) >= 3) return err('Công ty đã nhận được bill, anh chị chờ một chút giúp em.');
+    if ((o.claims || 0) >= 6) return err('Công ty đã nhận được bill, anh chị chờ một chút giúp em.');
     const bill = readBill(c, c.args.bill); if (bill.error) return bill;
-    o.claims = (o.claims || 0) + 1;
-    const f = c.saveBill(o.id, bill.buf, bill.type);
-    (o.bills = o.bills || []).push({ f, at: c.stamp() });
     const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
     const what = c.A.isAgentPkgOrder(o) ? 'gói đại lý' : (o.items || []).some(x => x.id === c.A.PKG_ID) ? 'gói kích hoạt CTV' : 'đơn';
-    c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${orderText(o)}\nSố tiền cần nhận ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
-    c.log('Khách gửi bill chuyển khoản', o.id);
-    return { ok: true };
+    // AI đọc bill (nếu đã bật): so số tiền, ngày giờ, tài khoản nhận với đơn
+    const chk = await c.billCheck(bill, { amount: due, code: o.id, since: o.at || o.date, what: what === 'đơn' ? 'đơn hàng' : what });
+    o = find(c.cur()); if (!o) return err('Không tìm thấy đơn hàng.');
+    if (o.status !== 'pending') return { status: o.status };
+    o.claims = (o.claims || 0) + 1;
+    const f = c.saveBill(o.id, bill.buf, bill.type);
+    (o.bills = o.bills || []).push(Object.assign({ f, at: c.stamp() }, chk ? { check: chk } : {}));
+    c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${billLabel(chk)}${orderText(o)}\nSố tiền cần nhận ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
+    c.log('Khách gửi bill chuyển khoản', o.id + (chk ? (chk.ok ? ' (AI: khớp)' : ' (AI: chưa khớp)') : ''));
+    return { ok: true, check: chk ? { ok: chk.ok, issues: chk.issues } : null };
   } },
   // bill nạp tiền vào ví (yêu cầu nạp đang chờ của chính thành viên)
-  topupClaim: { auth: 'member', run(c) {
-    const { d, me } = c, tp = (d.topups || []).find(x => x.id === str(c.args.id, 40) && x.user === me.id);
+  topupClaim: { auth: 'member', async: true, async run(c) {
+    const { me } = c, tid = str(c.args.id, 40), find = d => (d.topups || []).find(x => x.id === tid && x.user === me.id);
+    let tp = find(c.d);
     if (!tp) return err('Không tìm thấy yêu cầu nạp tiền.');
     if (tp.status !== 'pending') return { status: tp.status };
-    if ((tp.claims || 0) >= 3) return err('Công ty đã nhận được bill, anh chị chờ một chút giúp em.');
+    if ((tp.claims || 0) >= 6) return err('Công ty đã nhận được bill, anh chị chờ một chút giúp em.');
     const bill = readBill(c, c.args.bill); if (bill.error) return bill;
+    const chk = await c.billCheck(bill, { amount: tp.amount, code: tp.code || '', since: tp.at || tp.date, what: 'yêu cầu nạp tiền' });
+    tp = find(c.cur()); if (!tp) return err('Không tìm thấy yêu cầu nạp tiền.');
+    if (tp.status !== 'pending') return { status: tp.status };
     tp.claims = (tp.claims || 0) + 1;
-    (tp.bills = tp.bills || []).push({ f: c.saveBill(tp.id, bill.buf, bill.type), at: c.stamp() });
-    c.notify(`🧾 Bill nạp tiền ví\n${me.name} (@${me.username})\nSố tiền ${money(tp.amount)}, nội dung ${tp.code || ''}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'topup', ref: tp.id, button: '✅ Duyệt đã nhận tiền' }, bill);
-    c.log('Thành viên gửi bill nạp tiền', `@${me.username}: ${money(tp.amount)}`);
-    return { ok: true };
+    (tp.bills = tp.bills || []).push(Object.assign({ f: c.saveBill(tp.id, bill.buf, bill.type), at: c.stamp() }, chk ? { check: chk } : {}));
+    c.notify(`🧾 Bill nạp tiền ví\n${billLabel(chk)}${me.name} (@${me.username})\nSố tiền ${money(tp.amount)}, nội dung ${tp.code || ''}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'topup', ref: tp.id, button: '✅ Duyệt đã nhận tiền' }, bill);
+    c.log('Thành viên gửi bill nạp tiền', `@${me.username}: ${money(tp.amount)}` + (chk ? (chk.ok ? ' (AI: khớp)' : ' (AI: chưa khớp)') : ''));
+    return { ok: true, check: chk ? { ok: chk.ok, issues: chk.issues } : null };
   } },
   // trang chờ thanh toán của thành viên hỏi trạng thái đơn gói hoặc yêu cầu nạp tiền
   payStatus: { auth: 'member', run(c) {
@@ -737,6 +753,15 @@ const ACTIONS = {
     c.store.setJSON('secret:bot', { key, at: c.today() }); c.log('Tạo khóa tra cứu cho An An', 'đuôi ' + key.slice(-4)); return { key };
   } },
   botKeyOff: { auth: 'owner', run(c) { c.store.setJSON('secret:bot', {}); c.log('Khóa cổng tra cứu An An', ''); return { ok: true }; } },
+  aiGet: { auth: 'owner', run(c) { const k = c.store.getJSON('secret:ai') || {}; return { on: !!(k.key || c.aiEnv), env: !k.key && !!c.aiEnv, tail: k.key ? k.key.slice(-4) : '', at: k.at || '', model: k.model || 'claude-opus-5-5' }; } },
+  aiSet: { auth: 'owner', async: true, async run(c) {
+    const key = String(c.args.key || '').trim();
+    if (!/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(key)) return err('Khóa chưa đúng. Khóa API của Anthropic bắt đầu bằng sk-ant-');
+    const r = await fetch('https://api.anthropic.com/v1/models', { headers: { 'x-api-key': key, 'anthropic-version': '2026-10-21' } }).catch(() => null);
+    if (!r || !r.ok) return err(r && r.status === 401 ? 'Khóa không dùng được (Anthropic báo sai khóa).' : 'Chưa kiểm tra được khóa, anh thử lại sau ít phút.');
+    c.store.setJSON('secret:ai', { key, at: c.stamp(), model: 'claude-opus-5-5' }); c.log('Bật AI đọc bill', 'khóa …' + key.slice(-4)); return { ok: true };
+  } },
+  aiOff: { auth: 'owner', run(c) { c.store.setJSON('secret:ai', {}); c.log('Tắt AI đọc bill', ''); return { ok: true }; } },
   mailGet: { auth: 'owner', run(c) { const m = c.store.getJSON('secret:mail') || {}; return { user: m.user || '', fromName: m.fromName || '', host: m.host || 'smtp.gmail.com', configured: !!(m.user && m.pass) }; } },
   mailSet: { auth: 'owner', run(c) {
     const cur = c.store.getJSON('secret:mail') || {}, user = str(c.args.user, 120).toLowerCase(), pass = String(c.args.pass || '').replace(/\s+/g, '');

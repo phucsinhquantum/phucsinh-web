@@ -306,16 +306,21 @@
       if (e.target.closest('#pwClaim')) { openPanel(); return; }
       if (e.target.closest('#pwCancel')) { bill = null; $('#pwBill').remove(); const c = $('#pwClaim'); if (c) c.hidden = false; return; }
       const s = e.target.closest('#pwSend'); if (!s || !bill) return;
-      s.disabled = true; s.textContent = 'Đang gửi...';
-      setTimeout(() => {
-        const r = cfg.send(bill);
+      s.disabled = true; s.textContent = 'Đang gửi và kiểm tra bill...';
+      const old = $('#pwBad'); if (old) old.remove();
+      setTimeout(() => Promise.resolve(cfg.send(bill)).then(r => {
         if (r.error) { s.disabled = false; s.innerHTML = icon('check') + ' Gửi bill cho công ty'; toast(r.error, 'err'); return; }
-        bill = null; $('#pwBill').remove();
+        bill = null; const bp = $('#pwBill'); if (bp) bp.remove();
         if (r.status && r.status !== 'pending') return paid(r.status);
         const box = $('#payWait'); if (box) box.outerHTML = html({ sent: true });
-        toast('Đã gửi bill, công ty sẽ duyệt sớm');
-        if (cfg.onSent) cfg.onSent();
-      }, 30);
+        // AI đọc bill thấy chưa khớp: báo khách kiểm tra lại (bill vẫn tới công ty)
+        const ck = r.check;
+        if (ck && ck.ok === false) {
+          const b2 = $('#payWait'); if (b2) b2.insertAdjacentHTML('afterend', `<div class="pw-bad" id="pwBad" role="alert"><b>⚠️ Bill của anh chị chưa khớp, vui lòng kiểm tra lại</b><ul>${(ck.issues || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul><small>Nếu chuyển sai, anh chị chuyển bổ sung hoặc chọn đúng ảnh bill rồi bấm Gửi lại bill. Nếu chắc chắn đã chuyển đúng, anh chị chờ công ty kiểm tra.</small></div>`);
+          toast('Bill chưa khớp, anh chị kiểm tra lại giúp em', 'err');
+        } else toast(ck && ck.ok ? 'Bill khớp, đã gửi công ty duyệt' : 'Đã gửi bill, công ty sẽ duyệt sớm');
+        if (cfg.onSent) cfg.onSent(r);
+      }), 30);
     });
     document.addEventListener('change', e => {
       if (!cfg || e.target.id !== 'pwFile' || !e.target.files[0]) return;
