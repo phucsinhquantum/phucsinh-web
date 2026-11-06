@@ -523,6 +523,7 @@ async function seed() {
     ok(compare(exp, good).ok, 'bill đúng số tiền, sau giờ đặt, đúng tài khoản: khớp');
     ok(!compare(exp, Object.assign({}, good, { amount: 650000 })).ok, 'bill thiếu tiền: chưa khớp');
     ok(!compare(exp, Object.assign({}, good, { time: '2026-11-05 10:00' })).ok, 'bill chuyển trước khi đặt đơn: chưa khớp');
+    ok(compare(exp, Object.assign({}, good, { time: '2026-11-06 20:00' })).ok && compare(Object.assign({}, exp, { now: Date.parse('2026-11-07T02:00:00+07:00') }), Object.assign({}, good, { time: '2026-11-06 23:50' })).ok, 'giờ trên bill lệch: chuyển trước giờ đặt 30 phút hoặc chuyển muộn vài tiếng sau vẫn khớp');
     ok(!compare(exp, Object.assign({}, good, { account: '1234567890' })).ok, 'bill chuyển sai tài khoản: chưa khớp');
     const r = compare(exp, Object.assign({}, good, { content: 'chuyen tien' })); ok(r.ok && r.notes.length === 1, 'thiếu mã đơn trong nội dung: vẫn khớp, chỉ ghi chú cho quản trị');
     ok(!compare(exp, { receipt: false }).ok, 'ảnh không phải bill: chưa khớp');

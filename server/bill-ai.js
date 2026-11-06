@@ -58,8 +58,8 @@ function compare(exp, got) {
   if (!bt) issues.push('Không đọc được ngày giờ chuyển khoản trên bill.');
   else {
     const shown = bt.day ? bt.d.split('-').reverse().join('/') : String(got.time).slice(11, 16) + ' ngày ' + bt.d.split('-').reverse().join('/');
-    if (since && (bt.day ? bt.d < since.d : bt.t < since.t - 15 * 6e4)) issues.push(`Bill chuyển lúc ${shown}, trước khi tạo ${exp.what || 'đơn'} này.`);
-    else if (bt.t > now + (bt.day ? 864e5 : 15 * 6e4)) issues.push(`Ngày giờ trên bill (${shown}) chưa tới, anh chị kiểm tra lại.`);
+    if (since && (bt.day ? bt.d < since.d : bt.t < since.t - 60 * 6e4)) issues.push(`Bill chuyển lúc ${shown}, trước khi tạo ${exp.what || 'đơn'} này.`);
+    else if (bt.t > now + (bt.day ? 864e5 : 30 * 6e4)) issues.push(`Ngày giờ trên bill (${shown}) chưa tới, anh chị kiểm tra lại.`);
   }
   const acc = digits(got.account), want = digits(exp.account);
   if (acc.length >= 4 && want && !(acc === want || want.endsWith(acc) || acc.endsWith(want))) issues.push('Số tài khoản nhận trên bill không phải tài khoản công ty.');
