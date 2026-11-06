@@ -156,6 +156,7 @@ const wrapMail = (site, title, body) => `<div style="font-family:Arial,sans-seri
 // dòng đầu tin Telegram: kết quả AI đọc bill
 function billLabel(chk) {
   if (!chk) return '';
+  if (chk.failed) return '🤖 AI chưa kiểm tra được bill này, anh tự đối chiếu.\n';
   const r = chk.read || {}, seen = r.amount ? `Bill ghi ${money(r.amount)}${r.time ? ', lúc ' + r.time : ''}` : '';
   if (chk.ok) return `🤖 AI đã kiểm tra: KHỚP số tiền và thời gian.${seen ? ' ' + seen + '.' : ''}${chk.notes.length ? '\nℹ️ ' + chk.notes.join(' ') : ''}\n`;
   return `⚠️ AI kiểm tra: CHƯA KHỚP, khách đã được báo kiểm tra lại.\n${chk.issues.map(x => '• ' + x).join('\n')}${chk.notes.length ? '\nℹ️ ' + chk.notes.join(' ') : ''}${seen ? '\n' + seen : ''}\n`;
@@ -335,8 +336,8 @@ const ACTIONS = {
     const f = c.saveBill(o.id, bill.buf, bill.type);
     (o.bills = o.bills || []).push(Object.assign({ f, at: c.stamp() }, chk ? { check: chk } : {}));
     c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${billLabel(chk)}${orderText(o)}\nSố tiền cần nhận ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
-    c.log('Khách gửi bill chuyển khoản', o.id + (chk ? (chk.ok ? ' (AI: khớp)' : ' (AI: chưa khớp)') : ''));
-    return { ok: true, check: chk ? { ok: chk.ok, issues: chk.issues } : null };
+    c.log('Khách gửi bill chuyển khoản', o.id + (chk ? (chk.failed ? ' (AI: chưa kiểm tra được)' : chk.ok ? ' (AI: khớp)' : ' (AI: chưa khớp)') : ''));
+    return { ok: true, check: chk && !chk.failed ? { ok: chk.ok, issues: chk.issues } : null };
   } },
   // bill nạp tiền vào ví (yêu cầu nạp đang chờ của chính thành viên)
   topupClaim: { auth: 'member', async: true, async run(c) {
@@ -352,8 +353,8 @@ const ACTIONS = {
     tp.claims = (tp.claims || 0) + 1;
     (tp.bills = tp.bills || []).push(Object.assign({ f: c.saveBill(tp.id, bill.buf, bill.type), at: c.stamp() }, chk ? { check: chk } : {}));
     c.notify(`🧾 Bill nạp tiền ví\n${billLabel(chk)}${me.name} (@${me.username})\nSố tiền ${money(tp.amount)}, nội dung ${tp.code || ''}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'topup', ref: tp.id, button: '✅ Duyệt đã nhận tiền' }, bill);
-    c.log('Thành viên gửi bill nạp tiền', `@${me.username}: ${money(tp.amount)}` + (chk ? (chk.ok ? ' (AI: khớp)' : ' (AI: chưa khớp)') : ''));
-    return { ok: true, check: chk ? { ok: chk.ok, issues: chk.issues } : null };
+    c.log('Thành viên gửi bill nạp tiền', `@${me.username}: ${money(tp.amount)}` + (chk ? (chk.failed ? ' (AI: chưa kiểm tra được)' : chk.ok ? ' (AI: khớp)' : ' (AI: chưa khớp)') : ''));
+    return { ok: true, check: chk && !chk.failed ? { ok: chk.ok, issues: chk.issues } : null };
   } },
   // trang chờ thanh toán của thành viên hỏi trạng thái đơn gói hoặc yêu cầu nạp tiền
   payStatus: { auth: 'member', run(c) {

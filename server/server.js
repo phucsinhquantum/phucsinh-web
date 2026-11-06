@@ -145,7 +145,7 @@ const aiCfg = () => { const s = store.getJSON('secret:ai') || {}; return s.key ?
 async function billCheck(bill, exp) {
   const cfg = aiCfg(); if (!cfg) return null;
   try { const read = await BILL_AI.read(cfg, bill.buf, bill.type); return Object.assign(BILL_AI.compare(Object.assign({ account: (E.SITE.bank || {}).account || '' }, exp), read), { read }); }
-  catch (e) { console.error('[AI đọc bill]', e.message); return null; }
+  catch (e) { console.error('[AI đọc bill]', e.message); return { failed: true, ok: null, issues: [], notes: [] }; }
 }
 function tell(text, confirm, photo) {
   let url = null;
