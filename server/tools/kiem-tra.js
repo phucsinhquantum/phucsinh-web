@@ -62,6 +62,27 @@ async function confirm(s, c, n0, what, payer, id, phone) {
   ok(/Đã xác nhận/.test(r.text), what + ': bấm xác nhận thành công');
 }
 
+// SePay (anh Tuân 06/11): tiền vào đúng mã + đúng số tiền thì tự duyệt; sai khóa, thiếu tiền, lặp, không mã thì không duyệt
+async function sepayFlow() {
+  console.log('SePay tự xác nhận tiền vào');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'psq-sp-')), s = await startServer(dir, true);
+  try {
+    const owner = client(s.port), tok = (s.log().match(/dat-lai=([\w-]+)/) || [])[1];
+    await owner.act('resetPass', { token: tok, pass: 'KiemTra@2026' }); await owner.act('login', { login: 'chu@kiem-tra.vn', pass: 'KiemTra@2026' });
+    const key = ((await owner.act('sepayNew', {})).result || {}).key;
+    const m = client(s.port); await m.act('register', { name: 'Thành viên nạp', username: 'ktnap', email: 'ktnap@kiem-tra.vn', pass: '123456a', ref: 'PS1000', agree: true });
+    const tp = ((await m.act('deposit', { amount: 500000, method: 'Chuyển khoản' })).result || {}).topup;
+    const hook = async (body, k = key) => { const r = await fetch('http://127.0.0.1:' + s.port + '/api/sepay', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Apikey ' + k }, body: JSON.stringify(Object.assign({ gateway: 'BIDV', accountNumber: '8686141319', transferType: 'in' }, body)) }); return { status: r.status, j: await r.json().catch(() => ({})) }; };
+    const st = async () => ((await m.act('payStatus', { kind: 'topup', id: tp.id })).result || {}).status;
+    ok((await hook({ id: 1, content: 'NAP KTNAP', transferAmount: 500000 }, 'sai-khoa')).status === 401 && await st() === 'pending', 'SePay: sai khóa bị từ chối, lệnh nạp vẫn chờ');
+    ok((await hook({ id: 2, content: 'NAP KTNAP', transferAmount: 400000 })).j.success && await st() === 'pending', 'SePay: tiền thiếu thì không tự duyệt');
+    ok((await hook({ id: 3, content: 'NAP KTNAP', transferAmount: 500000, transferType: 'out' })).j.success && await st() === 'pending', 'SePay: tiền ra thì bỏ qua');
+    ok((await hook({ id: 4, content: 'IBFT NAPKTNAP chuyen', transferAmount: 500000 })).j.success && await st() === 'done', 'SePay: đúng mã nạp, đúng số tiền thì tự cộng ví');
+    const r5 = await hook({ id: 4, content: 'IBFT NAPKTNAP chuyen', transferAmount: 500000 });
+    const db = (await owner.req('GET', '/api/admin/db')).json.db, cash = db.wallet.filter(w => w.ref === tp.id && w.type === 'topup').length;
+    ok(r5.j.result === 'trùng' && cash === 1, 'SePay: gửi lặp cùng giao dịch không cộng ví 2 lần');
+  } finally { s.stop(); fs.rmSync(dir, { recursive: true, force: true }); }
+}
 async function flow() {
   console.log('1. Luồng đăng ký, thanh toán, hoa hồng trên dữ liệu trống');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'psq-kt-'));
@@ -525,7 +546,7 @@ async function seed() {
     const old = { id: 'sko', live: true, date: '2020-01-01', prizes: [], winners: [] };
     ok(!X.wheelEventOpen(old), 'sự kiện đang bật nhưng đã qua ngày không còn hiện');
   }
-  try { await flow(); await seed(); }
+  try { await flow(); await sepayFlow(); await seed(); }
   catch (e) { ok(false, 'lỗi khi kiểm tra: ' + (e.stack || e.message)); }
   console.log(failed ? `\nCÓ ${failed} BƯỚC SAI, KHÔNG ĐƯA LÊN.` : '\nTẤT CẢ ĐỀU ĐÚNG.');
   process.exit(failed ? 1 : 0);

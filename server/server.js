@@ -233,6 +233,7 @@ async function api(req, res, url) {
   const me = meOf(req), route = url.pathname, imp = me && impOf(req);
   if (req.method === 'GET' && route === '/api/boot') return send(res, 200, bootPayload(me, imp));
   if (route === '/api/confirm') return confirmPage(req, res, url);
+  if (route === '/api/sepay') return sepayApi(req, res);
   if (req.method === 'GET' && route === '/api/verify') return verifyPage(req, res, url);
   if (route === '/api/ship') return shipPage(req, res, url);
   if (req.method === 'GET' && route === '/api/tai-lieu/slide') return slidePage(res, me);
@@ -375,6 +376,70 @@ function verifyPage(req, res, url) {
   res.end();
 }
 
+/* ---------- duyệt đã nhận tiền: dùng chung cho trang xác nhận (Telegram) và SePay ---------- */
+const fmVnd = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ';
+const dueOf = o => Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
+function approveOrder(o, via) {
+  const owner = D.users.find(u => A().isOwner(u)) || null;
+  ACTOR = owner; const r = A().setStatus(D, o, 'paid');
+  if (!r.error) (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: (owner || {}).name || 'Chủ sở hữu', action: 'Cập nhật đơn hàng', detail: `${o.id}: Xác nhận đã nhận ${fmVnd(dueOf(o))} (${via})` });
+  ACTOR = null; return r;
+}
+function approveTopup(tp, via) {
+  const owner = D.users.find(u => A().isOwner(u)) || null, u = A().user(D, tp.user) || {};
+  ACTOR = owner; tp.status = 'done'; const tw = tp.wallet || 'cash';
+  A().credit(D, tp.user, tw, 'topup', tp.amount, 'Nạp tiền qua ' + (tp.method || ''), tp.id);
+  (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: (owner || {}).name || 'Chủ sở hữu', action: 'Duyệt nạp tiền', detail: `${u.name}: ${fmVnd(tp.amount)} (${via})` });
+  ACTOR = null; return u;
+}
+
+/* ---------- SePay báo biến động số dư: tiền vào đúng mã đơn (PSQ...) hoặc mã nạp (NAP ...) và đúng số tiền thì tự duyệt ----------
+   SePay gửi POST /api/sepay, tiêu đề Authorization: Apikey <khóa> (chủ sở hữu tạo khóa ở Quản trị > Thiết lập). Trả {"success":true}. */
+const sepayKey = () => (store.getJSON('secret:sepay') || {}).key || '';
+function sepayMatch(tx) {
+  const amt = Math.round(+tx.transferAmount || 0), txt = String(tx.content || '') + ' ' + String(tx.description || '') + ' ' + String(tx.code || ''), N = txt.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const ids = [...new Set((N.match(/PSQ\d{3,}/g) || []))];
+  for (const id of ids) { const o = D.orders.find(x => x.id === id); if (o) return { kind: 'order', x: o, ok: o.status === 'pending' && dueOf(o) === amt, why: o.status !== 'pending' ? 'đơn không còn chờ thanh toán (' + o.status + ')' : dueOf(o) !== amt ? `đơn cần ${fmVnd(dueOf(o))}` : '' }; }
+  const cd = t => String(t.code).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const tps = (D.topups || []).filter(t => t.status === 'pending' && t.code && N.includes(cd(t))).sort((a, b) => cd(b).length - cd(a).length || String(a.date).localeCompare(String(b.date)));
+  if (tps.length) { const t = tps.find(t => Math.round(t.amount) === amt); return t ? { kind: 'topup', x: t, ok: true } : { kind: 'topup', x: tps[0], ok: false, why: `lệnh nạp cần ${fmVnd(tps[0].amount)}` }; }
+  return null;
+}
+function sepayIn(tx) {
+  D.sepay = D.sepay || [];
+  const id = String(tx.id || ''), amt = Math.round(+tx.transferAmount || 0);
+  if (id && D.sepay.some(x => x.id === id)) return 'trùng';
+  const e = { id, at: stamp(), when: String(tx.transactionDate || ''), amount: amt, content: String(tx.content || '').slice(0, 200), bank: String(tx.gateway || ''), refCode: String(tx.referenceCode || '') };
+  D.sepay.unshift(e); if (D.sepay.length > 1000) D.sepay.length = 1000;
+  const acc = String(tx.accountNumber || '').replace(/\D/g, ''), mine = String(((E.SITE || {}).bank || {}).account || '').replace(/\D/g, '');
+  if (tx.transferType !== 'in') { e.result = 'Tiền ra, bỏ qua'; save(); return e.result; }
+  if (acc && mine && acc !== mine) { e.result = 'Tài khoản khác, bỏ qua'; save(); return e.result; }
+  const m = sepayMatch(tx);
+  if (m && m.ok && m.kind === 'order') {
+    const r = approveOrder(m.x, 'tự xác nhận qua SePay'); e.ref = m.x.id;
+    e.result = r.error ? 'Chưa duyệt được: ' + r.error : 'Đã tự duyệt đơn ' + m.x.id; after();
+    tell(r.error ? `⚠️ Tiền vào ${fmVnd(amt)} cho đơn ${m.x.id} nhưng chưa tự duyệt được: ${r.error}\nNội dung: ${e.content}` : `💰 Đã nhận ${fmVnd(amt)} cho đơn ${m.x.id} (${m.x.name}), tự xác nhận qua SePay. Đơn đã chuyển sang Đã thanh toán.\nNội dung: ${e.content}`);
+    return e.result;
+  }
+  if (m && m.ok && m.kind === 'topup') {
+    const u = approveTopup(m.x, 'tự xác nhận qua SePay'); e.ref = m.x.id; e.result = 'Đã tự cộng ví ' + (u.name || ''); after();
+    tell(`💰 Đã nhận ${fmVnd(amt)} nạp ví của ${u.name || ''} (@${u.username || ''}), tự xác nhận qua SePay. Tiền đã vào ví.\nNội dung: ${e.content}`);
+    return e.result;
+  }
+  e.result = m ? 'Chưa khớp: ' + m.why : 'Không thấy mã đơn hay mã nạp'; if (m) e.ref = m.x.id; save();
+  tell(`⚠️ Tiền vào ${fmVnd(amt)} chưa khớp đơn nào nên chưa tự duyệt${m ? ` (${m.kind === 'order' ? 'đơn ' + m.x.id : 'lệnh nạp của ' + ((A().user(D, m.x.user) || {}).name || '')}: ${m.why})` : ''}.\nNội dung: ${e.content}${e.when ? '\nLúc: ' + e.when : ''}\nAnh kiểm tra rồi duyệt tay trong Quản trị.`);
+  return e.result;
+}
+async function sepayApi(req, res) {
+  if (req.method !== 'POST') return send(res, 405, { success: false });
+  const key = sepayKey(), got = String(req.headers.authorization || '').replace(/^Apikey\s+/i, '').trim();
+  const ok = key && got.length === key.length && require('crypto').timingSafeEqual(Buffer.from(got), Buffer.from(key));
+  if (!ok) return send(res, 401, { success: false, error: key ? 'Sai khóa' : 'Chưa bật SePay' });
+  let tx; try { tx = JSON.parse(await readBody(req, 64 * 1024) || '{}'); } catch (e) { return send(res, 400, { success: false }); }
+  try { const r = sepayIn(tx); return send(res, 200, { success: true, result: r }); }
+  catch (e) { console.error('[SePay]', e); D = store.getJSON('db'); ACTOR = null; return send(res, 500, { success: false }); }
+}
+
 /* ---------- xác nhận đã nhận tiền (mở từ tin Telegram) ---------- */
 async function confirmPage(req, res, url) {
   let t = url.searchParams.get('t');
@@ -391,9 +456,8 @@ async function confirmPage(req, res, url) {
     const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
     if (o.status !== 'pending') { store.useToken(t); return page('Đơn đã xử lý', `<h1>Đơn ${esc(o.id)} đã được xử lý</h1><p>Trạng thái hiện tại: ${esc(o.status)}.</p>`); }
     if (req.method === 'POST') {
-      ACTOR = owner; const r = A().setStatus(D, o, 'paid');
-      if (!r.error) (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: (owner || {}).name || 'Chủ sở hữu', action: 'Cập nhật đơn hàng', detail: `${o.id}: Xác nhận đã nhận ${money(due)} (từ tin Telegram)` });
-      ACTOR = null; store.useToken(t); after();
+      const r = approveOrder(o, 'từ tin Telegram');
+      store.useToken(t); after();
       if (!r.error) notify(env, { text: `✅ Đã duyệt đơn ${o.id}: ${o.name}, đã nhận ${money(due)}.` }).catch(() => {});
       return page('Đã xác nhận', r.error ? `<h1>Chưa xác nhận được</h1><p>${esc(r.error)}</p>` : `<h1>✅ Đã xác nhận đơn ${esc(o.id)}</h1><p>Đơn chuyển sang ${o.status === 'done' ? 'Hoàn thành' : 'Đã thanh toán'}.</p>`);
     }
@@ -403,10 +467,8 @@ async function confirmPage(req, res, url) {
   const u = A().user(D, tp.user) || {};
   if (tp.status !== 'pending') { store.useToken(t); return page('Đã xử lý', `<h1>Yêu cầu nạp tiền đã được xử lý</h1>`); }
   if (req.method === 'POST') {
-    ACTOR = owner; tp.status = 'done'; const tw = tp.wallet || 'cash';
-    A().credit(D, tp.user, tw, 'topup', tp.amount, 'Nạp tiền qua ' + (tp.method || ''), tp.id);
-    (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: (owner || {}).name || 'Chủ sở hữu', action: 'Duyệt nạp tiền', detail: `${u.name}: ${money(tp.amount)} (từ tin Telegram)` });
-    ACTOR = null; store.useToken(t); after();
+    approveTopup(tp, 'từ tin Telegram');
+    store.useToken(t); after();
     notify(env, { text: `✅ Đã duyệt nạp ${money(tp.amount)} vào ví của ${u.name || ''}.` }).catch(() => {});
     return page('Đã xác nhận', `<h1>✅ Đã cộng ${money(tp.amount)} vào ví của ${esc(u.name || '')}</h1>`);
   }

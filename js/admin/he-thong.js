@@ -335,7 +335,7 @@
       const mc = $('#mcBody', el);
       if (mc) {
         const draw = () => {
-          const g = API.act('mailGet'), bk = API.act('botKeyGet');
+          const g = API.act('mailGet'), bk = API.act('botKeyGet'), sp = API.act('sepayGet');
           mc.innerHTML = `<p class="${g.configured ? 'green' : 'gold'}" style="font-size:13.5px">${g.configured ? 'Đang gửi bằng ' + esc(g.user) : 'Chưa kết nối email. Thư chưa được gửi đi.'}</p>
             <ol class="dim" style="font-size:13px;padding-left:18px;line-height:1.6;margin:8px 0">
               <li>Đăng nhập Gmail dùng để gửi thư, bật <b>Xác minh 2 bước</b> (myaccount.google.com, mục Bảo mật).</li>
@@ -356,7 +356,16 @@
             <p class="dim" style="font-size:13px;margin:6px 0 10px">Cho bot An An (Zalo, Messenger) tra thành viên theo tên, số điện thoại, mã PS để trả lời khách. Chỉ xem, không sửa được gì. An An chỉ được biết tên, cấp bậc, mã giới thiệu; số điện thoại chỉ có ở đại lý uy tín đang công khai. Điểm, đơn hàng chỉ trả cho chính chủ.</p>
             <p class="${bk.on ? 'green' : 'gold'}" style="font-size:13.5px;margin:0 0 10px">${bk.on ? `Đang mở, khóa đuôi …${esc(bk.tail)} (tạo ${esc(bk.at)})` : 'Đang tắt.'}</p>
             <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-sm" type="button" id="bkN">${icon('link')} ${bk.on ? 'Đổi khóa mới' : 'Tạo khóa'}</button>${bk.on ? `<button class="btn btn-sm" type="button" id="bkO">${icon('close')} Khóa cổng tra cứu</button>` : ''}</div>
-            <div id="bkR" style="font-size:13px;margin-top:8px"></div>`;
+            <div id="bkR" style="font-size:13px;margin-top:8px"></div>
+            <div class="divider"></div><h3 style="font-size:15px">SePay: tự xác nhận tiền vào</h3>
+            <p class="dim" style="font-size:13px;margin:6px 0 10px">Khách chuyển khoản đúng số tiền, nội dung có mã đơn (PSQ...) hoặc mã nạp (NAP ...) thì đơn tự chuyển Đã thanh toán, lệnh nạp tự cộng ví, bot báo anh. Tiền vào không khớp thì bot báo để anh duyệt tay.</p>
+            <p class="${sp.on ? 'green' : 'gold'}" style="font-size:13.5px;margin:0 0 10px">${sp.on ? `Đang bật, khóa đuôi …${esc(sp.tail)} (tạo ${esc(sp.at)})` : 'Đang tắt.'}</p>
+            <ol class="dim" style="font-size:13px;padding-left:18px;line-height:1.6;margin:8px 0"><li>Bấm <b>Tạo khóa</b> bên dưới, chép khóa (chỉ hiện một lần).</li><li>Vào my.sepay.vn/webhooks, bấm <b>+ Thêm webhook</b>: sự kiện <b>Có tiền vào</b>, URL <b>${esc(sp.url)}</b>, kiểu JSON, tài khoản BIDV ${esc(SITE.bank.account)}.</li><li>Phần bảo mật chọn <b>API Key</b>, dán khóa vừa chép, bấm Thêm. Rồi bấm <b>Gửi thử</b> hoặc chuyển thử 2.000đ.</li></ol>
+            <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-sm" type="button" id="spN">${icon('link')} ${sp.on ? 'Đổi khóa mới' : 'Tạo khóa'}</button>${sp.on ? `<button class="btn btn-sm" type="button" id="spO">${icon('close')} Tắt SePay</button>` : ''}</div>
+            <div id="spR" style="font-size:13px;margin-top:8px"></div>
+            ${(sp.log || []).length ? `<div class="table-wrap mt-1"><table class="tbl"><thead><tr><th>Lúc</th><th>Số tiền</th><th>Nội dung</th><th>Kết quả</th></tr></thead><tbody>${sp.log.map(x => `<tr><td class="dim nowrap">${esc(x.when || x.at)}</td><td class="gold nowrap">${money(x.amount)}</td><td style="font-size:12.5px">${esc(x.content)}</td><td style="font-size:12.5px" class="${/^Đã tự/.test(x.result || '') ? 'green' : /bỏ qua|trùng/.test(x.result || '') ? 'dim' : 'gold'}">${esc(x.result || '')}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
+          $('#spN', mc).addEventListener('click', () => { if (sp.on && !confirm('Đổi khóa mới thì phải dán lại khóa vào SePay. Tiếp tục?')) return; const r = API.act('sepayNew'); if (r.error) return toast(r.error); draw(); $('#spR', mc).innerHTML = `<p class="gold" style="margin:0 0 6px">Khóa mới, chỉ hiện một lần. Dán vào SePay, phần bảo mật API Key:</p><input class="input" readonly value="${esc(r.key)}" onclick="this.select()">`; });
+          const so = $('#spO', mc); if (so) so.addEventListener('click', () => { if (!confirm('Tắt SePay? Tiền vào sẽ không tự xác nhận nữa.')) return; API.act('sepayOff'); toast('Đã tắt SePay'); draw(); });
           $('#bkN', mc).addEventListener('click', () => { if (bk.on && !confirm('Đổi khóa mới thì khóa cũ trong n8n hết dùng được. Tiếp tục?')) return; const r = API.act('botKeyNew'); if (r.error) return toast(r.error); draw(); $('#bkR', mc).innerHTML = `<p class="gold" style="margin:0 0 6px">Khóa mới, chỉ hiện một lần. Dán vào n8n (tiêu đề x-bot-key):</p><input class="input" readonly value="${esc(r.key)}" onclick="this.select()">`; });
           const bo = $('#bkO', mc); if (bo) bo.addEventListener('click', () => { if (!confirm('Khóa cổng tra cứu? An An sẽ không tra được thành viên nữa.')) return; API.act('botKeyOff'); toast('Đã khóa cổng tra cứu'); draw(); });
           $('#mcF', mc).addEventListener('submit', e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), r = API.act('mailSet', f); if (r.error) return $('#mcE', mc).textContent = r.error; toast('Đã lưu email gửi thư'); draw(); });
