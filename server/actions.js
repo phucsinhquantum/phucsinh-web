@@ -762,6 +762,12 @@ const ACTIONS = {
     if (!r || !r.ok) return err(r && r.status === 401 ? 'Khóa không dùng được (Anthropic báo sai khóa).' : 'Chưa kiểm tra được khóa, anh thử lại sau ít phút.');
     c.store.setJSON('secret:ai', { key, at: c.stamp(), model: 'claude-opus-5-5' }); c.log('Bật AI đọc bill', 'khóa …' + key.slice(-4)); return { ok: true };
   } },
+  // chọn loại AI đọc bill (anh tự quyết chi phí): Opus mặc định, Sonnet, Haiku rẻ hơn
+  aiModel: { auth: 'owner', run(c) {
+    const m = String(c.args.model || ''); if (!['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'].includes(m)) return err('Loại AI chưa đúng.');
+    const k = c.store.getJSON('secret:ai') || {}; if (!k.key) return err('Anh lưu khóa trước.');
+    c.store.setJSON('secret:ai', Object.assign(k, { model: m })); c.log('Đổi loại AI đọc bill', m); return { ok: true };
+  } },
   aiOff: { auth: 'owner', run(c) { c.store.setJSON('secret:ai', {}); c.log('Tắt AI đọc bill', ''); return { ok: true }; } },
   mailGet: { auth: 'owner', run(c) { const m = c.store.getJSON('secret:mail') || {}; return { user: m.user || '', fromName: m.fromName || '', host: m.host || 'smtp.gmail.com', configured: !!(m.user && m.pass) }; } },
   mailSet: { auth: 'owner', run(c) {
