@@ -24,8 +24,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261106d">
-<script src="js/lang.js?v=20261106d"></script>
+<link rel="stylesheet" href="css/app.css?v=20261106e">
+<script src="js/lang.js?v=20261106e"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -244,11 +244,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261106d"></script>
-<script src="js/api.js?v=20261106d"></script>
-<script src="js/data.js?v=20261106d"></script>
-<script src="js/app.js?v=20261106d"></script>
-<script src="js/psq-data.js?v=20261106d"></script>
+<script src="js/patch.js?v=20261106e"></script>
+<script src="js/api.js?v=20261106e"></script>
+<script src="js/data.js?v=20261106e"></script>
+<script src="js/app.js?v=20261106e"></script>
+<script src="js/psq-data.js?v=20261106e"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -293,7 +293,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   const billWait = (kind, x, redo, paidTitle, paidSub) => {
     const open = openBill; openBill = false;
     PSQ.payWait.start({ open, paidTitle, paidSub, onPaid: () => setTimeout(redo, 2500),
-      send: bill => API.actAsync(kind === 'topup' ? 'topupClaim' : 'paidClaim', { id: x.id, bill }),
+      send: bill => kind === 'topup' ? API.act('topupClaim', { id: x.id, bill }) : API.act('paidClaim', { id: x.id, bill }),
       check: () => API.act('payStatus', { kind, id: x.id }).status });
   };
   // trả gói bằng ví điểm khả dụng (1 PS = 1đ): đủ điểm thì hệ thống tự kích hoạt, không cần công ty duyệt
@@ -388,7 +388,6 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       const send = $('#pwSend'), pick = $('#pwBill .pw-pick'), claim = $('#pwClaim');
       if (send) return G.point(send, 'Bấm Gửi bill cho công ty');
       if (pick) return G.point(pick, 'Chuyển khoản xong, bấm vào đây chọn ảnh bill');
-      if (claim && !claim.hidden && $('#pwBad')) return G.point(claim, 'Kiểm tra lại bill rồi bấm Gửi lại bill');
       if (claim && !claim.hidden && !/lại/.test(claim.textContent)) return G.point(claim, 'Chuyển khoản xong, bấm nút này để gửi ảnh bill');
       return G.point(null);
     }
@@ -761,14 +760,13 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       <div class="card glow-cyan">${head('Lịch sử nạp tiền', T.length + ' lần nạp')}
         ${T.length ? `<div class="table-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Số tiền</th><th>Hình thức</th><th>Vào ví</th><th>Trạng thái</th></tr></thead><tbody>${T.map(t => `<tr><td class="dim nowrap">${fdate(t.date)}</td><td class="gold nowrap"><b>${money(t.amount)}</b></td><td>${esc(t.method || '')}${t.auto ? '<br><small class="green">Tự động xác nhận</small>' : ''}</td><td class="nowrap">${wdot(t.wallet || 'shop')}</td><td>${wB(t.status)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${icon('plus')}Chưa nạp tiền lần nào.</div>`}
       </div>
-      <form class="card glow-gold" id="tpF" novalidate>${head('Nạp tiền', 'Ví tiền mặt hiện có ' + money(bal))}
+      <form class="card glow-gold" id="tpF" novalidate>${head('Nạp tiền', 'Ví tiền mặt hiện có ' + money(bal), PSQ.guide ? PSQ.guide.toggle() : '')}
         <div class="field"><label for="tpA">Số tiền (đồng)</label><input class="input" id="tpA" name="amount" type="number" min="10000" step="10000" inputmode="numeric" required></div>
         <div class="chips mt-1" id="tpQ">${[500000, 1000000, 2000000, 5000000].map(v => `<button class="chip" type="button" data-v="${v}">${short(v)}</button>`).join('')}</div>
         <div class="field mt-2"><label for="tpM">Hình thức</label><select class="input" id="tpM" name="method">${['Chuyển khoản', 'Tiền mặt tại cửa hàng'].map(m => `<option>${m}</option>`).join('')}</select></div>
         <div id="tpInfo" class="mt-2"></div>
         <p class="red mt-1" id="tpE" style="font-size:13px;min-height:18px"></p>
         <button class="btn btn-gold btn-block" type="submit" id="tpS"></button>
-        ${PSQ.guide ? `<div class="mt-1" style="text-align:center">${PSQ.guide.toggle()}</div>` : ''}
       </form></div>`;
     const A = $('#tpA', box), M = $('#tpM', box);
     const info = () => {

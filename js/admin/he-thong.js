@@ -335,7 +335,7 @@
       const mc = $('#mcBody', el);
       if (mc) {
         const draw = () => {
-          const g = API.act('mailGet'), bk = API.act('botKeyGet'), ai = API.act('aiGet');
+          const g = API.act('mailGet'), bk = API.act('botKeyGet');
           mc.innerHTML = `<p class="${g.configured ? 'green' : 'gold'}" style="font-size:13.5px">${g.configured ? 'Đang gửi bằng ' + esc(g.user) : 'Chưa kết nối email. Thư chưa được gửi đi.'}</p>
             <ol class="dim" style="font-size:13px;padding-left:18px;line-height:1.6;margin:8px 0">
               <li>Đăng nhập Gmail dùng để gửi thư, bật <b>Xác minh 2 bước</b> (myaccount.google.com, mục Bảo mật).</li>
@@ -356,18 +356,7 @@
             <p class="dim" style="font-size:13px;margin:6px 0 10px">Cho bot An An (Zalo, Messenger) tra thành viên theo tên, số điện thoại, mã PS để trả lời khách. Chỉ xem, không sửa được gì. An An chỉ được biết tên, cấp bậc, mã giới thiệu; số điện thoại chỉ có ở đại lý uy tín đang công khai. Điểm, đơn hàng chỉ trả cho chính chủ.</p>
             <p class="${bk.on ? 'green' : 'gold'}" style="font-size:13.5px;margin:0 0 10px">${bk.on ? `Đang mở, khóa đuôi …${esc(bk.tail)} (tạo ${esc(bk.at)})` : 'Đang tắt.'}</p>
             <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn btn-sm" type="button" id="bkN">${icon('link')} ${bk.on ? 'Đổi khóa mới' : 'Tạo khóa'}</button>${bk.on ? `<button class="btn btn-sm" type="button" id="bkO">${icon('close')} Khóa cổng tra cứu</button>` : ''}</div>
-            <div id="bkR" style="font-size:13px;margin-top:8px"></div>
-            <div class="divider"></div><h3 style="font-size:15px">AI đọc bill chuyển khoản</h3>
-            <p class="dim" style="font-size:13px;margin:6px 0 10px">Khách gửi bill (mua hàng, nạp tiền, gói CTV, gói đại lý) thì AI đọc số tiền, ngày giờ, tài khoản nhận trên ảnh rồi so với đơn. Chưa khớp thì báo khách kiểm tra lại. Bill vẫn gửi Telegram cho anh, kèm nhãn KHỚP hoặc CHƯA KHỚP. AI có thể đọc nhầm ảnh mờ và không phát hiện được ảnh bị sửa, anh vẫn đối chiếu tài khoản trước khi duyệt.</p>
-            <p class="${ai.on ? 'green' : 'gold'}" style="font-size:13.5px;margin:0 0 10px">${ai.on ? (ai.env ? 'Đang bật (khóa trong cấu hình máy chủ).' : `Đang bật, khóa đuôi …${esc(ai.tail)} (lưu ${esc(ai.at)})`) : 'Đang tắt: bill gửi thẳng cho anh, không kiểm tra.'}</p>
-            <ol class="dim" style="font-size:13px;padding-left:18px;line-height:1.6;margin:8px 0"><li>Mở <b>console.anthropic.com</b>, đăng ký, nạp tiền (Billing). Mỗi bill tốn khoảng vài trăm đồng.</li><li>Vào <b>API keys</b>, bấm Create key, chép khóa (bắt đầu bằng sk-ant-).</li><li>Dán vào ô dưới, bấm Lưu. Khóa chỉ lưu trên máy chủ, không hiện lại.</li></ol>
-            <form class="row" id="aiF" style="gap:8px;flex-wrap:wrap" autocomplete="off"><input class="input" name="key" type="password" autocomplete="new-password" spellcheck="false" placeholder="sk-ant-..." style="flex:1;min-width:220px"><button class="btn btn-gold btn-sm" type="submit">${icon('check')} Lưu khóa</button>${ai.on && !ai.env ? `<button class="btn btn-sm" type="button" id="aiO">${icon('close')} Tắt</button>` : ''}</form>
-            ${ai.on && !ai.env ? `<div class="field mt-1" style="max-width:420px"><label for="aiM">Loại AI</label><select class="input" id="aiM">${[['claude-opus-5-5', 'Opus 5.5: đọc kỹ nhất, khoảng 500đ/bill'], ['claude-sonnet-5-5', 'Sonnet 5.5: khoảng 250đ/bill'], ['claude-haiku-5-5', 'Haiku 5.5: rẻ nhất, khoảng 15đ/bill, dễ đọc nhầm ảnh mờ hơn']].map(([k, l]) => `<option value="${k}"${ai.model === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
-            <div id="aiR" style="font-size:13px;margin-top:8px"></div>`;
-          const am = $('#aiM', mc); if (am) am.addEventListener('change', () => { const r = API.act('aiModel', { model: am.value }); if (r.error) toast(r.error, 'err'); else toast('Đã đổi loại AI đọc bill'); });
-          $('#aiF', mc).addEventListener('submit', e => { e.preventDefault(); const out = $('#aiR', mc), b = $('button[type=submit]', e.target); b.disabled = true; out.className = 'dim'; out.textContent = 'Đang kiểm tra khóa...';
-            API.actAsync('aiSet', { key: e.target.key.value }).then(r => { b.disabled = false; if (r.error) { out.className = 'red'; out.textContent = r.error; return; } toast('Đã bật AI đọc bill'); draw(); }); });
-          const ao = $('#aiO', mc); if (ao) ao.addEventListener('click', () => { if (!confirm('Tắt AI đọc bill? Bill sẽ gửi thẳng cho anh, không kiểm tra.')) return; API.act('aiOff'); toast('Đã tắt AI đọc bill'); draw(); });
+            <div id="bkR" style="font-size:13px;margin-top:8px"></div>`;
           $('#bkN', mc).addEventListener('click', () => { if (bk.on && !confirm('Đổi khóa mới thì khóa cũ trong n8n hết dùng được. Tiếp tục?')) return; const r = API.act('botKeyNew'); if (r.error) return toast(r.error); draw(); $('#bkR', mc).innerHTML = `<p class="gold" style="margin:0 0 6px">Khóa mới, chỉ hiện một lần. Dán vào n8n (tiêu đề x-bot-key):</p><input class="input" readonly value="${esc(r.key)}" onclick="this.select()">`; });
           const bo = $('#bkO', mc); if (bo) bo.addEventListener('click', () => { if (!confirm('Khóa cổng tra cứu? An An sẽ không tra được thành viên nữa.')) return; API.act('botKeyOff'); toast('Đã khóa cổng tra cứu'); draw(); });
           $('#mcF', mc).addEventListener('submit', e => { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)), r = API.act('mailSet', f); if (r.error) return $('#mcE', mc).textContent = r.error; toast('Đã lưu email gửi thư'); draw(); });

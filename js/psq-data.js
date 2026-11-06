@@ -472,7 +472,7 @@
     deposit(d, u, amount, method, opt = {}) {
       amount = Math.round(+amount);
       if (!(amount > 0)) return { error: 'Anh chị nhập số tiền cần nạp.' };
-      const t = { id: uid('nd'), user: u.id, wallet: 'cash', amount, points: amount, method: method || 'Chuyển khoản', status: opt.status || 'pending', date: opt.date || now(), at: nowAt(), note: opt.note || '', code: opt.code || '' };
+      const t = { id: uid('nd'), user: u.id, wallet: 'cash', amount, points: amount, method: method || 'Chuyển khoản', status: opt.status || 'pending', date: opt.date || now(), note: opt.note || '', code: opt.code || '' };
       if (t.status === 'done') { t.auto = !!opt.auto; credit(d, u.id, 'cash', 'topup', amount, 'Nạp tiền qua ' + t.method + (opt.auto ? ' (tự động xác nhận)' : ''), t.id, { date: t.date }); }
       (d.topups = d.topups || []).push(t); return { topup: t };
     },
