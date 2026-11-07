@@ -432,9 +432,10 @@ function sepayIn(tx) {
 }
 async function sepayApi(req, res) {
   if (req.method !== 'POST') return send(res, 405, { success: false });
-  const key = sepayKey(), got = String(req.headers.authorization || '').replace(/^Apikey\s+/i, '').trim();
+  const key = sepayKey(), got = String(req.headers.authorization || '').replace(/^(\s*(Apikey|Bearer)\s*[:=]?\s*)+/i, '').trim();
   const ok = key && got.length === key.length && require('crypto').timingSafeEqual(Buffer.from(got), Buffer.from(key));
-  if (!ok) return send(res, 401, { success: false, error: key ? 'Sai khóa' : 'Chưa bật SePay' });
+  // ghi lại lần gọi bị từ chối (không lưu khóa) để quản trị biết SePay có gọi tới mà sai khóa
+  if (!ok) { D.sepayDenied = { at: stamp(), why: !key ? 'Chưa tạo khóa' : got ? 'Sai khóa (đuôi …' + got.slice(-4) + ')' : 'Không có khóa trong tiêu đề Authorization' }; save(); console.error('[SePay] từ chối:', D.sepayDenied.why); return send(res, 401, { success: false, error: key ? 'Sai khóa' : 'Chưa bật SePay' }); }
   let tx; try { tx = JSON.parse(await readBody(req, 64 * 1024) || '{}'); } catch (e) { return send(res, 400, { success: false }); }
   try { const r = sepayIn(tx); return send(res, 200, { success: true, result: r }); }
   catch (e) { console.error('[SePay]', e); D = store.getJSON('db'); ACTOR = null; return send(res, 500, { success: false }); }
