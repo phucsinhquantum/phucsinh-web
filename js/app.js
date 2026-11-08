@@ -685,7 +685,7 @@
   function ctvTip() {
     const a = $('.ctv-cta'); if (!a || store.get('psq_ctv_tip', 0)) return;
     const t = document.createElement('div'); t.className = 'ctv-tip'; t.setAttribute('role', 'status');
-    t.innerHTML = `<button type="button" class="ctv-x" aria-label="Đóng">${icon('close')}</button><b>${icon('sparkle')} Cơ hội cho anh chị</b><p>Đăng ký cộng tác viên để bán hàng nhận hoa hồng ${ctvRate()}% và lên đại lý hưởng thu nhập không giới hạn.</p><a class="btn btn-gold btn-sm" href="${ctvHref()}">Đăng ký ngay</a>`;
+    t.innerHTML = `<button type="button" class="ctv-x" aria-label="Đóng">${icon('close')}</button><b>${icon('sparkle')} Cơ hội cho anh chị</b><p>Đăng ký cộng tác viên để bán hàng nhận hoa hồng ${ctvRate()}% theo chính sách của chương trình.</p><a class="btn btn-gold btn-sm" href="${ctvHref()}">Đăng ký ngay</a>`;
     document.body.appendChild(t);
     const place = () => { const r = a.getBoundingClientRect(); t.style.top = (r.bottom + 12) + 'px'; t.style.left = Math.max(12, Math.min(innerWidth - t.offsetWidth - 12, r.left + r.width / 2 - t.offsetWidth / 2)) + 'px'; t.style.setProperty('--ax', (r.left + r.width / 2 - t.getBoundingClientRect().left) + 'px'); };
     place(); addEventListener('resize', place);

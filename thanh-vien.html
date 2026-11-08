@@ -12,6 +12,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Thành viên · Phúc Sinh QuanTum</title>
 <meta name="description" content="Tài khoản thành viên Phúc Sinh QuanTum: ví điểm PS, cấp bậc cộng tác viên và đại lý, hoa hồng, đơn hàng.">
+<meta name="robots" content="noindex,follow">
 <meta name="theme-color" content="#06080a">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
@@ -1000,7 +1001,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
         <form id="af" class="mt-3" novalidate>
           ${mode === 'register' ? `<div class="field"><label for="fn">Họ và tên</label><input class="input" id="fn" name="name" autocomplete="name" required></div>
           <div class="field mt-2"><label for="fu">Tên truy cập</label><input class="input" id="fu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="Ví dụ minhanh2026"><small class="dim" id="fuHint" style="font-size:12px;min-height:16px;display:block;margin-top:4px">Chữ thường không dấu, số, dấu chấm hoặc gạch dưới. Để trống thì hệ thống tự tạo.</small></div>
-          <div class="field mt-2"><label for="fp">Số điện thoại</label><input class="input" id="fp" name="phone" type="tel" autocomplete="tel" inputmode="tel"></div>` : ''}
+          <div class="field mt-2"><label for="fp">Số điện thoại <span class="red">*</span></label><input class="input" id="fp" name="phone" type="tel" autocomplete="tel" inputmode="tel" required></div>` : ''}
           ${mode === 'reset' ? '' : `<div class="field mt-2"><label for="fe">${mode === 'login' ? 'Email hoặc tên truy cập' : 'Email'}</label><input class="input" id="fe" name="email" type="${mode === 'login' ? 'text' : 'email'}" autocomplete="${mode === 'login' ? 'username' : 'email'}" autocapitalize="off" spellcheck="false" required></div>`}
           ${mode === 'forgot' ? '' : `<div class="field mt-2"><label for="fw">${mode === 'reset' ? 'Mật khẩu mới' : 'Mật khẩu'}</label><input class="input" id="fw" name="pass" type="password" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required></div>`}
           ${mode === 'reset' || mode === 'register' ? `<div class="field mt-2"><label for="fw2">${mode === 'reset' ? 'Nhập lại mật khẩu mới' : 'Nhập lại mật khẩu'}</label><input class="input" id="fw2" name="pass2" type="password" autocomplete="new-password" minlength="6" required><small class="dim" id="fw2Hint" style="font-size:12px;min-height:16px;display:block;margin-top:4px"></small></div>` : ''}
@@ -1053,6 +1054,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
         wanted = (f.username || '').trim().toLowerCase(); const ue = unameErr(wanted); if (ue) return err.textContent = ue;
         if (f.pass.length < 6) return err.textContent = 'Mật khẩu tối thiểu 6 ký tự.';
         if (f.pass !== f.pass2) { $('#fw2').focus(); return err.textContent = 'Hai lần nhập mật khẩu chưa khớp, anh chị nhập lại giúp em.'; }
+        if (!f.phone || !f.phone.trim()) { $('#fp').focus(); return err.textContent = 'Anh chị điền số điện thoại giúp em.'; }
         if (!f.agree) return err.textContent = 'Anh chị cần đồng ý với điều khoản.';
       }
       btn.disabled = true;

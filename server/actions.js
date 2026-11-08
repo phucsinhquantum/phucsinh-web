@@ -219,7 +219,8 @@ const ACTIONS = {
     if (name.length < 2 || !email || !pass) return err('Anh chị điền đủ họ tên, email và mật khẩu.');
     if (!EMAIL.test(email)) return err('Email chưa đúng định dạng.');
     if (mailTypo(email)) return err(`Email có vẻ gõ nhầm, có phải là ${mailTypo(email)} không? Anh chị sửa lại để nhận được thư kích hoạt.`);
-    if (phone && !PHONE.test(phone)) return err('Số điện thoại chưa đúng.');
+    if (!phone) return err('Anh chị điền số điện thoại giúp em (để liên hệ khi cần và giữ đúng người giới thiệu).');
+    if (!PHONE.test(phone)) return err('Số điện thoại chưa đúng.');
     if (pass.length < 6 || pass.length > 100) return err('Mật khẩu tối thiểu 6 ký tự.');
     if (!args.agree) return err('Anh chị cần đồng ý với điều khoản.');
     if (d.users.some(x => (x.email || '').toLowerCase() === email)) return err('Email này đã có tài khoản.');
@@ -352,6 +353,20 @@ const ACTIONS = {
     c.notify(`Lời nhắn mới: ${m.name} (${m.phone})\nChủ đề: ${m.topic}\n${m.text.slice(0, 500)}`);
     return { message: m };
   } },
+  // khách để lại số điện thoại khi xem sản phẩm qua link giới thiệu: ghi người gửi link ĐẦU TIÊN cho số này 90 ngày,
+  // để sau này mua ở trình duyệt hay máy khác (không còn nhớ mã) vẫn tính đúng người. Số đã là thành viên, đã từng mua qua link, hoặc đã được giữ chỗ thì không đổi.
+  captureLead: { auth: 'guest', run(c) {
+    const { d, A, args } = c, phone = normPhone(args.phone);
+    if (!/^0[0-9]{9}$/.test(phone)) return err('Anh chị kiểm tra lại số điện thoại giúp em.');
+    const found = findRef(d, args.ref), sp = found && !found.company && found.user.role !== 'admin' ? found.user : null;
+    const mem = d.users.find(u => u.role !== 'admin' && normPhone(u.phone) === phone), kept = (d.guestRefs || {})[phone], old = (d.leadRefs || {})[phone];
+    const held = (kept && A.user(d, kept)) || (old && Date.now() - old.at < 90 * 864e5 && A.user(d, old.u));
+    if (sp && !mem && !held) {
+      (d.leadRefs = d.leadRefs || {})[phone] = { u: sp.id, at: Date.now() };
+      c.notify(`Khách để lại số ${phone} khi xem sản phẩm ${str(args.product, 40)}; người gửi link: ${sp.name} (${sp.code || ''})`);
+    }
+    return { ok: true };
+  } },
   placeOrder: { auth: 'guest', run(c) {
     const { d, A, args, me } = c, info = args.info || {};
     const items = [];
@@ -375,7 +390,8 @@ const ACTIONS = {
     if (!me) {
       const mem = d.users.find(u => u.role !== 'admin' && phone && normPhone(u.phone) === phone);
       const kept = (d.guestRefs || {})[phone], found = findRef(d, args.ref), fromLink = found && !found.company && found.user.role !== 'admin' ? found.user.id : null;
-      const sp = mem ? mem.sponsor : kept && c.A.user(d, kept) ? kept : fromLink;
+      const lead = (d.leadRefs || {})[phone], fromLead = lead && Date.now() - lead.at < 90 * 864e5 && c.A.user(d, lead.u) ? lead.u : null;
+      const sp = mem ? mem.sponsor : kept && c.A.user(d, kept) ? kept : fromLead || fromLink;
       if (sp) { o.refBy = sp; if (!mem && !kept) (d.guestRefs = d.guestRefs || {})[phone] = sp; }
       if (mem && d.users.filter(u => u.role !== 'admin' && normPhone(u.phone) === phone).length === 1) { o.userId = mem.id; o.linked = 'phone'; }   // số điện thoại là của thành viên: đơn tính cho tài khoản đó
     }
