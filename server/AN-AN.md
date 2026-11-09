@@ -55,3 +55,11 @@ Cùng khóa x-bot-key. Mỗi ngày (ví dụ 22h) n8n đọc từng fanpage An A
 - Số liệu quá 2 ngày không gửi lại thì trang coi như chưa có số bài.
 - Trả về `{ ok, added, updated, bad, showing }`. Web tự báo Telegram trang nào vừa hiện lại hoặc tạm ẩn.
 - Điều kiện hiện (mặc định: An An quản lý + ít nhất 5 bài trong 7 ngày) anh chỉnh ở Quản trị > Quản trị fanpage. Trang không phải Facebook (TikTok, Zalo) thì bật "Luôn hiện" để bỏ qua điều kiện.
+
+## Bot Trợ Lý (Telegram): xuất đơn hàng
+
+`GET /api/bot/orders`, cùng khóa và tiêu đề như trên (`x-bot-key` hoặc `Authorization: Bearer`). Chỉ dùng cho bot nội bộ, vì có SĐT và địa chỉ khách.
+
+- `status`: `chua-giao` (mặc định: chờ xác nhận, đã thanh toán, đang giao), `all`, hoặc một trạng thái `pending|paid|ship|done|failed`.
+- `from`, `to`: ngày giờ VN dạng `YYYY-MM-DD` (theo ngày đặt).
+- Trả `{ status, from, to, count, total, orders: [{ id, at, status, statusName, total, pay, name, phone, address, note, items: [{name, qty, price}], buyer: {code, tier}, ref: {name, code}, shipBy, shipAt }] }`, mới nhất trước, tối đa 2000 đơn.

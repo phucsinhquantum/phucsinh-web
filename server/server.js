@@ -17,7 +17,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { openStore } = require('./store');
 const { createEngine, esc, today } = require('./engine');
-const { ACTIONS, scopeFor, hashPass, clean, botLookup, botProducts, botKeyOf, fanList, botFanpages } = require('./actions');
+const { ACTIONS, scopeFor, hashPass, clean, botOrders, botLookup, botProducts, botKeyOf, fanList, botFanpages } = require('./actions');
 const { sendMail } = require('./mail');
 const N = require('./notify'), { chatName, chatsOf } = N;
 const P = require('../js/patch.js');
@@ -249,7 +249,7 @@ async function api(req, res, url) {
     return send(res, 200, ev ? { n: (ev.winners || []).length, at: ev.spinAt || '' } : { n: -1 });
   }
   if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
-  if (route === '/api/bot/lookup' || route === '/api/bot/products' || route === '/api/bot/fanpages') return botApi(req, res, url, route.split('/').pop());
+  if (route === '/api/bot/lookup' || route === '/api/bot/products' || route === '/api/bot/fanpages' || route === '/api/bot/orders') return botApi(req, res, url, route.split('/').pop());
   if (req.method !== 'POST') return send(res, 405, { error: 'Sai phương thức.' });
   // chống gửi giả từ trang khác: trình duyệt chỉ gửi được tiêu đề này khi cùng tên miền
   if (req.headers['x-psq'] !== '1') return send(res, 403, { error: 'Yêu cầu không hợp lệ.' });
@@ -348,6 +348,7 @@ async function botApi(req, res, url, prod) {
     if (on.length || off.length) tell(`📣 Fanpage thành viên trên trang chủ thay đổi:${on.length ? '\n✅ Hiện lại: ' + on.map(([, n]) => n).join(', ') : ''}${off.length ? '\n⏸ Tạm ẩn (chưa đủ bài): ' + off.map(([, n]) => n).join(', ') : ''}`);
     return send(res, 200, r, { 'cache-control': 'no-store' });
   }
+  if (prod === 'orders') return send(res, 200, botOrders(D, A(), a), { 'cache-control': 'no-store' });
   prod = prod === 'products';
   const r = prod ? botProducts(D, A(), E.PRODUCTS, a.q, BASE) : botLookup(D, A(), content.get('psq_dealers_v1') ?? E.sandbox.DEALERS, a.q, a.asker, BASE);
   return send(res, r.error ? 400 : 200, r, { 'cache-control': 'no-store' });

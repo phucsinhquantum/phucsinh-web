@@ -337,6 +337,13 @@ async function flow() {
     ok(hb.status === 200 && rb && rb.code === B.r.me.code && rb.tier === 'Cộng tác viên', 'An An: tra theo tên ra đúng B, cấp Cộng tác viên');
     ok(!/@kiem-tra\.vn|"phone"|"email"|"self"/.test(JSON.stringify(hb.j)), 'An An: người lạ hỏi không thấy email, SĐT, ví của thành viên');
     ok(((await bot(B.r.me.code, bk.key)).j.results || []).length === 1, 'An An: tra theo mã PS được');
+    // bot Trợ Lý xuất đơn chưa giao: cần khóa, có SĐT/địa chỉ, chỉ đơn chờ/đã thanh toán/đang giao
+    const bo = async (q, key) => { const r = await fetch(`http://127.0.0.1:${s.port}/api/bot/orders${q}`, { headers: key ? { 'x-bot-key': key } : {} }); return { status: r.status, j: await r.json() }; };
+    ok((await bo('', '')).status === 401, 'Trợ Lý: lấy đơn cần khóa bot');
+    const bo1 = await bo('', bk.key), od = (await owner.req('GET', '/api/admin/db')).json.db;
+    const open = (od.orders || []).filter(o => ['pending', 'paid', 'ship'].includes(o.status));
+    ok(bo1.status === 200 && bo1.j.count === open.length && bo1.j.orders.every(o => ['pending', 'paid', 'ship'].includes(o.status) && 'phone' in o && Array.isArray(o.items)), 'Trợ Lý: đơn chưa giao đúng số lượng, có SĐT và sản phẩm');
+    ok((await bo('?status=all', bk.key)).j.count === (od.orders || []).length, 'Trợ Lý: status=all lấy hết đơn');
     ok(rb && rb.refLink === `http://127.0.0.1:${s.port}/thanh-vien.html?ref=${B.r.me.code}`, 'An An: có link giới thiệu của người được tra để gửi khách đăng ký');
     const H = client(s.port), hr = await H.act('register', { name: 'Nguyễn Văn Hà', username: 'ktha', email: 'ktha@kiem-tra.vn', phone: '0912345678', pass: '123456a', ref: A.r.me.code, agree: true });
     ok(!hr.error, 'An An: thêm thành viên Nguyễn Văn Hà' + (hr.error ? ': ' + hr.error : ''));

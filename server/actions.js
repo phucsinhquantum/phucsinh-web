@@ -835,6 +835,19 @@ function botProducts(d, A, products, q, base) {
   return { query: q || '', count: hit.length, total: list.length, products: out,
     rule: 'Chỉ giới thiệu sản phẩm có trong danh sách này. Sản phẩm khách hỏi mà không có ở đây thì báo đã hết hàng hoặc ngừng bán, gợi ý sản phẩm tương tự. inStock false thì báo tạm hết hàng. Bảo hành theo trường warranty của từng sản phẩm; trống thì theo chính sách chung của công ty (hàng đối tác trống thì mời khách hỏi lại, em kiểm tra). Hàng đối tác do công ty giao. Sản phẩm có variants thì giá theo từng phân loại, hỏi khách chọn phân loại nào.' };
 }
+/* Bot Trợ Lý (Telegram) xuất đơn ra Excel: GET /api/bot/orders?status=chua-giao|all|pending|paid|ship|done|cancel&from=&to= (ngày VN) */
+const ORDER_OPEN = ['pending', 'paid', 'ship'], ORDER_NAME = { pending: 'Chờ xác nhận', paid: 'Đã thanh toán', ship: 'Đang giao', done: 'Hoàn thành', failed: 'Đã hủy' };
+function botOrders(d, A, a) {
+  const st = str(a.status || 'chua-giao', 20), from = str(a.from, 10), to = str(a.to, 10), day = o => String(o.at || o.date || '').slice(0, 10);
+  const want = st === 'all' ? null : st === 'chua-giao' ? ORDER_OPEN : [st];
+  const list = (d.orders || []).filter(o => (!want || want.includes(o.status)) && (!from || day(o) >= from) && (!to || day(o) <= to))
+    .sort((x, y) => String(y.at || y.date || '').localeCompare(String(x.at || x.date || '')) || String(y.id).localeCompare(String(x.id)));
+  const pub = u => u ? { name: u.name || '', code: u.code || '', tier: u.tier || '' } : null;
+  const orders = list.slice(0, 2000).map(o => { const buyer = o.userId && A.user(d, o.userId), ref = (buyer && buyer.sponsor && A.user(d, buyer.sponsor)) || (o.refBy && A.user(d, o.refBy)) || null;
+    return { id: o.id, at: o.at || o.date || '', status: o.status, statusName: ORDER_NAME[o.status] || o.status, total: +o.total || 0, pay: o.pay || '', name: o.name || '', phone: o.phone || '', address: o.address || '', note: o.note || '',
+      items: (o.items || []).map(x => ({ name: x.name, qty: +x.qty || 0, price: +x.price || 0 })), buyer: buyer ? { code: buyer.code || '', tier: buyer.tier || '' } : null, ref: ref ? { name: ref.name || '', code: ref.code || '' } : null, shipBy: o.shipBy || '', shipAt: o.shipAt || '' }; });
+  return { status: st, from, to, count: list.length, total: list.reduce((s, o) => s + (+o.total || 0), 0), orders };
+}
 const botKeyOf = store => (store.getJSON('secret:bot') || {}).key || '';
 
-module.exports = { botLookup, botProducts, fanList, fanWhy, fanRule, botFanpages, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };
+module.exports = { botOrders, botLookup, botProducts, fanList, fanWhy, fanRule, botFanpages, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };
