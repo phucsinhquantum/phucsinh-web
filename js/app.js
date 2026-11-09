@@ -21,7 +21,12 @@
   const refCode = () => { try { const v = JSON.parse(localStorage.getItem(REF_KEY)); return v && v.code && Date.now() - v.at < REF_DAYS * 864e5 ? v.code : ''; } catch (e) { return ''; } };
   { const c = String(qs('ref') || '').trim().toUpperCase().slice(0, 30); if (/^[A-Z0-9._]{3,30}$/.test(c) && !refCode()) try { localStorage.setItem(REF_KEY, JSON.stringify({ code: c, at: Date.now() })); } catch (e) {} }
   const today = () => new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 10);   // ngày theo giờ Việt Nam
-  const fdate = iso => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
+  // fdate: nhận chuỗi ngày hoặc cả bản ghi giao dịch. Có giờ VN ('YYYY-MM-DD HH:MM[:SS]', hoặc rec.at) thì hiện 09/11/2026 07:15:32; giao dịch cũ chỉ có ngày thì hiện ngày.
+  const fdate = x => {
+    if (x && typeof x === 'object') { const at = String(x.at || ''), dt = String(x.date || ''); x = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(at) && (!dt || at.slice(0, 10) === dt.slice(0, 10)) ? at : (dt && x.time && dt.length === 10 ? dt + ' ' + x.time : dt); }
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}:\d{2}(?::\d{2})?))?$/.exec(String(x || ''));
+    if (m) return `${m[3]}/${m[2]}/${m[1]}${m[4] ? ' ' + m[4] : ''}`;
+    const d = new Date(x); return isNaN(d) ? (x || '') : d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
 
   /* ---------- biểu tượng (nét mảnh) ---------- */
   const P = {
@@ -565,7 +570,16 @@
         <a class="cd-btn cd-zalo" href="${esc((S.social || {}).zalo || 'https://zalo.me/' + String(S.zalo || '').replace(/\D/g, ''))}" target="_blank" rel="noopener" aria-label="Chat Zalo"><span class="cd-ico notranslate" translate="no">Zalo</span><span class="cd-tip">Chat Zalo</span></a>
         <a class="cd-btn cd-mess" href="${S.messenger ? esc(S.messLink()) : 'lien-he.html'}"${S.messenger ? ' target="_blank" rel="noopener"' : ''} aria-label="Nhắn tin Messenger"><span class="cd-ico">${icon('messenger')}</span><span class="cd-tip">Nhắn Messenger</span></a>
         <a class="cd-btn cd-call" href="tel:${esc(String(S.phone || '').replace(/[^\d+]/g, ''))}" aria-label="Gọi ${esc(S.phone || '')}"><span class="cd-ico">${icon('phone')}</span><span class="cd-tip">Gọi ${esc(S.phone || '')}</span></a>
+        <button class="cd-btn cd-main" type="button" aria-expanded="false" aria-label="Liên hệ: Zalo, Messenger, gọi điện" data-cd-toggle><span class="cd-ico"><span class="cd-chat">${icon('chat')}</span><span class="cd-x">${icon('close')}</span></span></button>
       </div>`}`);
+    // điện thoại, máy tính bảng: 3 nút liên hệ gộp vào 1 nút, bấm mới bung ra
+    const dock = document.querySelector('.contact-dock');
+    if (dock) document.addEventListener('click', e => {
+      const t = e.target.closest('[data-cd-toggle]');
+      const open = t ? !dock.classList.contains('open') : false;   // bấm ra ngoài hoặc chọn 1 nút thì thu lại
+      if (!t && !dock.classList.contains('open')) return;
+      dock.classList.toggle('open', open); dock.querySelector('[data-cd-toggle]').setAttribute('aria-expanded', open);
+    });
     // các icon thanh bên nhấp nháy đỏ một lúc khi vào trang để khách chú ý; khách lần đầu thấy thêm lời nhắc đăng ký CTV
     const attn = () => { app.classList.remove('nav-attn'); void app.offsetWidth; app.classList.add('nav-attn'); setTimeout(() => app.classList.remove('nav-attn'), 7000); ctvTip(); };
     if (document.documentElement.classList.contains('intro-cover') || document.documentElement.classList.contains('intro-lock')) document.addEventListener('psq:intro-leave', attn, { once: true }); else attn();
@@ -780,7 +794,7 @@
     }
     return { start, stop };
   })();
-  const stampVN = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };
+  const stampVN = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 19); };
   window.PSQ = { liveEvents, stampVN, partnerCat, isPartner, shopCats, pv, variantOf, priceLabel, prices, badgesOf, isHot, imagesOf, BADGES, rich, richText, richProd, richYt, isHtml, fans, guide, promos, refCode, pwa, qr, payWait, stockOf, soldOut, videos, dealers, products, $, $$, esc, money, short, initials, qs, fdate, today, icon, store, db, auth, cart, product, fold, psOf, shopList, placeOrder, art, spark, area, donut, toast, modal, productCard, statusBadge, statusName, reveal, openCart };
 
   // mọi ô mật khẩu trên web có nút mắt để xem lại mật khẩu vừa gõ (kể cả ô vẽ sau)

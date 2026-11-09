@@ -1170,3 +1170,58 @@ html.reduce-motion .story-track .story-card { animation: none; }
 .ev-note .ev-live { display: inline-flex; align-items: center; gap: 6px; color: #ff8f8f; }
 .ev-note .ev-live i { width: 8px; height: 8px; border-radius: 50%; background: #ff5a5a; box-shadow: 0 0 0 0 rgba(255, 90, 90, .7); animation: evDot 1.4s ease-out infinite; }
 @keyframes evDot { 70% { box-shadow: 0 0 0 8px rgba(255, 90, 90, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 90, 90, 0); } }
+
+/* ---------- chừa thanh trạng thái / tai thỏ của điện thoại (cả khi cài web như app) ---------- */
+:root { --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px); }
+.topbar { height: calc(var(--top-h) + var(--sat)); padding-top: calc(12px + var(--sat)); background: linear-gradient(rgba(6, 8, 10, .97), rgba(6, 8, 10, .9) calc(var(--sat) + 30px), rgba(6, 8, 10, .6) 80%, transparent); }
+.drawer { padding-top: var(--sat); padding-bottom: var(--sab); }
+.modal-back { padding-top: max(16px, var(--sat)); padding-bottom: max(16px, var(--sab)); }
+@media (max-width: 1099px) {
+  .side { padding-top: calc(12px + var(--sat)); padding-bottom: calc(12px + var(--sab)); padding-left: max(12px, var(--sal)); }
+  .main { padding-left: max(20px, var(--sal)); padding-right: max(20px, var(--sar)); padding-bottom: calc(100px + var(--sab)); }
+  .topbar { margin-left: calc(-1 * max(20px, var(--sal))); margin-right: calc(-1 * max(20px, var(--sar))); padding-left: max(20px, var(--sal)); padding-right: max(20px, var(--sar)); }
+  .top-actions .icon-btn:not(.lang-btn), .menu-btn { width: 44px; height: 44px; }
+  .top-actions .lang-btn { height: 44px; }
+  /* máy tính bảng cũng có thanh điều hướng dưới, dễ bấm bằng ngón cái */
+  .tabbar {
+    display: flex; position: fixed; z-index: 70; left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 20px)); bottom: max(10px, var(--sab));
+    height: 64px; border-radius: 20px; padding: 0 6px; justify-content: space-around; align-items: center;
+    background: rgba(10, 14, 16, .98); border: 1px solid rgba(243, 199, 107, .3);
+    box-shadow: 0 0 24px -8px var(--gold-glow), var(--shadow);
+  }
+  .topbar .crumb { display: none; }
+  .topbar h1 { font-size: 18px; }
+  .tabbar a { flex: 1; min-height: 52px; display: grid; justify-items: center; align-content: center; gap: 3px; font-size: 11px; color: var(--text-3); padding: 6px 0; }
+  .tabbar a svg { width: 22px; height: 22px; }
+  .tabbar a.active { color: var(--gold); }
+  .toasts { bottom: calc(92px + var(--sab)); }
+}
+@media (max-width: 919px) { .search { display: none; } }
+@media (max-width: 699px) {
+  .main { padding: 12px max(14px, var(--sar)) calc(96px + var(--sab)) max(14px, var(--sal)); }
+  .topbar { margin: -12px calc(-1 * max(14px, var(--sar))) 14px calc(-1 * max(14px, var(--sal))); padding: calc(8px + var(--sat)) max(12px, var(--sar)) 8px max(12px, var(--sal)); height: calc(60px + var(--sat)); gap: 8px; }
+  .top-actions { gap: 6px; }
+  .top-actions .icon-btn:not(.lang-btn), .menu-btn { width: 40px; height: 40px; }
+  .top-actions .lang-btn { height: 40px; padding: 0 9px; }
+  .top-actions .lang-btn b { display: none; }
+  .tabbar { left: 10px; right: 10px; width: auto; transform: none; }
+  .tabbar a { font-size: 10.5px; }
+}
+
+/* ---------- 3 nút liên hệ gộp thành 1 trên điện thoại, máy tính bảng ---------- */
+.cd-main { display: none; border: 1px solid rgba(243, 199, 107, .6); cursor: pointer; color: inherit; font: inherit; }
+.cd-main .cd-ico { background: linear-gradient(145deg, #ffe3a1, #e0a640 60%, #a8741f); color: #2a1a05; }
+.cd-main .cd-x { display: none; }
+@media (max-width: 1099px) {
+  .contact-dock { bottom: calc(86px + var(--sab)); right: max(12px, var(--sar)); }
+  .cd-main { display: grid; order: 9; width: 50px; height: 50px; }
+  .contact-dock > a.cd-btn { opacity: 0; transform: translateY(14px) scale(.7); pointer-events: none; visibility: hidden; transition: opacity .2s, transform .25s cubic-bezier(.2, .8, .2, 1), visibility 0s .25s; }
+  .contact-dock.open > a.cd-btn { opacity: 1; transform: none; pointer-events: auto; visibility: visible; transition: opacity .2s, transform .25s cubic-bezier(.2, .8, .2, 1); }
+  .contact-dock.open > a.cd-btn:nth-child(2) { transition-delay: .04s; }
+  .contact-dock.open > a.cd-btn:nth-child(1) { transition-delay: .08s; }
+  .contact-dock.open .cd-main .cd-chat { display: none; }
+  .contact-dock.open .cd-main .cd-x { display: block; }
+  .contact-dock:not(.open) .cd-call::after, .contact-dock:not(.open) .cd-call .cd-ico svg { animation: none; }
+  .contact-dock.open .cd-tip { display: block; opacity: 1; transform: translate(0, -50%); }
+}
+.menu-btn, .top-actions .icon-btn { flex: none; }

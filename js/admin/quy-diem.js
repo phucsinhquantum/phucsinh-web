@@ -56,13 +56,13 @@
 
       <div class="card glow-gold mt-2"><div class="card-head"><div><h3>Sổ phát hành và chuyển quỹ</h3><div class="sub">${r.book.length} lần ghi · chỉ ghi thêm, không sửa, không xóa</div></div></div>
         <div class="table-wrap"><table class="tbl" style="min-width:720px"><thead><tr><th>Ngày</th><th>Thao tác</th><th>Số điểm</th><th>Lý do</th><th>Người làm</th></tr></thead><tbody>
-        ${r.book.slice().reverse().map(b => `<tr><td class="dim nowrap">${fdate(b.date)}${b.time ? `<br><small>${esc(b.time)}</small>` : ''}</td><td class="nowrap">${!b.from ? 'Tạo điểm vào Quỹ phát hành' : !b.to ? 'Hủy điểm ở Quỹ phát hành' : `${ADB.FUND_ACC[b.from]} sang ${ADB.FUND_ACC[b.to]}`}</td><td class="nowrap gold"><b>${money(b.amount)}</b></td><td class="dim" style="min-width:220px">${esc(b.note || '')}</td><td class="nowrap">${esc(b.actor || '')}</td></tr>`).join('')}
+        ${r.book.slice().reverse().map(b => `<tr><td class="dim nowrap">${fdate(b)}</td><td class="nowrap">${!b.from ? 'Tạo điểm vào Quỹ phát hành' : !b.to ? 'Hủy điểm ở Quỹ phát hành' : `${ADB.FUND_ACC[b.from]} sang ${ADB.FUND_ACC[b.to]}`}</td><td class="nowrap gold"><b>${money(b.amount)}</b></td><td class="dim" style="min-width:220px">${esc(b.note || '')}</td><td class="nowrap">${esc(b.actor || '')}</td></tr>`).join('')}
         </tbody></table></div></div>`;
 
     const rows = () => { const q = flt.q.trim().toLowerCase(); return r.rows.filter(x => (!flt.k || x.kind === flt.k) && (!q || [x.note, x.who, uname(d, x.user)].join(' ').toLowerCase().includes(q))).slice().reverse(); };
     const list = () => {
       const L = rows(); $('#qdN', el).textContent = `${L.length} dòng · quỹ hiện còn ${money(r.kt)}`;
-      $('#qdL', el).innerHTML = L.length ? L.slice(0, lim).map(x => `<tr><td class="dim nowrap">${fdate(x.date)}</td><td class="nowrap">${esc(KIND[x.kind] || x.kind)}</td><td class="dim" style="min-width:220px">${esc(x.note || '')}</td><td class="nowrap">${x.user ? `<b>${esc(uname(d, x.user))}</b>` : esc(x.who || '')}</td><td class="nowrap">${x.wallet && W[x.wallet] ? `<span style="color:${W[x.wallet].color}">${esc(W[x.wallet].short)}</span>` : '<span class="dim">-</span>'}</td><td>${sg(x.amount)}</td><td class="nowrap ${x.bal < 0 ? 'red' : ''}">${money(x.bal)}</td></tr>`).join('')
+      $('#qdL', el).innerHTML = L.length ? L.slice(0, lim).map(x => `<tr><td class="dim nowrap">${fdate(x)}</td><td class="nowrap">${esc(KIND[x.kind] || x.kind)}</td><td class="dim" style="min-width:220px">${esc(x.note || '')}</td><td class="nowrap">${x.user ? `<b>${esc(uname(d, x.user))}</b>` : esc(x.who || '')}</td><td class="nowrap">${x.wallet && W[x.wallet] ? `<span style="color:${W[x.wallet].color}">${esc(W[x.wallet].short)}</span>` : '<span class="dim">-</span>'}</td><td>${sg(x.amount)}</td><td class="nowrap ${x.bal < 0 ? 'red' : ''}">${money(x.bal)}</td></tr>`).join('')
         : `<tr><td colspan="7"><div class="empty">Không có dòng nào.</div></td></tr>`;
       $('#qdMore', el).hidden = L.length <= lim;
     };

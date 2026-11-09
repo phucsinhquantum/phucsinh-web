@@ -64,7 +64,7 @@
     const S = d.settings || {}, u = d.users.find(x => x.email === m.to), name = u ? u.name : 'anh chị';
     const oid = (m.subject.match(/PSQ\d+/) || [])[0], o = oid && d.orders.find(x => x.id === oid);
     let main;
-    if (o) main = `<p>Phúc Sinh QuanTum đã nhận đơn hàng <b>#${esc(o.id)}</b> của anh chị ngày ${fdate(o.date)}.</p>
+    if (o) main = `<p>Phúc Sinh QuanTum đã nhận đơn hàng <b>#${esc(o.id)}</b> của anh chị ngày ${fdate(o)}.</p>
       <table>${o.items.map(x => `<tr><td>${esc(x.name)} x${x.qty}</td><td>${money(x.price * x.qty)}</td></tr>`).join('')}<tr><td><b>Tổng cộng</b></td><td><b>${money(o.total)}</b></td></tr></table>
       <p>Giao đến: ${esc(o.address || '')}. Thanh toán: ${o.pay === 'bank' ? 'chuyển khoản' : o.pay === 'wallet' ? 'bằng ví điểm' : 'khi nhận hàng'}.</p><p>Nhân viên sẽ gọi xác nhận trong thời gian sớm nhất.</p>
       <p><span class="ht-btn">Xem đơn hàng</span></p>`;

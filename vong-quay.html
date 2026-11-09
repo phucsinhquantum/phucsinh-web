@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261107a">
-<script src="js/lang.js?v=20261107a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261109a">
+<script src="js/lang.js?v=20261109a"></script>
 </head>
 <body data-page="wheel">
 <div id="page" data-title="Vòng quay may mắn" data-crumb="Vòng quay may mắn">
@@ -100,11 +100,11 @@
 
 </div>
 
-<script src="js/patch.js?v=20261107a"></script>
-<script src="js/api.js?v=20261107a"></script>
-<script src="js/data.js?v=20261107a"></script>
-<script src="js/app.js?v=20261107a"></script>
-<script src="js/psq-data.js?v=20261107a"></script>
+<script src="js/patch.js?v=20261109a"></script>
+<script src="js/api.js?v=20261109a"></script>
+<script src="js/data.js?v=20261109a"></script>
+<script src="js/app.js?v=20261109a"></script>
+<script src="js/psq-data.js?v=20261109a"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, toast, modal, fdate, auth } = PSQ;
@@ -406,7 +406,7 @@
       pool = ADB.wheelEventPool(E); winners = E.winners || [];
       slots = ADB.wheelEventSlots(E); prizeNow = slots[winners.length] || '';
       $('#whEvTitle').textContent = E.name;
-      $('#whEvSub').innerHTML = `<span class="badge ${E.kind === 'online' ? 'ship' : 'gold'}">${KIND[E.kind] || ''}</span> ${E.date ? fdate(E.date) + ' · ' : ''}${pool.length} người trong vòng`;
+      $('#whEvSub').innerHTML = `<span class="badge ${E.kind === 'online' ? 'ship' : 'gold'}">${KIND[E.kind] || ''}</span> ${E.date ? fdate(E) + ' · ' : ''}${pool.length} người trong vòng`;
       $('#whQuick').innerHTML = `<div class="wh-evinfo"><div><small>Người tham dự</small><b>${(E.participants || []).length}</b></div><div><small>Giải thưởng</small><b>${slots.length || 'Không giới hạn'}</b></div><div><small>Đã trao</small><b>${winners.length}</b></div></div>
         ${slots.length ? `<div class="wh-slots">${(E.prizes || []).map(p => `<span class="chip">${esc(p.name)} × ${+p.qty || 0}</span>`).join('')}</div>` : ''}`;
       $('#whRemove').checked = !!E.removeWinners; $('#whRemove').disabled = !admin;

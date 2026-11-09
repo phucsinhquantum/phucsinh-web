@@ -109,7 +109,7 @@ D.users.filter(u => u.role === 'admin' && !u.pass).forEach(u => {
 });
 
 const save = () => store.setJSON('db', D);
-const stamp = () => { const t = new Date(Date.now() + 7 * 36e5); return t.toISOString().slice(0, 10) + ' ' + t.toISOString().slice(11, 16); };
+const stamp = () => { const t = new Date(Date.now() + 7 * 36e5); return t.toISOString().slice(0, 10) + ' ' + t.toISOString().slice(11, 19); };   // giờ VN có giây: 2026-11-09 07:15:32
 // sự kiện vòng quay kết thúc (trao hết giải, hoặc quản trị bấm Kết thúc khi đã có người trúng): báo danh sách trúng thưởng 1 lần
 function eventDone() {
   const W = D.wheel || {}; let ch = false;
@@ -120,7 +120,7 @@ function eventDone() {
     const last = String(ev.endAt || (won[won.length - 1] || {}).at || '');
     ev.reported = stamp(); ch = true;
     // sự kiện đã xong từ lâu (trước khi có tính năng này): chỉ đánh dấu, không báo
-    if (!last || Date.now() + 7 * 36e5 - Date.parse(last.replace(' ', 'T') + ':00Z') > 12 * 36e5) return;
+    if (!last || Date.now() + 7 * 36e5 - Date.parse(last.slice(0, 16).replace(' ', 'T') + ':00Z') > 12 * 36e5) return;
     tell(`🎉 Sự kiện vòng quay "${ev.name}" đã kết thúc${ev.date ? ' (' + ev.date + ')' : ''}.\nĐã trao ${won.length}${n ? '/' + n : ''} giải. Danh sách người trúng thưởng:\n${won.map((w, i) => `${i + 1}. ${w.name}${w.prize ? ' · ' + w.prize : ''}${w.at ? ' · ' + String(w.at).slice(11, 16) : ''}`).join('\n')}`);
   });
   return ch;

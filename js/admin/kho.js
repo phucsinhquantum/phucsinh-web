@@ -95,7 +95,7 @@
   const pnNum = id => +String(id).replace(/\D/g, '') || 0;
   function viewReceipt(r) {
     modal(`<div class="card-head"><h3>Phiếu nhập ${esc(r.id)}</h3><span class="badge ok">Đã nhập kho</span>${closeBtn}</div>
-      <dl class="kv"><dt>Ngày nhập</dt><dd>${fdate(r.date)}</dd><dt>Nhà cung cấp</dt><dd>${esc(r.supplier)}</dd><dt>Người lập</dt><dd>${esc(r.by)}</dd>${r.note ? `<dt>Ghi chú</dt><dd>${esc(r.note)}</dd>` : ''}</dl>
+      <dl class="kv"><dt>Ngày nhập</dt><dd>${fdate(r)}</dd><dt>Nhà cung cấp</dt><dd>${esc(r.supplier)}</dd><dt>Người lập</dt><dd>${esc(r.by)}</dd>${r.note ? `<dt>Ghi chú</dt><dd>${esc(r.note)}</dd>` : ''}</dl>
       <div class="divider"></div>
       <div class="table-wrap" style="margin:0"><table class="tbl" style="min-width:0"><thead><tr><th>Sản phẩm</th><th>SL</th><th>Giá nhập</th><th>Thành tiền</th></tr></thead><tbody>
       ${r.items.map(x => `<tr><td>${esc(x.name)}</td><td>${x.qty}</td><td class="nowrap">${money(x.cost)}</td><td class="nowrap">${money(x.qty * x.cost)}</td></tr>`).join('')}</tbody></table></div>
@@ -157,7 +157,7 @@
             <span class="row" style="gap:8px;margin-left:auto"><button class="btn btn-sm btn-outline-gold" type="button" data-csv>${icon('download')} Tải Excel (CSV)</button>${edit ? `<button class="btn btn-sm btn-gold" type="button" data-new>${icon('plus')} Tạo phiếu nhập</button>` : ''}</span>
           </div>
           <div class="table-wrap"><table class="tbl"><thead><tr><th>Mã phiếu</th><th>Ngày</th><th>Nhà cung cấp</th><th>Mặt hàng</th><th>Tổng tiền</th><th>Người lập</th><th></th></tr></thead><tbody>
-          ${rows.map(r => `<tr><td><b>${esc(r.id)}</b></td><td class="dim nowrap">${fdate(r.date)}</td><td>${esc(r.supplier)}</td>
+          ${rows.map(r => `<tr><td><b>${esc(r.id)}</b></td><td class="dim nowrap">${fdate(r)}</td><td>${esc(r.supplier)}</td>
             <td class="dim" style="max-width:240px">${r.items.map(x => esc(x.name) + ' x' + x.qty).join('<br>')}</td><td class="gold nowrap">${money(r.total)}</td><td class="nowrap">${esc(r.by)}</td>
             <td><button class="btn btn-sm" type="button" data-view="${esc(r.id)}">Xem</button></td></tr>`).join('') || `<tr><td colspan="7"><div class="empty">${icon('download')}Chưa có phiếu nhập phù hợp.</div></td></tr>`}
           </tbody></table></div>

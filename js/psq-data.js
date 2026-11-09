@@ -63,7 +63,7 @@
     // ghi nhật ký thao tác (chưa lưu, gọi ADB.save sau)
     log(d, action, detail) {
       const u = PSQ.auth.user(); const t = vnISO();
-      (d.logs = d.logs || []).unshift({ id: uid('nk'), date: t.slice(0, 10) + ' ' + t.slice(11, 16), actor: u ? u.name : 'Hệ thống', action, detail: detail || '' });
+      (d.logs = d.logs || []).unshift({ id: uid('nk'), date: t.slice(0, 10) + ' ' + t.slice(11, 19), actor: u ? u.name : 'Hệ thống', action, detail: detail || '' });
     },
     // thành viên tuyến dưới trực tiếp trên cây
     children(d, id) { return d.users.filter(u => u.role !== 'admin' && u.placed && u.parent === id); },
@@ -167,11 +167,12 @@
   // gốc tính hoa hồng của đơn: tổng PS, giảm theo đúng tỉ lệ mã giảm giá
   const psBase = o => { const t = itemsTotal(o), ps = itemsPs(o); return t > 0 ? Math.round(ps * Math.max(0, t - (o.discount || 0)) / t) : 0; };
   const now = () => vnISO().slice(0, 10);
-  const nowAt = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };   // giờ VN, để biết đơn đặt bao lâu rồi
+  const nowAt = () => { const t = new Date(Date.now() + 7 * 36e5).toISOString(); return t.slice(0, 10) + ' ' + t.slice(11, 19); };   // giờ VN có giây, ghi vào mọi giao dịch (at)
 
   function credit(d, user, wallet, type, amount, note, ref, extra) {
     if (!amount) return null;
     const w = Object.assign({ id: uid('gd'), user, wallet, type, amount, ref: ref || '', date: now(), note: note || '', status: 'done' }, extra || {});
+    if (!w.at || String(w.at).slice(0, 10) !== String(w.date).slice(0, 10)) w.at = w.date === now() ? nowAt() : '';
     (d.wallet = d.wallet || []).push(w); return w;
   }
   // trả một khoản hoa hồng vào ví
@@ -217,6 +218,7 @@
   }
   function addCommission(d, c) {
     c = Object.assign({ id: uid('hh'), level: 1, status: 'paid' }, c);
+    if (!c.at && (!c.date || c.date === now())) c.at = nowAt();
     (d.commissions = d.commissions || []).push(c);
     if (c.status === 'paid') payCommission(d, c);
     return c;
@@ -332,7 +334,7 @@
       if (!M) return { error: 'Thao tác không hợp lệ.' };
       if (M[0] === 'ph' && amount > r.ph) return { error: 'Quỹ phát hành chỉ còn ' + PSQ.money(r.ph) + '.' };
       if (M[0] === 'kt' && amount > r.kt) return { error: 'Quỹ kế toán chỉ còn ' + PSQ.money(r.kt) + '.' };
-      const e = { id: uid('qd'), date: now(), time: vnISO().slice(11, 16), from: M[0], to: M[1], amount, note: String(note).trim(), actor: u.name, actorId: u.id };
+      const e = { id: uid('qd'), date: now(), time: vnISO().slice(11, 19), from: M[0], to: M[1], amount, note: String(note).trim(), actor: u.name, actorId: u.id };
       (d.fundbook = d.fundbook || []).push(e); return { entry: e };
     },
     // số dư quỹ kế toán hiện tại (để chặn khoản cộng tay vượt quỹ)
@@ -472,7 +474,7 @@
     deposit(d, u, amount, method, opt = {}) {
       amount = Math.round(+amount);
       if (!(amount > 0)) return { error: 'Anh chị nhập số tiền cần nạp.' };
-      const t = { id: uid('nd'), user: u.id, wallet: 'cash', amount, points: amount, method: method || 'Chuyển khoản', status: opt.status || 'pending', date: opt.date || now(), note: opt.note || '', code: opt.code || '' };
+      const t = { id: uid('nd'), user: u.id, wallet: 'cash', amount, points: amount, method: method || 'Chuyển khoản', status: opt.status || 'pending', date: opt.date || now(), at: opt.date ? '' : nowAt(), note: opt.note || '', code: opt.code || '' };
       if (t.status === 'done') { t.auto = !!opt.auto; credit(d, u.id, 'cash', 'topup', amount, 'Nạp tiền qua ' + t.method + (opt.auto ? ' (tự động xác nhận)' : ''), t.id, { date: t.date }); }
       (d.topups = d.topups || []).push(t); return { topup: t };
     },
@@ -651,7 +653,7 @@
     do { c = 'PSQ-'; for (let i = 0; i < 6; i++) c += CODE_CH[Math.floor(Math.random() * CODE_CH.length)]; } while (taken.has(c));
     return c;
   }
-  const stampNow = () => { const t = vnISO(); return t.slice(0, 10) + ' ' + t.slice(11, 16); };
+  const stampNow = () => { const t = vnISO(); return t.slice(0, 10) + ' ' + t.slice(11, 19); };
   const inStock = p => p.active !== false && (p.stock == null || p.stock > 0);
   const normName = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
   // cài đặt vòng quay khách hàng: chỉ cấp mã cho người giới thiệu thuộc các cấp bậc trong tiers (mặc định chỉ Khách hàng)
