@@ -71,7 +71,7 @@ async function sepayFlow() {
     const owner = client(s.port), tok = (s.log().match(/dat-lai=([\w-]+)/) || [])[1];
     await owner.act('resetPass', { token: tok, pass: 'KiemTra@2026' }); await owner.act('login', { login: 'chu@kiem-tra.vn', pass: 'KiemTra@2026' });
     const key = ((await owner.act('sepayNew', {})).result || {}).key;
-    const m = client(s.port); await m.act('register', { name: 'Thành viên nạp', username: 'ktnap', email: 'ktnap@kiem-tra.vn', pass: '123456a', ref: 'PS1000', agree: true });
+    const m = client(s.port); await m.act('register', { name: 'Thành viên nạp', username: 'ktnap', email: 'ktnap@kiem-tra.vn', phone: '0912000111', pass: '123456a', ref: 'PS1000', agree: true });
     const tp = ((await m.act('deposit', { amount: 500000, method: 'Chuyển khoản' })).result || {}).topup;
     const hook = async (body, k = key) => { const r = await fetch('http://127.0.0.1:' + s.port + '/api/sepay', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Apikey ' + k }, body: JSON.stringify(Object.assign({ gateway: 'BIDV', accountNumber: '8686141319', transferType: 'in' }, body)) }); return { status: r.status, j: await r.json().catch(() => ({})) }; };
     const st = async () => ((await m.act('payStatus', { kind: 'topup', id: tp.id })).result || {}).status;
