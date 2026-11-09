@@ -753,10 +753,6 @@ const ACTIONS = {
     c.store.setJSON('secret:bot', { key, at: c.today() }); c.log('Tạo khóa tra cứu cho An An', 'đuôi ' + key.slice(-4)); return { key };
   } },
   botKeyOff: { auth: 'owner', run(c) { c.store.setJSON('secret:bot', {}); c.log('Khóa cổng tra cứu An An', ''); return { ok: true }; } },
-  // SePay: khóa để SePay gửi kèm (Authorization: Apikey ...), chỉ hiện một lần lúc tạo
-  sepayGet: { auth: 'owner', run(c) { const k = c.store.getJSON('secret:sepay') || {}; return { on: !!k.key, tail: k.key ? k.key.slice(-4) : '', at: k.at || '', url: c.base + '/api/sepay', log: (c.d.sepay || []).slice(0, 20), denied: c.d.sepayDenied || null }; } },
-  sepayNew: { auth: 'owner', run(c) { const key = crypto.randomBytes(24).toString('base64url'); c.store.setJSON('secret:sepay', { key, at: c.stamp() }); c.log('Tạo khóa SePay', '…' + key.slice(-4)); return { key }; } },
-  sepayOff: { auth: 'owner', run(c) { c.store.setJSON('secret:sepay', {}); c.log('Tắt SePay', ''); return { ok: true }; } },
   mailGet: { auth: 'owner', run(c) { const m = c.store.getJSON('secret:mail') || {}; return { user: m.user || '', fromName: m.fromName || '', host: m.host || 'smtp.gmail.com', configured: !!(m.user && m.pass) }; } },
   mailSet: { auth: 'owner', run(c) {
     const cur = c.store.getJSON('secret:mail') || {}, user = str(c.args.user, 120).toLowerCase(), pass = String(c.args.pass || '').replace(/\s+/g, '');
