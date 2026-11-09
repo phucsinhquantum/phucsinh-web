@@ -323,7 +323,7 @@ async function flow() {
     const open = (od.orders || []).filter(o => ['pending', 'paid', 'ship'].includes(o.status));
     ok(bo1.status === 200 && bo1.j.count === open.length && bo1.j.orders.every(o => ['pending', 'paid', 'ship'].includes(o.status) && 'phone' in o && Array.isArray(o.items)), 'Trợ Lý: đơn chưa giao đúng số lượng, có SĐT và sản phẩm');
     ok((await bo('?status=all', bk.key)).j.count === (od.orders || []).length, 'Trợ Lý: status=all lấy hết đơn');
-    ok((await fetch(`http://127.0.0.1:${s.port}/api/sepay`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status === 404, 'Đã bỏ SePay: /api/sepay không còn');
+    ok((await fetch(`http://127.0.0.1:${s.port}/api/sepay`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-psq': '1', authorization: 'Apikey x' }, body: '{}' })).status === 404, 'Đã bỏ SePay: /api/sepay không còn nhận tin');
     ok(rb && rb.refLink === `http://127.0.0.1:${s.port}/thanh-vien.html?ref=${B.r.me.code}`, 'An An: có link giới thiệu của người được tra để gửi khách đăng ký');
     const H = client(s.port), hr = await H.act('register', { name: 'Nguyễn Văn Hà', username: 'ktha', email: 'ktha@kiem-tra.vn', phone: '0912345678', pass: '123456a', ref: A.r.me.code, agree: true });
     ok(!hr.error, 'An An: thêm thành viên Nguyễn Văn Hà' + (hr.error ? ': ' + hr.error : ''));
