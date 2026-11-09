@@ -69,7 +69,7 @@
       <p>Giao đến: ${esc(o.address || '')}. Thanh toán: ${o.pay === 'bank' ? 'chuyển khoản' : o.pay === 'wallet' ? 'bằng ví điểm' : 'khi nhận hàng'}.</p><p>Nhân viên sẽ gọi xác nhận trong thời gian sớm nhất.</p>
       <p><span class="ht-btn">Xem đơn hàng</span></p>`;
     else if (m.type === 'Đăng ký') main = `<p>Cảm ơn anh chị đã đăng ký thành viên ${esc(S.shopName || SITE.brand)}.</p>${u && u.code ? `<p>Mã giới thiệu của anh chị: <b>${esc(u.code)}</b>. Chia sẻ mã này để người thân nhận ưu đãi khi đăng ký.</p>` : ''}
-      <p>Kích hoạt gói cộng tác viên để nhận hoa hồng bán hàng, trở thành đại lý hưởng thu nhập không giới hạn.</p><p><span class="ht-btn">Vào trang thành viên</span></p>`;
+      <p>Kích hoạt gói cộng tác viên để nhận hoa hồng bán hàng theo chính sách của chương trình.</p><p><span class="ht-btn">Vào trang thành viên</span></p>`;
     else main = `<p>${esc(m.subject)}.</p><p>Nội dung chi tiết theo mẫu thư "${esc(m.type)}" của hệ thống. (mẫu)</p>`;
     return `<div class="ht-mail"><div class="ht-mail-h">${esc(S.shopName || SITE.brand)}</div>
       <div class="ht-mail-b"><p>Kính gửi ${esc(name)},</p>${main}<p>Trân trọng,<br>Đội ngũ ${esc(S.shopName || SITE.brand)}</p></div>

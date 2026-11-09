@@ -253,6 +253,18 @@
     const gs = () => PSQ.guide.point($('#buyBtn'), 'Bấm Mua ngay để đặt hàng');
     PSQ.guide.refresh = gs; setTimeout(gs, 600);
   }
+  // thành viên: sao chép link sản phẩm kèm mã; khách vào bằng link giới thiệu: để lại số để giữ đúng người giới thiệu
+  { const buy = $('.buy'), me = API.me, rc = PSQ.refCode ? PSQ.refCode() : '';
+    if (buy && me && me.role !== 'admin' && me.code) {
+      buy.insertAdjacentHTML('afterend', `<div class="mt-1"><button class="btn btn-outline-gold btn-sm" type="button" id="shareRef">${icon('link')} Sao chép link sản phẩm kèm mã của tôi</button></div>`);
+      $('#shareRef').addEventListener('click', () => {
+        const x = new URL(location.href); x.search = ''; x.hash = ''; x.searchParams.set('id', p.id); x.searchParams.set('ref', me.code); const t = x.toString();
+        (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Đã sao chép link kèm mã ' + me.code), () => window.prompt('Sao chép link này:', t));
+      });
+    } else if (buy && !me && rc) {
+      buy.insertAdjacentHTML('afterend', `<form class="card mt-1" id="leadBox" style="padding:14px"><b style="font-size:14px">Để lại số điện thoại, bên em tư vấn và gửi ưu đãi sản phẩm này</b><div class="row wrap" style="gap:8px;margin-top:10px"><input class="input" id="leadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Số điện thoại của anh chị" style="flex:1 1 200px"><button class="btn btn-gold" type="submit">Gửi</button></div><small class="muted" style="display:block;margin-top:8px">Bằng việc gửi số, anh chị đồng ý để Phúc Sinh QuanTum liên hệ tư vấn.</small></form>`);
+      $('#leadBox').addEventListener('submit', e => { e.preventDefault(); const r = API.act('captureLead', { phone: $('#leadPhone').value, ref: rc, product: p.id }); if (r && r.error) return toast(r.error, 'err'); $('#leadBox').innerHTML = '<b style="font-size:14px">Cảm ơn anh chị, bên em sẽ liên hệ sớm.</b>'; });
+    } }
   // tab
   $('#tabs').addEventListener('click', e => {
     const b = e.target.closest('[data-tab]'); if (!b) return;

@@ -9,6 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Đặt hàng · Phúc Sinh QuanTum</title>
 <meta name="description" content="Đặt hàng trầm hương Phúc Sinh QuanTum: kiểm tra giỏ hàng, nhập thông tin giao hàng, chọn thanh toán bằng ví hoặc chuyển khoản.">
+<meta name="robots" content="noindex,follow">
 <meta name="theme-color" content="#06080a">
 <link rel="icon" type="image/png" sizes="32x32" href="img/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
@@ -175,7 +176,7 @@
   const STEPS = [['Giỏ hàng', 'Kiểm tra sản phẩm'], ['Thông tin giao hàng', 'Địa chỉ và thanh toán'], ['Xác nhận', 'Xem lại và đặt hàng']];
   const normPhone = s => String(s || '').replace(/[\s.\-()]/g, '').replace(/^\+84/, '0');
   const u = auth.user();
-  const form = { name: u?.name || '', phone: u?.phone || '', email: u?.email || '', province: PROVINCES.includes(u?.city) ? u.city : '', address: '', note: '', pay: '', saveAddr: true, addrId: '' };
+  const form = { name: u?.name || '', phone: u?.phone || '', email: u?.email || '', province: PROVINCES.includes(u?.city) ? u.city : '', address: '', note: '', pay: '', saveAddr: true, addrId: '', ref: u ? '' : (PSQ.refCode ? PSQ.refCode() : '') };
   // sổ địa chỉ của thành viên (Tài khoản > Sổ địa chỉ): điền sẵn địa chỉ mặc định
   const myAddr = () => (u && window.ADB ? (ADB.load().addresses || []).filter(a => a.user === u.id) : []).sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
   const useAddr = a => { if (!a) return; form.addrId = a.id; form.name = a.name || form.name; form.phone = a.phone || form.phone; form.address = a.line || ''; form.province = PROVINCES.includes(a.province) ? a.province : form.province; };
@@ -280,6 +281,7 @@
       <div class="form-grid">
         ${field('name', 'Họ và tên', `<input class="input" id="f-name" name="name" autocomplete="name" value="${esc(form.name)}" placeholder="Nguyễn Văn A">`, 0, 1)}
         ${field('phone', 'Số điện thoại', `<input class="input" id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" value="${esc(form.phone)}" placeholder="0912 345 678">`, 0, 1)}
+        ${u ? '' : field('ref', 'Mã người giới thiệu', `<input class="input" id="f-ref" name="ref" autocomplete="off" maxlength="30" value="${esc(form.ref)}" placeholder="Nếu có người giới thiệu (ví dụ PS1001)">`)}
         ${field('email', 'Email', `<input class="input" id="f-email" name="email" type="email" autocomplete="email" value="${esc(form.email)}" placeholder="Để nhận xác nhận đơn (không bắt buộc)">`)}
         ${field('province', 'Tỉnh / thành phố', `<select class="input" id="f-province" name="province"><option value="">Chọn tỉnh, thành phố</option>${PROVINCES.map(p => `<option${p === form.province ? ' selected' : ''}>${p}</option>`).join('')}</select>`, 0, 1)}
         ${field('address', 'Địa chỉ nhận hàng', `<input class="input" id="f-address" name="address" autocomplete="street-address" value="${esc(form.address)}" placeholder="Số nhà, đường, phường hoặc xã">`, 1, 1)}
@@ -300,7 +302,7 @@
   }
   function readForm() {
     const f = $('#infoForm'); if (!f) return;
-    ['name', 'phone', 'email', 'province', 'address', 'note'].forEach(k => form[k] = f.elements[k].value.trim());
+    ['name', 'phone', 'email', 'province', 'address', 'note', 'ref'].forEach(k => { if (f.elements[k]) form[k] = f.elements[k].value.trim(); });
     form.pay = f.elements.pay.value || '';
     if (f.elements.saveAddr) form.saveAddr = f.elements.saveAddr.checked;
   }
@@ -451,7 +453,7 @@
       const want = payUsed(), wantCash = cashUsed(); // tính trước khi giỏ hàng được xóa
       const saveAddr = u && !form.addrId && form.saveAddr ? { line: form.address.trim(), province: form.province } : null;
       const res = PSQ.placeOrder({ name: form.name, phone: normPhone(form.phone), email: form.email, address: `${form.address}, ${form.province}`, note: form.note, pay: form.pay },
-        { useShop: u ? want : 0, useCash: u ? wantCash : 0, saveAddr, coupon: coupon ? coupon.code : '' });
+        Object.assign({ useShop: u ? want : 0, useCash: u ? wantCash : 0, saveAddr, coupon: coupon ? coupon.code : '' }, !u && form.ref ? { ref: form.ref.toUpperCase() } : {}));
       if (res.error) { b.disabled = false; toast(res.error, 'err'); return; }
       placed = res.order; coupon = null;
       render(true); toast('Đặt hàng thành công: ' + placed.id);

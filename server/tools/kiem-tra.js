@@ -18,6 +18,7 @@ const SEED = process.argv[2];
 let P;   // sản phẩm dùng để thử
 let ENG; // bộ tính toán (ADB) để đối chiếu số dư, quỹ điểm
 let failed = 0;
+let PH = 90000000; const ph = () => '09' + (PH++);
 const ok = (cond, msg) => { console.log((cond ? '  đúng  ' : '  SAI   ') + msg); if (!cond) failed++; return cond; };
 const freePort = () => new Promise(r => { const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => r(p)); }); });
 
@@ -97,7 +98,7 @@ async function flow() {
     ok(!(await owner.act('login', { login: 'chu@kiem-tra.vn', pass: 'KiemTra@2026' })).error, 'chủ sở hữu đăng nhập');
     const plan = Object.assign({}, ((await owner.req('GET', '/api/admin/db')).json.db.settings || {}).plan);
 
-    const reg = async (name, user, ref) => { const c = client(s.port); const r = await c.act('register', { name, username: user, email: user + '@kiem-tra.vn', pass: '123456a', ref, agree: true }); c.me = r.me; return { c, r }; };
+    const reg = async (name, user, ref) => { const c = client(s.port); const r = await c.act('register', { name, username: user, phone: ph(), email: user + '@kiem-tra.vn', pass: '123456a', ref, agree: true }); c.me = r.me; return { c, r }; };
     const A = await reg('Đại lý A', 'kta', 'PS1000');
     ok(!A.r.error && A.r.me && !A.r.me.sponsor, 'đăng ký bằng mã công ty PS1000 được, không có tuyến trên' + (A.r.error ? ': ' + A.r.error : ''));
     const B = await reg('CTV B', 'ktb', A.r.me && A.r.me.code);
@@ -105,7 +106,7 @@ async function flow() {
     const C = await reg('Khách C', 'ktc', B.r.me && B.r.me.code);
     ok(!C.r.error && C.r.me && C.r.me.sponsor === B.r.me.id, 'C đăng ký bằng mã của B');
     ok((await guest.act('checkRef', { code: 'PS9999' })).error, 'mã giới thiệu sai bị chặn');
-    ok(/mã giới thiệu/.test((await client(s.port).act('register', { name: 'Không mã', username: 'ktkhongma', email: 'ktkhongma@kiem-tra.vn', pass: '123456a', agree: true })).error || ''), 'đăng ký không có mã giới thiệu bị chặn');
+    ok(/mã giới thiệu/.test((await client(s.port).act('register', { name: 'Không mã', username: 'ktkhongma', phone: ph(), email: 'ktkhongma@kiem-tra.vn', pass: '123456a', agree: true })).error || ''), 'đăng ký không có mã giới thiệu bị chặn');
     ok(/gmail\.com không/.test((await client(s.port).act('register', { name: 'Gõ Nhầm', username: 'ktnham', email: 'ktnham@gmail.con', pass: '123456a', ref: 'PS1000', agree: true })).error || ''), 'email gõ nhầm tên miền (gmail.con) bị chặn, gợi ý gmail.com');
     ok((await client(s.port).act('register', { name: 'Trùng', username: 'kttrung', email: 'kta@kiem-tra.vn', pass: '123456a', agree: true })).error, 'email đã có tài khoản bị chặn');
     ok(!!(await client(s.port).act('login', { login: 'kta@kiem-tra.vn', pass: 'sai-mat-khau' })).error, 'sai mật khẩu không đăng nhập được');
@@ -145,7 +146,7 @@ async function flow() {
 
     // slide thuyết trình: tệp ở thư mục dữ liệu, chỉ CTV, đại lý, quản trị mở được
     fs.mkdirSync(path.join(dir, 'tai-lieu'), { recursive: true }); fs.writeFileSync(path.join(dir, 'tai-lieu', 'slide-thuyet-trinh.html'), '<title>SLIDE-KT</title>');
-    const kl = client(s.port); await kl.act('register', { name: 'Khách Slide', username: 'ktslide', email: 'ktslide@kiem-tra.vn', pass: '123456a', ref: 'PS1000', agree: true });
+    const kl = client(s.port); await kl.act('register', { name: 'Khách Slide', username: 'ktslide', phone: ph(), email: 'ktslide@kiem-tra.vn', pass: '123456a', ref: 'PS1000', agree: true });
     const sl = async c => { const r = await c.req('GET', '/api/tai-lieu/slide'); return r.status === 200 && /SLIDE-KT/.test(r.text); };
     ok(!(await sl(guest)) && !(await sl(kl)), 'slide thuyết trình: chưa đăng nhập và khách không mở được');
     ok(await sl(A.c) && await sl(B.c) && await sl(owner), 'slide thuyết trình: đại lý, CTV, quản trị mở được');
@@ -251,6 +252,20 @@ async function flow() {
     const bBoot = (await B.c.boot()).db, bg = (bBoot.guests || []).find(g => g.phone === guestInfo.phone);
     ok(bg && bg.orders.length === 2 && !('address' in bg.orders[0]), 'B thấy khách lẻ của mình (2 đơn, có SĐT, không có địa chỉ nhà) để gọi chăm sóc');
     ok(!((await A.c.boot()).db.guests || []).some(g => g.phone === guestInfo.phone), 'A không thấy khách lẻ của B');
+    // khách để lại số khi xem qua link của A, sau đó vào bằng trình duyệt khác (mã B) rồi mua: vẫn tính cho A; số đã để lại cho A thì B không giành được
+    const leadInfo = { name: 'Khách để lại số', phone: '0909333444', address: '3 Đường Thử, Quận 3', pay: 'bank' };
+    ok(!(await client(s.port).act('captureLead', { phone: leadInfo.phone, ref: A.r.me.code, product: P.id })).error, 'khách để lại số qua link của A');
+    ok(!(await client(s.port).act('captureLead', { phone: leadInfo.phone, ref: B.r.me.code, product: P.id })).error, 'khách để lại số lần 2 qua link của B (không đổi người)');
+    ok((await client(s.port).act('captureLead', { phone: '12345', ref: A.r.me.code })).error, 'số điện thoại sai bị chặn');
+    const ld = await client(s.port).act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: leadInfo, ref: B.r.me.code });
+    ok(!ld.error && ((ld.result || {}).order || {}).refBy === A.r.me.id, 'đơn của khách đã để lại số qua link A tính cho A dù trình duyệt nhớ mã B');
+    // khách đã để lại số qua link A, sau đó ĐĂNG KÝ thành viên dưới B: từ đó tính cho B (người mới), không còn tính cho A
+    const regInfo = { name: 'Khách đổi người', phone: '0909555666', address: '4 Đường Thử, Quận 3', pay: 'bank' };
+    await client(s.port).act('captureLead', { phone: regInfo.phone, ref: A.r.me.code, product: P.id });
+    const rg = await client(s.port).act('register', { name: regInfo.name, username: 'ktdoinguoi', email: 'ktdoinguoi@kiem-tra.vn', phone: regInfo.phone, pass: '123456a', ref: B.r.me.code, agree: true });
+    ok(!rg.error, 'khách đã để lại số qua A đăng ký thành viên dưới B' + (rg.error ? ': ' + rg.error : ''));
+    const rd = await client(s.port).act('placeOrder', { items: [{ id: P.id, qty: 1 }], info: regInfo, ref: A.r.me.code });
+    ok(!rd.error && ((rd.result || {}).order || {}).refBy === B.r.me.id, 'sau khi đăng ký dưới B, đơn tính cho B (người mới), không tính cho A');
     ok(db.users.filter(u => u.role !== 'admin').every(u => u.placed) && db.users.find(u => u.id === B.r.me.id).parent === A.r.me.id, 'thành viên đăng ký tự lên cây ngay dưới người giới thiệu');
     const bw = ((await B.c.boot()).db.wallet || []).find(w => w.ref === gOrders[0].id && w.type === 'commission');
     ok(bw && bw.info && /Khách lẻ thử/.test(bw.info.buyer), 'lịch sử ví của B ghi rõ người mua (khách lẻ)');
@@ -361,7 +376,7 @@ async function flow() {
     }
     // xóa thành viên: chỉ người chưa có tuyến dưới, chưa phát sinh tiền; mã không cấp lại; khôi phục được
     {
-      const X = client(s.port), xr = await X.act('register', { name: 'Đăng Ký Nhầm', username: 'ktnham2', email: 'ktnham2@kiem-tra.vn', pass: '123456a', ref: A.r.me.code, agree: true });
+      const X = client(s.port), xr = await X.act('register', { name: 'Đăng Ký Nhầm', username: 'ktnham2', phone: ph(), email: 'ktnham2@kiem-tra.vn', pass: '123456a', ref: A.r.me.code, agree: true });
       const xid = (xr.me || xr.result && xr.result.user || {}).id || ((await owner.req('GET', '/api/admin/db')).json.db.users.find(u => u.username === 'ktnham2') || {}).id;
       ok(/Mật khẩu/.test((await owner.act('memberDelete', { ids: [xid], pass: 'sai' })).error || ''), 'xóa thành viên phải nhập đúng mật khẩu chủ sở hữu');
       ok(/tuyến dưới/.test((await owner.act('memberDelete', { ids: [A.r.me.id], pass: 'KiemTra@2026' })).error || ''), 'không xóa được người đã có tuyến dưới');
