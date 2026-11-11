@@ -200,6 +200,14 @@ const findRef = (d, ref) => {
   return u ? { user: u, company: u.role === 'admin' } : null;
 };
 
+/* ---------- tài khoản phân phối điểm mua hàng (anh Tuân 12/11) ----------
+   Quyền và hạn mức lưu ngoài dữ liệu chung (store 'cfg:give'), chỉ chủ sở hữu đổi qua giveSet/giveCfg. */
+const GIVE_DEF = { max: 20000000, day: 100000000 };
+const giveCfg = store => Object.assign({ users: {} }, GIVE_DEF, store.getJSON('cfg:give') || {});
+const giveFind = (d, k) => { k = String(k || '').trim().replace(/^@/, ''); if (!k) return null; const K = k.toUpperCase();
+  return d.users.find(x => x.role !== 'admin' && x.status !== 'locked' && ((x.username || '').toUpperCase() === K || hasCode(x, K))) || null; };
+const givePub = (A, u) => ({ id: u.id, name: u.name, username: u.username || '', code: u.code || '', tier: A.tierOf(u).name });
+
 const ACTIONS = {
   /* ===== khách chưa đăng nhập ===== */
   checkRef: { auth: 'guest', run(c) {
@@ -563,6 +571,58 @@ const ACTIONS = {
       r = { to: pick(r.to, ['id', 'name', 'username']) };
     } else return err('Thao tác không hợp lệ.');
     return Object.assign({ ok: true }, r);
+  } },
+  /* ----- phân phối điểm mua hàng ----- */
+  giveInfo: { auth: 'member', run(c) {
+    const g = giveCfg(c.store); if (!g.users[c.me.id] || c.me.role === 'admin') return { on: false };
+    const used = c.A.giveShopToday(c.d, c.me.id);
+    return { on: true, max: g.max, day: g.day, used, left: Math.max(0, g.day - used), bal: c.A.balances(c.d, c.me.id).shop };
+  } },
+  giveShop: { auth: 'member', run(c) {
+    const { d, A, me, args } = c, g = giveCfg(c.store);
+    if (!g.users[me.id] || me.role === 'admin') return err('Tài khoản này chưa được chủ sở hữu bật quyền chuyển điểm mua hàng.');
+    const to = giveFind(d, args.user), a = int(args.amount), note = str(args.note, 80), tx = str(args.tx, 40);
+    if (!to) return err('Không tìm thấy thành viên có tên truy cập hoặc mã PS này.');
+    if (to.id === me.id) return err('Không thể chuyển cho chính mình.');
+    if (args.check) return { to: givePub(A, to) };
+    if (tx) { const dup = (d.wallet || []).find(w => w.user === me.id && w.type === 'giveshop' && w.tx === tx); if (dup) return { to: givePub(A, to), dup: true, bal: A.balances(d, me.id).shop }; }
+    if (!verifyPass(String(args.pass || ''), me.pass)) return err('Mật khẩu xác nhận chưa đúng.');
+    if (!(a > 0)) return err('Anh chị nhập số điểm cần chuyển.');
+    if (a > g.max) return err('Mỗi lần chuyển tối đa ' + ps(g.max) + '.');
+    const used = A.giveShopToday(d, me.id); if (used + a > g.day) return err(`Hôm nay đã chuyển ${ps(used)}, hạn mức mỗi ngày ${ps(g.day)}. Còn chuyển được ${ps(Math.max(0, g.day - used))}.`);
+    const r = A.giveShop(d, me, to, a, note, tx ? { tx } : null); if (r.error) return r;
+    c.log('Chuyển điểm mua hàng', `@${me.username} chuyển ${ps(a)} vào ví mua hàng của ${to.name} (@${to.username}, ${to.code || ''})${note ? ': ' + note : ''}`);
+    c.notify(`🎁 Chuyển điểm mua hàng\n${me.name} (@${me.username}) chuyển ${ps(a)}\nNgười nhận: ${to.name} (@${to.username}, ${to.code || ''})${note ? '\nGhi chú: ' + note : ''}\nVí mua hàng ${me.username} còn ${ps(r.bal)} · hôm nay đã chuyển ${ps(used + a)}/${ps(g.day)}\nLúc ${r.entry.at}`);
+    return { to: givePub(A, to), bal: r.bal, at: r.entry.at };
+  } },
+  giveSet: { auth: 'owner', run(c) {
+    const { d, A } = c, u = A.user(d, c.args.id), g = giveCfg(c.store), on = !!c.args.on;
+    if (!verifyPass(String(c.args.pass || ''), c.me.pass)) return err('Mật khẩu xác nhận chưa đúng.');
+    if (!u || u.role === 'admin') return err('Chỉ bật cho tài khoản thành viên (không phải quản trị).');
+    if (on) g.users[u.id] = { by: c.me.name, at: c.stamp() }; else delete g.users[u.id];
+    c.store.setJSON('cfg:give', g);
+    c.log(on ? 'Bật quyền chuyển điểm mua hàng' : 'Tắt quyền chuyển điểm mua hàng', `${u.name} (@${u.username}, ${u.code || ''})`);
+    c.notify(`${on ? '🔓 Bật' : '🔒 Tắt'} quyền chuyển điểm mua hàng cho ${u.name} (@${u.username}), do ${c.me.name} thao tác lúc ${c.stamp()}.`);
+    return { on };
+  } },
+  giveCfg: { auth: 'owner', run(c) {
+    const { d, A } = c, g = giveCfg(c.store);
+    if (c.args.save) {
+      const max = int(c.args.max), day = int(c.args.day);
+      if (!(max > 0) || !(day >= max)) return err('Hạn mức mỗi lần phải lớn hơn 0 và hạn mức mỗi ngày không nhỏ hơn mỗi lần.');
+      g.max = max; g.day = day; c.store.setJSON('cfg:give', g); c.log('Đổi hạn mức chuyển điểm mua hàng', `${ps(max)}/lần, ${ps(day)}/ngày`);
+    }
+    const users = Object.entries(g.users).map(([id, x]) => { const u = A.user(d, id); return u ? Object.assign(givePub(A, u), { by: x.by, at: x.at, bal: A.balances(d, id).shop, today: A.giveShopToday(d, id) }) : null; }).filter(Boolean);
+    const hist = (d.wallet || []).filter(w => w.type === 'giveshop' && w.amount < 0 && w.rcpt).slice(-500).reverse().map(w => { const f = A.user(d, w.user) || {}, t = A.user(d, w.rcpt) || {};
+      return { ref: w.ref, at: w.at || w.date, amount: -w.amount, backed: +w.backed || 0, note: w.note, from: { name: f.name, username: f.username }, to: { name: t.name, username: t.username, code: t.code } }; });
+    return { max: g.max, day: g.day, users, hist };
+  } },
+  giveBack: { auth: 'owner', run(c) {
+    if (!verifyPass(String(c.args.pass || ''), c.me.pass)) return err('Mật khẩu xác nhận chưa đúng.');
+    const r = c.A.giveShopBack(c.d, str(c.args.ref, 40), c.me.name); if (r.error) return r;
+    c.log('Hoàn lại điểm mua hàng', `${ps(r.take)} từ ${r.to.name} (@${r.to.username}) về @${r.giver.username}${r.short ? `, thiếu ${ps(r.short)} do người nhận đã dùng` : ''}`);
+    c.notify(`↩️ Hoàn lại điểm mua hàng: lấy ${ps(r.take)} từ ${r.to.name} (@${r.to.username}) về ví @${r.giver.username}${r.short ? `\nCòn ${ps(r.short)} người nhận đã dùng, không lấy lại được.` : ''}`);
+    return { take: r.take, short: r.short };
   } },
   lookupUser: { auth: 'member', run(c) {
     const to = c.A.byUsername(c.d, c.args.username);

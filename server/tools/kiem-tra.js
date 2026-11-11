@@ -324,6 +324,37 @@ async function flow() {
     ok(bo1.status === 200 && bo1.j.count === open.length && bo1.j.orders.every(o => ['pending', 'paid', 'ship'].includes(o.status) && 'phone' in o && Array.isArray(o.items)), 'Trợ Lý: đơn chưa giao đúng số lượng, có SĐT và sản phẩm');
     ok((await bo('?status=all', bk.key)).j.count === (od.orders || []).length, 'Trợ Lý: status=all lấy hết đơn');
     ok((await fetch(`http://127.0.0.1:${s.port}/api/sepay`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-psq': '1', authorization: 'Apikey x' }, body: '{}' })).status === 404, 'Đã bỏ SePay: /api/sepay không còn nhận tin');
+    {
+    // tài khoản phân phối điểm mua hàng (anh Tuân 12/11): chỉ chủ sở hữu bật quyền, nhập lại mật khẩu, có hạn mức, hoàn lại được
+    const shopOf = async uid => { const db = (await owner.req('GET', '/api/admin/db')).json.db; return db.wallet.filter(w => w.user === uid && (w.wallet || '') === 'shop' && (w.status === 'done' || (w.status === 'pending' && w.amount < 0))).reduce((x, w) => x + w.amount, 0); };
+    const B = await reg('Phân Phối Thử', 'ktpp', A.r.me && A.r.me.code); B.r.me = B.r.me || B.c.me;
+    ok(!(await owner.act('ctvGrant', { id: B.r.me.id, note: 'kiểm tra phân phối' })).error, 'Phân phối: cấp gói CTV để có điểm mua hàng');
+    const bShop0 = await shopOf(B.r.me.id), aShop0 = await shopOf(A.r.me.id);
+    ok(bShop0 >= 2000, 'Phân phối: tài khoản thử có điểm mua hàng để thử (' + bShop0 + ')');
+    ok(/chưa được chủ sở hữu bật/.test((await B.c.act('giveShop', { user: A.r.me.code, amount: 1000, pass: '123456a' })).error || ''), 'Phân phối: chưa bật quyền thì không chuyển được');
+    ok(!!(await B.c.act('giveSet', { id: B.r.me.id, on: true, pass: '123456a' })).error, 'Phân phối: thành viên tự bật quyền bị chặn');
+    ok(/Mật khẩu/.test((await owner.act('giveSet', { id: B.r.me.id, on: true, pass: 'sai' })).error || ''), 'Phân phối: chủ sở hữu bật quyền cần đúng mật khẩu');
+    ok(!(await owner.act('giveSet', { id: B.r.me.id, on: true, pass: 'KiemTra@2026' })).error, 'Phân phối: chủ sở hữu bật quyền cho tài khoản thử');
+    ok(!(await owner.act('giveCfg', { save: true, max: 1000, day: 1500 })).error, 'Phân phối: chủ sở hữu đặt hạn mức 1.000/lần, 1.500/ngày');
+    const gi = (await B.c.act('giveInfo', {})).result || {};
+    ok(gi.on && gi.max === 1000 && gi.day === 1500, 'Phân phối: tài khoản thử thấy quyền và hạn mức');
+    const ck = (await B.c.act('giveShop', { user: A.r.me.code, check: true })).result || {};
+    ok(ck.to && ck.to.id === A.r.me.id && ck.to.code === A.r.me.code, 'Phân phối: tìm người nhận theo mã PS');
+    ok(/chính mình/.test((await B.c.act('giveShop', { user: 'ktpp', amount: 10, pass: '123456a' })).error || ''), 'Phân phối: không chuyển cho chính mình');
+    ok(/Mật khẩu/.test((await B.c.act('giveShop', { user: 'kta', amount: 1000, pass: 'sai' })).error || ''), 'Phân phối: sai mật khẩu bị chặn');
+    ok(/tối đa/.test((await B.c.act('giveShop', { user: 'kta', amount: 1001, pass: '123456a' })).error || ''), 'Phân phối: vượt hạn mức mỗi lần bị chặn');
+    const g1 = await B.c.act('giveShop', { user: 'kta', amount: 1000, note: 'thử', pass: '123456a', tx: 'ktx1' });
+    ok(!g1.error && (await shopOf(B.r.me.id)) === bShop0 - 1000 && (await shopOf(A.r.me.id)) === aShop0 + 1000, 'Phân phối: chuyển 1.000 PS, ví mua hàng hai bên đúng');
+    ok(((await B.c.act('giveShop', { user: 'kta', amount: 1000, pass: '123456a', tx: 'ktx1' })).result || {}).dup && (await shopOf(A.r.me.id)) === aShop0 + 1000, 'Phân phối: bấm đôi cùng mã giao dịch không chuyển 2 lần');
+    ok(/hạn mức mỗi ngày/.test((await B.c.act('giveShop', { user: 'kta', amount: 600, pass: '123456a' })).error || ''), 'Phân phối: vượt hạn mức mỗi ngày bị chặn');
+    const hs = ((await owner.act('giveCfg', {})).result || {}).hist || [];
+    ok(hs.length === 1 && hs[0].amount === 1000, 'Phân phối: chủ sở hữu xem được lịch sử chuyển');
+    ok(!!(await B.c.act('giveBack', { ref: hs[0].ref, pass: '123456a' })).error, 'Phân phối: thành viên không tự hoàn lại được');
+    const bk1 = (await owner.act('giveBack', { ref: hs[0].ref, pass: 'KiemTra@2026' })).result || {};
+    ok(bk1.take === 1000 && (await shopOf(B.r.me.id)) === bShop0 && (await shopOf(A.r.me.id)) === aShop0, 'Phân phối: hoàn lại đưa điểm về đúng hai ví');
+    ok(/hoàn lại hết/.test((await owner.act('giveBack', { ref: hs[0].ref, pass: 'KiemTra@2026' })).error || ''), 'Phân phối: không hoàn lại 2 lần');
+    ok(!(await owner.act('giveSet', { id: B.r.me.id, on: false, pass: 'KiemTra@2026' })).error && !((await B.c.act('giveInfo', {})).result || {}).on, 'Phân phối: tắt quyền thì tài khoản thử không còn thấy chức năng');
+    }
     ok(rb && rb.refLink === `http://127.0.0.1:${s.port}/thanh-vien.html?ref=${B.r.me.code}`, 'An An: có link giới thiệu của người được tra để gửi khách đăng ký');
     const H = client(s.port), hr = await H.act('register', { name: 'Nguyễn Văn Hà', username: 'ktha', email: 'ktha@kiem-tra.vn', phone: '0912345678', pass: '123456a', ref: A.r.me.code, agree: true });
     ok(!hr.error, 'An An: thêm thành viên Nguyễn Văn Hà' + (hr.error ? ': ' + hr.error : ''));

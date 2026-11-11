@@ -25,8 +25,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261109b">
-<script src="js/lang.js?v=20261109b"></script>
+<link rel="stylesheet" href="css/app.css?v=20261112a">
+<script src="js/lang.js?v=20261112a"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -245,11 +245,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261109b"></script>
-<script src="js/api.js?v=20261109b"></script>
-<script src="js/data.js?v=20261109b"></script>
-<script src="js/app.js?v=20261109b"></script>
-<script src="js/psq-data.js?v=20261109b"></script>
+<script src="js/patch.js?v=20261112a"></script>
+<script src="js/api.js?v=20261112a"></script>
+<script src="js/data.js?v=20261112a"></script>
+<script src="js/app.js?v=20261112a"></script>
+<script src="js/psq-data.js?v=20261112a"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -685,10 +685,14 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 
   /* ---------- VÍ ---------- */
   const WACT = { cash: [['deposit', 'Nạp tiền', 'plus'], ['topoints', 'Đổi sang điểm PS', 'gem'], ['withdraw', 'Rút về ngân hàng', 'download']], avail: [['transfer', 'Chuyển cho thành viên', 'users'], ['toshop', 'Sang ví mua hàng', 'bag']], sales: [['tocash', 'Rút sang ví tiền mặt', 'arrow']], bonus: [['convert', 'Chuyển sang ví khả dụng', 'arrow']], shop: [] };
-  const GOLD = ['deposit', 'tocash', 'convert', 'transfer'];
+  const GOLD = ['deposit', 'tocash', 'convert', 'transfer', 'giveshop'];
+  // tài khoản phân phối điểm mua hàng: máy chủ trả quyền và hạn mức (giveInfo)
+  let giveC = null, giveT = 0;
+  const giveOn = (fresh) => { if (fresh || !giveC || Date.now() - giveT > 30000) { const r = API.act('giveInfo'); giveC = r && !r.error ? r : { on: false }; giveT = Date.now(); } return giveC.on ? giveC : null; };
   const byNewest = (x, y) => (y.date || '').localeCompare(x.date || '');
   function pWallet(box, d, me) {
     const b = ADB.balances(d, me.id), mine = (d.wallet || []).filter(w => w.user === me.id).sort(byNewest), P = ADB.plan(d);
+    const gi = giveOn(); WACT.shop = gi ? [['giveshop', 'Chuyển cho thành viên', 'users']] : [];
     const held = k => -mine.filter(w => w.type === 'withdraw' && w.status === 'pending' && ADB.walletOf(w) === k).reduce((s, w) => s + w.amount, 0);
     box.innerHTML = ph('Ví của tôi', 'Ví tiền và ví hoa hồng tính bằng đồng, ba ví điểm tính bằng PS · 1đ = 1 PS · thuế thu nhập ' + P.taxRate + '% trừ khi rút hoa hồng và khi chuyển điểm thưởng') + note + `<section class="wgrid one-s">${WK.map(k => `<div class="wcard" style="--c:${W[k].color}"><span class="ico">${icon(W[k].icon)}</span><span class="amt">${wamt(k, b[k])}</span><span class="nm">${esc(W[k].name)}</span><small>${esc(wnote(k))}${held(k) ? `. Đang chờ rút ${wamt(k, held(k))}` : ''}</small>
         <div class="wfoot"><div class="acts">${WACT[k].map(([a, l, ic]) => `<button class="btn btn-sm${GOLD.includes(a) ? ' btn-gold' : ''}" type="button" data-wa="${a}">${icon(ic)} ${l}</button>`).join('') || `<button class="btn btn-sm" type="button" data-cart>${icon('cart')} Dùng khi đặt hàng</button>`}</div>${histBtn(k)}</div></div>`).join('')}</section>
@@ -930,34 +934,37 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       convert: { t: 'Chuyển điểm thưởng sang khả dụng', from: 'bonus', sub: `Trừ thuế ${tx}% khi chuyển.` },
       topoints: { t: 'Đổi tiền mặt sang điểm PS', from: 'cash', sub: '1đ = 1 PS, không mất phí, không trừ thuế. Điểm vào ví điểm khả dụng.' },
       toshop: { t: 'Chuyển sang ví mua hàng', from: 'avail', sub: 'Không mất phí. Điểm mua hàng chỉ dùng thanh toán đơn trên web.' },
-      transfer: { t: 'Chuyển điểm cho thành viên', from: 'avail', sub: 'Từ ví điểm khả dụng của anh chị sang ví điểm khả dụng của người nhận.' }
+      transfer: { t: 'Chuyển điểm cho thành viên', from: 'avail', sub: 'Từ ví điểm khả dụng của anh chị sang ví điểm khả dụng của người nhận.' },
+      giveshop: { t: 'Chuyển điểm mua hàng cho thành viên', from: 'shop', sub: 'Từ ví mua hàng của tài khoản này sang thẳng ví mua hàng người nhận. Nhập lại mật khẩu để xác nhận, công ty nhận báo qua Telegram.' }
     }[kind];
-    const max = Math.max(0, b[cfg.from]), tax = a => Math.round(a * tx / 100);
+    const max = Math.max(0, b[cfg.from]), tax = a => Math.round(a * tx / 100), isTr = kind === 'transfer' || kind === 'giveshop', txId = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     const md = modal(`<form id="waF" novalidate>
       <div class="card-head"><div><h3>${cfg.t}</h3><div class="sub">${cfg.sub}</div></div><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
       <div class="row between wa-bal" style="--c:${W[cfg.from].color};gap:10px"><span class="dim">${esc(W[cfg.from].name)}</span><b class="nowrap">${wamt(cfg.from, max)}</b></div>
-      ${kind === 'transfer' ? `<div class="field mt-2"><label for="waU">Tên truy cập người nhận</label><input class="input" id="waU" name="user" autocomplete="off" autocapitalize="off" placeholder="Ví dụ khach2"><div class="wa-prev" id="waP"></div></div>` : ''}
+      ${kind === 'giveshop' ? (() => { const g = giveOn(true) || {}; return `<p class="dim mt-1" style="font-size:12.5px">Hạn mức: ${ps(g.max || 0)} mỗi lần, ${ps(g.day || 0)} mỗi ngày · hôm nay đã chuyển ${ps(g.used || 0)}, còn ${ps(g.left || 0)}.</p>`; })() : ''}
+      ${isTr ? `<div class="field mt-2"><label for="waU">${kind === 'giveshop' ? 'Tên truy cập hoặc mã PS người nhận' : 'Tên truy cập người nhận'}</label><input class="input" id="waU" name="user" autocomplete="off" autocapitalize="off" placeholder="${kind === 'giveshop' ? 'Ví dụ khach2 hoặc PS1234' : 'Ví dụ khach2'}"><div class="wa-prev" id="waP"></div></div>` : ''}
       <div class="field mt-2"><label for="waA">${kind === 'withdraw' ? 'Số tiền rút về ngân hàng (đồng)' : kind === 'tocash' ? 'Số tiền rút (đồng)' : kind === 'topoints' ? 'Số tiền đổi (đồng)' : 'Số điểm'}</label><div class="row" style="gap:8px"><input class="input" id="waA" name="amount" type="number" min="1" step="1000" inputmode="numeric" style="flex:1;min-width:0"><button class="btn btn-sm" type="button" id="waMax">Tối đa</button></div></div>
       ${kind === 'withdraw' ? `<div class="form-grid mt-2"><div class="field"><label for="waB">Ngân hàng</label><input class="input" id="waB" name="bank" placeholder="Ví dụ Vietcombank"></div><div class="field"><label for="waN">Số tài khoản, tên chủ tài khoản</label><input class="input" id="waN" name="account"></div></div>` : ''}
-      ${kind === 'transfer' ? `<div class="field mt-2"><label for="waT">Lời nhắn (nếu có)</label><input class="input" id="waT" name="note" maxlength="80"></div>` : ''}
+      ${isTr ? `<div class="field mt-2"><label for="waT">${kind === 'giveshop' ? 'Ghi chú (nếu có)' : 'Lời nhắn (nếu có)'}</label><input class="input" id="waT" name="note" maxlength="80"></div>` : ''}
+      ${kind === 'giveshop' ? `<div class="field mt-2"><label for="waPw">Nhập lại mật khẩu của anh chị để xác nhận</label><input class="input" id="waPw" type="password" autocomplete="current-password"></div>` : ''}
       <dl class="calc mt-2" id="waC"></dl>
       <p class="red mt-1" id="waE" style="font-size:13px;min-height:18px"></p>
       ${kind === 'withdraw' && max < min ? `<p class="dim" style="font-size:12.5px">Số dư chưa đủ mức rút tối thiểu ${money(min)}.</p>` : ''}
-      <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit" id="waS"${kind === 'withdraw' && max < min ? ' disabled' : ''}>${kind === 'transfer' ? 'Tiếp tục' : 'Xác nhận'}</button></div></form>`);
+      <div class="row" style="justify-content:flex-end;gap:8px"><button class="btn" type="button" data-close>Hủy</button><button class="btn btn-gold" type="submit" id="waS"${kind === 'withdraw' && max < min ? ' disabled' : ''}>${isTr ? 'Tiếp tục' : 'Xác nhận'}</button></div></form>`);
     const el = md.el, F = $('#waF', el), A = $('#waA', el), E = $('#waE', el), C = $('#waC', el), S = $('#waS', el);
     // người nhận: tra trên máy chủ (trang chỉ có dữ liệu của mình và tuyến dưới)
     let rcptU = null;
     const rcpt = () => rcptU && rcptU.id !== me.id ? rcptU : null;
     const calc = () => {
       const a = Math.max(0, Math.round(+A.value || 0)), kv = r => r.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-      F.dataset.ok = ''; C.classList.remove('ok'); if (kind === 'transfer') S.textContent = 'Tiếp tục';
+      F.dataset.ok = ''; C.classList.remove('ok'); if (isTr) S.textContent = 'Tiếp tục';
       if (!a) { C.innerHTML = ''; return; }
       C.innerHTML = kind === 'topoints' ? kv([['Trừ ví tiền mặt', money(a)], ['Vào ví điểm khả dụng', '<span class="green">' + ps(a) + '</span>'], ['Tiền mặt còn lại', money(max - a)]])
         : kind === 'tocash' ? kv([['Trừ ví hoa hồng bán hàng', money(a)], [`Thuế thu nhập ${tx}%`, '<span class="red">-' + money(tax(a)) + '</span>'], ['Thực nhận vào ví tiền mặt', '<span class="green">' + money(a - tax(a)) + '</span>']])
         : kind === 'withdraw' ? (() => { const t = ADB.withdrawTax(d, me.id, Math.min(a, max)); return kv([['Trừ ví tiền mặt', money(a)], [`Thuế thu nhập ${tx}%`, t.tax ? '<span class="red">-' + money(t.tax) + '</span>' : '0đ'], ['Thực nhận (công ty chuyển khoản)', '<span class="green">' + money(a - t.tax) + '</span>'], ['Số dư còn lại', money(max - a)]]); })()
         : kind === 'convert' ? kv([['Trừ ví điểm thưởng', ps(a)], [`Thuế ${tx}%`, '<span class="red">-' + ps(tax(a)) + '</span>'], ['Vào ví điểm khả dụng', '<span class="green">' + ps(a - tax(a)) + '</span>']])
         : kind === 'toshop' ? kv([['Trừ ví điểm khả dụng', ps(a)], ['Vào ví điểm mua hàng', '<span class="green">' + ps(a) + '</span>']])
-        : kv([['Người nhận', (() => { const t = rcpt(); return t ? esc(t.name) + ' @' + esc(t.username) : '<span class="dim">chưa chọn</span>'; })()], ['Số điểm chuyển', ps(a)], ['Số dư còn lại', ps(max - a)]]);
+        : kv([['Người nhận', (() => { const t = rcpt(); return t ? esc(t.name) + ' @' + esc(t.username) : '<span class="dim">chưa chọn</span>'; })()], ['Số điểm chuyển', ps(a)], [kind === 'giveshop' ? 'Vào ví' : 'Số dư còn lại', kind === 'giveshop' ? 'Điểm mua hàng của người nhận' : ps(max - a)]].concat(kind === 'giveshop' ? [['Ví mua hàng còn lại', ps(max - a)]] : []));
     };
     A.addEventListener('input', calc);
     $('#waMax', el).addEventListener('click', () => { A.value = max; calc(); });
@@ -965,9 +972,9 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
     let rt;
     if (U) U.addEventListener('input', () => { clearTimeout(rt); rt = setTimeout(look, 350); });
     const look = () => {
-      const v = U.value.trim(), to = v ? (API.act('lookupUser', { username: v }).user || null) : null; rcptU = to;
+      const v = U.value.trim(), to = !v ? null : kind === 'giveshop' ? (API.act('giveShop', { user: v, check: true }).to || null) : (API.act('lookupUser', { username: v }).user || null); rcptU = to;
       $('#waP', el).innerHTML = !v ? '' : !to || to.role === 'admin' ? '<span class="red">Không tìm thấy thành viên có tên truy cập này.</span>' : to.id === me.id ? '<span class="red">Đây là tài khoản của anh chị.</span>'
-        : `<div class="who">${av(to, 'v')}<div><b>${esc(to.name)}</b><small>@${esc(to.username)} · ${esc(ADB.tierOf(to).name)}</small></div></div>`;
+        : `<div class="who">${av(to, 'v')}<div><b>${esc(to.name)}</b><small>@${esc(to.username)}${to.code ? ' · ' + esc(to.code) : ''} · ${esc(to.tier || ADB.tierOf(to).name)}</small></div></div>`;
       calc();
     };
     F.addEventListener('submit', e => {
@@ -981,6 +988,20 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       else if (kind === 'topoints') { if (!act('wallet', { kind, amount: a }, 'Đã đổi, nhận ' + ps(a) + ' vào ví điểm khả dụng', E)) return; }
       else if (kind === 'convert') { if (!act('wallet', { kind, amount: a }, r => 'Đã chuyển, nhận ' + ps(r.net) + ' vào ví điểm khả dụng', E)) return; }
       else if (kind === 'toshop') { if (!act('wallet', { kind, amount: a }, 'Đã chuyển ' + ps(a) + ' sang ví điểm mua hàng', E)) return; }
+      else if (kind === 'giveshop') {
+        const name = U.value.trim(), msg = $('#waT', el).value.trim(), pw = $('#waPw', el).value;
+        if (F.dataset.ok !== '1') {
+          const test = API.act('giveShop', { user: name, check: true });
+          if (test.error) return E.textContent = test.error;
+          if (!(a > 0)) return E.textContent = 'Anh chị nhập số điểm cần chuyển.';
+          if (a > max) return E.textContent = 'Ví điểm mua hàng không đủ.';
+          F.dataset.ok = '1'; C.classList.add('ok'); S.textContent = 'Xác nhận chuyển';
+          E.innerHTML = `<span class="gold">Chuyển ${ps(a)} vào ví mua hàng của ${esc(test.to.name)} (@${esc(test.to.username)}, ${esc(test.to.code)}, ${esc(test.to.tier)})? Nhập mật khẩu rồi bấm Xác nhận chuyển.</span>`; $('#waPw', el).focus(); return;
+        }
+        if (!pw) return E.textContent = 'Anh chị nhập lại mật khẩu để xác nhận.';
+        r = act('giveShop', { user: name, amount: a, note: msg, pass: pw, tx: txId }, r => (r.dup ? 'Lần chuyển này đã ghi rồi' : 'Đã chuyển ' + ps(a) + ' vào ví mua hàng của ' + r.to.name), E); if (!r) return;
+        giveOn(true);
+      }
       else {
         const name = U.value.trim(), msg = $('#waT', el).value.trim();
         if (F.dataset.ok !== '1') {
