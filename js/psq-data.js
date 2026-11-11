@@ -276,7 +276,7 @@
      đã chi trả về ngân hàng. Sổ ghi thêm, không sửa, không xóa. Cân đối luôn phải bằng 0.
      ===================================================================== */
   const FUND_IN = ['commission', 'referral', 'override', 'package', 'topup', 'bonus', 'adjust', 'prize'];   // trừ quỹ kế toán
-  const FUND_PAIR = ['tocash', 'convert', 'toshop', 'transfer', 'topoints', 'giveshop'];                                // chuyển nội bộ, chỉ phần thuế rời ví
+  const FUND_PAIR = ['tocash', 'convert', 'toshop', 'transfer', 'topoints', 'giveshop', 'adminmove'];                                // chuyển nội bộ, chỉ phần thuế rời ví
   const FUND_ACC = { ph: 'Quỹ phát hành', kt: 'Quỹ kế toán' };
   const isOwner = u => !!u && u.role === 'admin' && (u.adminRole || 'owner') === 'owner' && u.status !== 'locked';
 
@@ -491,6 +491,38 @@
       w.backed = (+w.backed || 0) + take;
       return { take, short: rem - take, giver, to };
     },
+    // chủ sở hữu thao tác ví thành viên (máy chủ kiểm quyền + mật khẩu): thu điểm về công ty (Quỹ kế toán) hoặc gom từ ví khác sang ví mua hàng
+    adminWallet(d, u, op, from, amount, note, actor, extra) {
+      amount = Math.round(+amount); note = String(note || '').trim();
+      if (!u || u.role === 'admin') return { error: 'Chỉ thao tác ví của tài khoản thành viên.' };
+      const OK = op === 'recall' ? ['avail', 'bonus', 'shop'] : ['avail', 'bonus'];
+      if (!OK.includes(from)) return { error: op === 'recall' ? 'Chỉ thu điểm ở ví điểm khả dụng, điểm thưởng hoặc ví mua hàng.' : 'Chỉ chuyển từ ví điểm khả dụng hoặc điểm thưởng sang ví mua hàng.' };
+      if (!(amount > 0)) return { error: 'Anh nhập số điểm lớn hơn 0.' };
+      if (!note) return { error: 'Anh nhập lý do để lưu vào lịch sử.' };
+      const b = ADB.balances(d, u.id)[from]; if (amount > b) return { error: WALLETS[from].name + ' của ' + u.name + ' chỉ còn ' + PSQ.money(b).replace('đ', WALLETS[from].unit === 'ps' ? ' PS' : 'đ') + '.' };
+      const ref = uid('qt'), x = Object.assign({ byAdmin: actor || '', op, at: nowAt() }, extra || {});
+      if (op === 'recall') { const w = credit(d, u.id, from, 'adjust', -amount, `Công ty thu hồi: ${note}`, ref, x); return { entry: w, bal: b - amount }; }
+      if (op === 'toshop') {
+        const w = credit(d, u.id, from, 'adminmove', -amount, `Công ty chuyển sang ví mua hàng: ${note}`, ref, x);
+        credit(d, u.id, 'shop', 'adminmove', amount, `Nhận từ ${WALLETS[from].name}: ${note}`, ref, { byAdmin: actor || '', op: 'toshop-in', at: x.at });
+        return { entry: w, bal: b - amount };
+      }
+      return { error: 'Thao tác không hợp lệ.' };
+    },
+    // hoàn lại một lần thu / chuyển của chủ sở hữu (cần còn đủ số dư ở ví đã nhận)
+    adminWalletUndo(d, ref, actor) {
+      const w = (d.wallet || []).find(x => x.ref === ref && x.byAdmin && (x.op === 'recall' || x.op === 'toshop'));
+      if (!w) return { error: 'Không tìm thấy lần điều chỉnh này.' };
+      if (w.undone) return { error: 'Lần này đã hoàn lại rồi.' };
+      const u = ADB.user(d, w.user), a = -w.amount, ref2 = uid('qt'), x = { byAdmin: actor || '', op: 'undo', undo: ref, at: nowAt() };
+      if (w.op === 'recall') credit(d, w.user, w.wallet, 'adjust', a, 'Công ty hoàn lại điểm đã thu', ref2, x);
+      else {
+        const sb = ADB.balances(d, w.user).shop; if (sb < a) return { error: `${u ? u.name : 'Thành viên'} đã dùng bớt ví mua hàng, chỉ còn ${PSQ.money(sb).replace('đ', ' PS')}, không hoàn lại được.` };
+        credit(d, w.user, 'shop', 'adminmove', -a, 'Công ty hoàn lại về ' + WALLETS[w.wallet].name, ref2, x);
+        credit(d, w.user, w.wallet, 'adminmove', a, 'Nhận lại từ ví mua hàng (công ty hoàn lại)', ref2, x);
+      }
+      w.undone = x.at; return { u, w };
+    },
     // dùng ví mua hàng để thanh toán đơn
     spendShop(d, u, order, amount) {
       const b = ADB.balances(d, u.id).shop; amount = Math.min(Math.round(+amount), b, order.total);
@@ -656,7 +688,7 @@
       d.orders.unshift(o); return o;
     }
   });
-  ADB.walletType = Object.assign(ADB.walletType, { commission: 'Hoa hồng bán hàng', referral: 'Thưởng giới thiệu CTV', override: 'Thu nhập từ tuyến dưới', package: 'Gói kích hoạt CTV', convert: 'Chuyển điểm thưởng', tocash: 'Rút sang ví tiền mặt', toshop: 'Chuyển sang ví mua hàng', transfer: 'Chuyển điểm', giveshop: 'Chuyển điểm mua hàng', topup: 'Nạp tiền', topoints: 'Đổi sang điểm PS', spend: 'Thanh toán đơn hàng', refund: 'Hoàn tiền đơn hủy', prize: 'Quà vòng quay' });
+  ADB.walletType = Object.assign(ADB.walletType, { commission: 'Hoa hồng bán hàng', referral: 'Thưởng giới thiệu CTV', override: 'Thu nhập từ tuyến dưới', package: 'Gói kích hoạt CTV', convert: 'Chuyển điểm thưởng', tocash: 'Rút sang ví tiền mặt', toshop: 'Chuyển sang ví mua hàng', transfer: 'Chuyển điểm', giveshop: 'Chuyển điểm mua hàng', adminmove: 'Chuyển sang ví mua hàng (công ty)', topup: 'Nạp tiền', topoints: 'Đổi sang điểm PS', spend: 'Thanh toán đơn hàng', refund: 'Hoàn tiền đơn hủy', prize: 'Quà vòng quay' });
   ADB.commissionKind = { ref: 'Thưởng giới thiệu', direct: 'Hoa hồng bán hàng', override: 'Thu nhập từ đại lý', missed: 'Hoa hồng bỏ lỡ' };
   ADB.commissionStatus.missed = ['Bỏ lỡ', 'failed'];
   ADB.commissionStatus.hold = ['Đang giữ, chờ đủ điều kiện', 'pending'];

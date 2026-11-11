@@ -624,6 +624,32 @@ const ACTIONS = {
     c.notify(`↩️ Hoàn lại điểm mua hàng: lấy ${ps(r.take)} từ ${r.to.name} (@${r.to.username}) về ví @${r.giver.username}${r.short ? `\nCòn ${ps(r.short)} người nhận đã dùng, không lấy lại được.` : ''}`);
     return { take: r.take, short: r.short };
   } },
+  /* ----- chủ sở hữu thu điểm / chuyển ví thành viên sang ví mua hàng (12/11) ----- */
+  memberWallet: { auth: 'owner', run(c) {
+    const { d, A, args } = c, u = A.user(d, args.id), op = args.op === 'toshop' ? 'toshop' : args.op === 'recall' ? 'recall' : '', from = str(args.from, 10), a = int(args.amount), note = str(args.note, 120);
+    if (!op) return err('Thao tác không hợp lệ.');
+    const tx = str(args.tx, 40); if (tx && (d.wallet || []).some(w => w.tx === tx && w.byAdmin)) return { ok: true, dup: true, bal: u ? A.balances(d, u.id) : null };
+    if (!verifyPass(String(args.pass || ''), c.me.pass)) return err('Mật khẩu xác nhận chưa đúng.');
+    const r = A.adminWallet(d, u, op, from, a, note, c.me.name, tx ? { tx } : null); if (r.error) return r;
+    const W = A.WALLETS[from], amt = W.unit === 'ps' ? ps(a) : money(a), what = op === 'recall' ? `Thu hồi ${amt} từ ${W.name}` : `Chuyển ${amt} từ ${W.name} sang ví mua hàng`;
+    c.log(op === 'recall' ? 'Thu hồi điểm thành viên' : 'Chuyển ví thành viên sang ví mua hàng', `${u.name} (@${u.username}, ${u.code || ''}): ${what}. Lý do: ${note}`);
+    c.notify(`${op === 'recall' ? '⤵️' : '🔁'} ${what}\nThành viên: ${u.name} (@${u.username}, ${u.code || ''})\nLý do: ${note}\nDo ${c.me.name} thao tác lúc ${r.entry.at}`);
+    return { ok: true, bal: A.balances(d, u.id) };
+  } },
+  memberWalletUndo: { auth: 'owner', run(c) {
+    if (!verifyPass(String(c.args.pass || ''), c.me.pass)) return err('Mật khẩu xác nhận chưa đúng.');
+    const r = c.A.adminWalletUndo(c.d, str(c.args.ref, 40), c.me.name); if (r.error) return r;
+    const what = `${r.w.op === 'recall' ? 'Hoàn lại điểm đã thu' : 'Hoàn lại lần chuyển sang ví mua hàng'}: ${ps(-r.w.amount)} (${c.A.WALLETS[r.w.wallet].name})`;
+    c.log('Hoàn lại điều chỉnh điểm', `${r.u.name} (@${r.u.username}): ${what}`);
+    c.notify(`↩️ ${what}\nThành viên: ${r.u.name} (@${r.u.username}, ${r.u.code || ''})\nDo ${c.me.name} thao tác`);
+    return { ok: true, bal: c.A.balances(c.d, r.u.id) };
+  } },
+  memberWalletLog: { auth: 'owner', run(c) {
+    const { d, A } = c, id = str(c.args.id, 40);
+    const rows = (d.wallet || []).filter(w => w.byAdmin && (w.op === 'recall' || w.op === 'toshop') && (!id || w.user === id)).slice(-300).reverse().map(w => { const u = A.user(d, w.user) || {};
+      return { ref: w.ref, undone: w.undone || '', at: w.at || w.date, op: w.op, wallet: w.wallet, amount: -w.amount, note: w.note, by: w.byAdmin, user: { id: u.id, name: u.name, username: u.username, code: u.code } }; });
+    return { rows, bal: id ? A.balances(d, id) : null };
+  } },
   lookupUser: { auth: 'member', run(c) {
     const to = c.A.byUsername(c.d, c.args.username);
     return to && to.role !== 'admin' ? { user: pick(to, ['id', 'name', 'username', 'tier', 'avatar']) } : { user: null };

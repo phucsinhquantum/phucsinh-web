@@ -354,6 +354,21 @@ async function flow() {
     ok(bk1.take === 1000 && (await shopOf(B.r.me.id)) === bShop0 && (await shopOf(A.r.me.id)) === aShop0, 'Phân phối: hoàn lại đưa điểm về đúng hai ví');
     ok(/hoàn lại hết/.test((await owner.act('giveBack', { ref: hs[0].ref, pass: 'KiemTra@2026' })).error || ''), 'Phân phối: không hoàn lại 2 lần');
     ok(!(await owner.act('giveSet', { id: B.r.me.id, on: false, pass: 'KiemTra@2026' })).error && !((await B.c.act('giveInfo', {})).result || {}).on, 'Phân phối: tắt quyền thì tài khoản thử không còn thấy chức năng');
+    // chủ sở hữu điều chỉnh điểm thành viên: thu về công ty, chuyển sang ví mua hàng, hoàn lại
+    const fundOk = async () => { const db = (await owner.req('GET', '/api/admin/db')).json.db; const f = ENG.ADB.fund(db); return { f, bal: ENG.ADB.balances(db, B.r.me.id) }; };
+    const sh0 = await shopOf(B.r.me.id), f0 = (await fundOk()).f;
+    ok(!!(await B.c.act('memberWallet', { id: B.r.me.id, op: 'recall', from: 'shop', amount: 1000, note: 'x', pass: '123456a' })).error, 'Điều chỉnh điểm: không phải chủ sở hữu bị chặn');
+    ok(/Mật khẩu/.test((await owner.act('memberWallet', { id: B.r.me.id, op: 'recall', from: 'shop', amount: 1000, note: 'thử', pass: 'sai' })).error || ''), 'Điều chỉnh điểm: sai mật khẩu bị chặn');
+    ok(/chỉ còn/.test((await owner.act('memberWallet', { id: B.r.me.id, op: 'recall', from: 'shop', amount: sh0 + 1, note: 'thử', pass: 'KiemTra@2026' })).error || ''), 'Điều chỉnh điểm: thu quá số dư bị chặn');
+    ok(/lý do/.test((await owner.act('memberWallet', { id: B.r.me.id, op: 'recall', from: 'shop', amount: 1000, note: '', pass: 'KiemTra@2026' })).error || ''), 'Điều chỉnh điểm: bắt buộc ghi lý do');
+    ok(!(await owner.act('memberWallet', { id: B.r.me.id, op: 'recall', from: 'shop', amount: 1000, note: 'thu thử', pass: 'KiemTra@2026', tx: 'mw1' })).error && (await shopOf(B.r.me.id)) === sh0 - 1000, 'Điều chỉnh điểm: thu 1.000 PS từ ví mua hàng');
+    ok(((await owner.act('memberWallet', { id: B.r.me.id, op: 'recall', from: 'shop', amount: 1000, note: 'thu thử', pass: 'KiemTra@2026', tx: 'mw1' })).result || {}).dup && (await shopOf(B.r.me.id)) === sh0 - 1000, 'Điều chỉnh điểm: bấm đôi không thu 2 lần');
+    const f1 = (await fundOk()).f; ok(!f1.diff && f1.kt === f0.kt + 1000, 'Điều chỉnh điểm: điểm thu về Quỹ kế toán, quỹ cân đối');
+    const lg = ((await owner.act('memberWalletLog', { id: B.r.me.id })).result || {}).rows || [];
+    ok(lg.length === 1 && lg[0].op === 'recall' && lg[0].amount === 1000, 'Điều chỉnh điểm: có lịch sử');
+    ok(!(await owner.act('memberWalletUndo', { ref: lg[0].ref, pass: 'KiemTra@2026' })).error && (await shopOf(B.r.me.id)) === sh0 && !(await fundOk()).f.diff, 'Điều chỉnh điểm: hoàn lại lần thu, quỹ vẫn cân');
+    ok(/đã hoàn lại/.test((await owner.act('memberWalletUndo', { ref: lg[0].ref, pass: 'KiemTra@2026' })).error || ''), 'Điều chỉnh điểm: không hoàn lại 2 lần');
+    ok(/khả dụng hoặc điểm thưởng/.test((await owner.act('memberWallet', { id: B.r.me.id, op: 'toshop', from: 'shop', amount: 10, note: 'x', pass: 'KiemTra@2026' })).error || ''), 'Điều chỉnh điểm: chỉ chuyển từ ví khả dụng, điểm thưởng sang ví mua hàng');
     }
     ok(rb && rb.refLink === `http://127.0.0.1:${s.port}/thanh-vien.html?ref=${B.r.me.code}`, 'An An: có link giới thiệu của người được tra để gửi khách đăng ký');
     const H = client(s.port), hr = await H.act('register', { name: 'Nguyễn Văn Hà', username: 'ktha', email: 'ktha@kiem-tra.vn', phone: '0912345678', pass: '123456a', ref: A.r.me.code, agree: true });
