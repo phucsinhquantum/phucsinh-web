@@ -112,7 +112,8 @@ async function flow() {
     ok(plan.pkgPoints === plan.pkgPrice && (db.wallet || []).some(w => w.user === B.r.me.id && w.wallet === 'shop' && w.type === 'package' && w.amount === plan.pkgPoints), `gói CTV nhận đủ ${plan.pkgPoints} PS vào ví mua hàng`);
     ok(!com(A.r.me.id, 'ref').length, 'đóng gói không có thưởng giới thiệu');
     const aB = com(A.r.me.id, 'direct').find(c => c.order === bFirst);
-    ok(aB && aB.amount === Math.round(P.price * plan.ctvRate / 100) && cashOf(A.r.me.id, 'commission').some(w => w.amount === aB.amount && w.taxable), `A nhận ${plan.ctvRate}% cả đơn đầu tiên của B (trả bằng điểm gói) vào ví tiền mặt`);
+    ok(aB && aB.amount === Math.round(P.price * plan.ctvRate / 100) && (() => { const o = db.orders.find(x => x.id === bFirst), pt = Math.round(aB.amount * ((o.shopPaid || 0) + (o.availPaid || 0)) / o.total), w = (db.wallet || []).filter(x => x.user === A.r.me.id && x.ref === bFirst && x.type === 'commission');
+      return pt > 0 && w.some(x => x.wallet === 'bonus' && x.amount === pt && /trả bằng điểm/.test(x.note)) && w.some(x => x.wallet === 'cash' && x.amount === aB.amount - pt && x.taxable); })(), `A nhận ${plan.ctvRate}% cả đơn đầu tiên của B: phần trả bằng điểm gói vào ví điểm thưởng, phần chuyển khoản vào ví tiền mặt`);
 
     // A mua đủ mốc lên đại lý
     const info = { name: 'Đại lý A', phone: '0912345678', address: '1 Đường Thử, Quận 1', pay: 'bank' };
@@ -546,6 +547,17 @@ async function seed() {
     const o = { id: 'vd10', userId: 'K', status: 'paid', total: 10000000, items: [{ id: 'vong', price: 10000000, qty: 1 }], date: day }; d.orders.push(o); X.settleOrder(d, o);
     const got = u => d.commissions.filter(c => c.user === u && c.order === 'vd10' && c.status === 'paid' && c.kind !== 'missed').reduce((s, c) => s + c.amount, 0);
     ok(got('D') === 1000000 && got('C') === 100000 && got('B') === 40000 && got('A') === 4000, `ví dụ 4 tầng: D 1.000.000, C 100.000, B 40.000, A 4.000 (thực tế ${['D', 'C', 'B', 'A'].map(got).join(', ')})`);
+  }
+  // anh Tuân 12/11: đơn trả bằng điểm thì mọi hoa hồng từ đơn đó (mọi tầng) vào ví điểm thưởng; trả một phần thì chia theo tỷ lệ
+  for (const [pts, name] of [[10000000, '100% điểm'], [0, '100% chuyển khoản'], [5000000, '50% điểm']]) {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: {} }; X.plan(d);
+    const day = new Date().toISOString().slice(0, 10), mk = (id, tier, sponsor) => { d.users.push({ id, name: id, tier, sponsor, role: 'member' }); d.orders.push({ id: 'tu-' + id, userId: id, status: 'done', settled: true, total: 100000, items: [{ id: 'x', price: 100000, qty: 1 }], date: day }); };
+    mk('A', 'ctv', null); mk('B', 'daily', 'A'); mk('C', 'ctv', 'B'); mk('D', 'ctv', 'C'); d.users.push({ id: 'K', name: 'Khách', tier: 'khach', sponsor: 'D', role: 'member' });
+    const o = { id: 'pt10', userId: 'K', status: 'paid', total: 10000000, shopPaid: pts, items: [{ id: 'vong', price: 10000000, qty: 1 }], date: day }; d.orders.push(o); X.settleOrder(d, o);
+    const rows = d.wallet.filter(w => w.ref === 'pt10' && ['commission', 'override'].includes(w.type)), sum = k => rows.filter(w => w.wallet === k).reduce((x, w) => x + w.amount, 0), all = rows.reduce((x, w) => x + w.amount, 0);
+    const want = Math.round(all * pts / 10000000);
+    ok(all === 1144000 && Math.abs(sum('bonus') - (pts ? want : 0) - (pts < 10000000 ? sum('bonus') - (pts ? want : 0) : 0)) <= 4 && (pts === 10000000 ? sum('cash') === 0 && sum('shop') === 0 : pts === 0 ? sum('bonus') + sum('shop') <= 40000 : sum('bonus') >= want - 4), `hoa hồng đơn ${name}: tổng 1.144.000, ví điểm thưởng ${sum('bonus')}, tiền mặt ${sum('cash')}, mua hàng ${sum('shop')}`);
+    ok(!X.fund(d).diff, `hoa hồng đơn ${name}: quỹ điểm cân đối`);
   }
   // đại lý tự mua (anh Tuân 04/11): B đại lý mua 10tr nhận 25% = 2.500.000; A (đại lý, giới thiệu B) nhận 40% = 1.000.000; C (CTV, trên A) 10% = 100.000
   for (const self of [1, 0]) {

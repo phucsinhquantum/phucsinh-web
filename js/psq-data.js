@@ -176,19 +176,28 @@
     (d.wallet = d.wallet || []).push(w); return w;
   }
   // trả một khoản hoa hồng vào ví
+  // phần đơn trả bằng điểm (ví mua hàng, ví điểm khả dụng): hoa hồng phần này vào ví điểm thưởng (anh Tuân chốt 12/11)
+  function ptsShare(d, orderId) {
+    const o = (d.orders || []).find(x => x.id === orderId); if (!o || !(o.total > 0)) return 0;
+    return Math.min(1, ((+o.shopPaid || 0) + (+o.availPaid || 0)) / o.total);
+  }
   function payCommission(d, c) {
-    const P = plan(d);
-    if (c.kind === 'override' && c.ctv) {
-      credit(d, c.user, 'cash', 'override', c.amount, `${c.rate}% thu nhập của ${(ADB.user(d, c.from) || {}).name || ''} (đơn ${c.order})`, c.order, { date: c.paidAt || c.date, taxable: true });
-    } else if (c.kind === 'override') {
-      const shop = pct(c.amount, P.overrideShop);
-      const dt = c.paidAt || c.date;
-      credit(d, c.user, 'bonus', 'override', c.amount - shop, `${c.rate || P.overrideRate}% thu nhập của đại lý ${(ADB.user(d, c.from) || {}).name || ''} (đơn ${c.order})`, c.order, { date: dt });
-      credit(d, c.user, 'shop', 'override', shop, `${P.overrideShop}% thu nhập đại lý tuyến dưới vào ví mua hàng`, c.order, { date: dt });
+    const P = plan(d), pr = ptsShare(d, c.order), dt = c.paidAt || c.date;
+    const fromName = (ADB.user(d, c.from) || {}).name || '', tag = pr >= 1 ? ' (đơn trả bằng điểm)' : pr > 0 ? ' (phần đơn trả bằng điểm)' : '';
+    const ptsPart = Math.round(c.amount * pr), rest = c.amount - ptsPart;
+    if (c.kind === 'ref') {
+      credit(d, c.user, c.wallet || 'sales', 'referral', c.amount, `Thưởng giới thiệu CTV ${fromName}`, c.order, { date: c.date, ...(c.wallet === 'cash' ? { taxable: true } : {}) });
     } else {
-      if (c.kind === 'ref') credit(d, c.user, c.wallet || 'sales', 'referral', c.amount, `Thưởng giới thiệu CTV ${(ADB.user(d, c.from) || {}).name || ''}`, c.order, { date: c.date, ...(c.wallet === 'cash' ? { taxable: true } : {}) });
-      // hoa hồng bán hàng vào thẳng ví tiền mặt, rút về ngân hàng mới trừ thuế (anh Tuân chọn 30/10); số dư ví hoa hồng cũ vẫn rút sang tiền mặt như trước
-      else credit(d, c.user, 'cash', 'commission', c.amount, `Hoa hồng ${c.rate}% đơn ${c.order}${c.self ? ' (tự mua)' : ''}`, c.order, { date: c.date, taxable: true });
+      const label = c.kind === 'override' ? `${c.rate || P.overrideRate}% thu nhập của ${c.ctv ? '' : 'đại lý '}${fromName} (đơn ${c.order})` : `Hoa hồng ${c.rate}% đơn ${c.order}${c.self ? ' (tự mua)' : ''}`, type = c.kind === 'override' ? 'override' : 'commission';
+      if (ptsPart) credit(d, c.user, 'bonus', type, ptsPart, label + tag, c.order, { date: dt });
+      if (rest) {
+        if (c.kind === 'override' && !c.ctv) {
+          const shop = pct(rest, P.overrideShop);
+          credit(d, c.user, 'bonus', 'override', rest - shop, label, c.order, { date: dt });
+          credit(d, c.user, 'shop', 'override', shop, `${P.overrideShop}% thu nhập đại lý tuyến dưới vào ví mua hàng`, c.order, { date: dt });
+        // hoa hồng bán hàng, thu nhập tuyến dưới của CTV vào thẳng ví tiền mặt, rút về ngân hàng mới trừ thuế (anh Tuân chọn 30/10)
+        } else credit(d, c.user, 'cash', type, rest, label, c.order, { date: c.kind === 'override' ? dt : c.date, taxable: true });
+      }
     }
     c.status = 'paid';
     // B (đại lý hoặc CTV) có thu nhập từ đơn mua hàng (kể cả thu nhập B nhận từ tầng dưới): đại lý A (người giới thiệu B) hưởng 40%, tính tiếp lên trên.
