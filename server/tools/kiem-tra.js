@@ -559,6 +559,30 @@ async function seed() {
     ok(all === 1144000 && Math.abs(sum('bonus') - (pts ? want : 0) - (pts < 10000000 ? sum('bonus') - (pts ? want : 0) : 0)) <= 4 && (pts === 10000000 ? sum('cash') === 0 && sum('shop') === 0 : pts === 0 ? sum('bonus') + sum('shop') <= 40000 : sum('bonus') >= want - 4), `hoa hồng đơn ${name}: tổng 1.144.000, ví điểm thưởng ${sum('bonus')}, tiền mặt ${sum('cash')}, mua hàng ${sum('shop')}`);
     ok(!X.fund(d).diff, `hoa hồng đơn ${name}: quỹ điểm cân đối`);
   }
+  // anh Tuân 12/11: thanh toán bằng ví trừ lần lượt ví mua hàng, ví điểm khả dụng, ví tiền mặt; phần điểm khả dụng tính hoa hồng vào ví điểm thưởng; hủy đơn hoàn đúng từng ví
+  {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: {} }; X.plan(d);
+    const day = new Date().toISOString().slice(0, 10);
+    d.users.push({ id: 'S', name: 'S', tier: 'ctv', sponsor: null, role: 'member' }, { id: 'K', name: 'K', tier: 'ctv', sponsor: 'S', role: 'member' });
+    d.orders.push({ id: 'tu-S', userId: 'S', status: 'done', settled: true, total: 100000, items: [{ id: 'x', price: 100000, qty: 1 }], date: day });
+    [['shop', 2000000], ['avail', 5000000], ['cash', 3500000]].forEach(([w, a]) => d.wallet.push({ id: 'seed-' + w, user: 'K', wallet: w, type: 'adjust', amount: a, note: 'nạp thử', date: day, status: 'done' }));
+    const K = d.users[1], bal = () => X.balances(d, 'K'), diff0 = X.fund(d).diff;
+    const o = { id: 'av10', userId: 'K', status: 'pending', pay: 'wallet', total: 10000000, items: [{ id: 'vong', price: 10000000, qty: 1 }], date: day }; d.orders.push(o);
+    const a1 = X.spendShop(d, K, o, 10000000), a2 = X.spendAvailPart(d, K, o, 10000000 - a1), a3 = X.spendCash(d, K, o, 10000000 - a1 - a2);
+    ok(a1 === 2000000 && a2 === 5000000 && a3 === 3000000 && o.availPaid === 5000000 && bal().avail === 0 && bal().cash === 500000, `đơn 10tr trả bằng ví: mua hàng 2tr, khả dụng 5tr, tiền mặt 3tr (thực tế ${a1}, ${a2}, ${a3})`);
+    X.setStatus(d, o, 'paid'); X.settleOrder(d, o);
+    const rows = d.wallet.filter(w => w.ref === 'av10' && w.user === 'S' && ['commission', 'override'].includes(w.type)), sum = k => rows.filter(w => w.wallet === k).reduce((x, w) => x + w.amount, 0);
+    ok(sum('bonus') === 70000 && sum('cash') === 30000, `hoa hồng S (10% thu nhập của K) từ đơn trả 70% bằng điểm (mua hàng + khả dụng): 70.000 vào điểm thưởng, 30.000 tiền mặt (thực tế ${sum('bonus')}, ${sum('cash')})`);
+    const cash0 = bal().cash; const o2 = { id: 'av2', userId: 'K', status: 'pending', pay: 'wallet', total: 400000, items: [{ id: 'vong', price: 400000, qty: 1 }], date: day }; d.orders.push(o2);
+    X.spendAvailPart(d, K, o2, 400000); const c2 = X.spendCash(d, K, o2, 400000);
+    ok(!o2.availPaid && c2 === 400000, 'ví khả dụng hết thì trừ ví tiền mặt');
+    X.refundOrder(d, o2); ok(bal().cash === cash0, 'hủy đơn: hoàn lại ví tiền mặt');
+    const o3 = { id: 'av3', userId: 'K', status: 'pending', pay: 'wallet', total: 300000, items: [], date: day }; d.orders.push(o3);
+    d.wallet.push({ id: 'seed-a2', user: 'K', wallet: 'avail', type: 'adjust', amount: 1000000, note: 'nạp thử', date: day, status: 'done' });
+    X.spendAvailPart(d, K, o3, 300000); ok(o3.availPaid === 300000 && bal().avail === 700000, 'đơn trả trọn bằng ví điểm khả dụng');
+    X.refundOrder(d, o3); ok(bal().avail === 1000000, 'hủy đơn: hoàn lại đúng ví điểm khả dụng');
+    ok(X.fund(d).diff === diff0, 'trả bằng ví điểm khả dụng: sổ quỹ không lệch thêm');
+  }
   // đại lý tự mua (anh Tuân 04/11): B đại lý mua 10tr nhận 25% = 2.500.000; A (đại lý, giới thiệu B) nhận 40% = 1.000.000; C (CTV, trên A) 10% = 100.000
   for (const self of [1, 0]) {
     const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: { plan: { selfAgent: self } } }; X.plan(d);

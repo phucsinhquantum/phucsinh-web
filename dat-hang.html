@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261112c">
-<script src="js/lang.js?v=20261112c"></script>
+<link rel="stylesheet" href="css/app.css?v=20261112d">
+<script src="js/lang.js?v=20261112d"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -163,11 +163,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261112c"></script>
-<script src="js/api.js?v=20261112c"></script>
-<script src="js/data.js?v=20261112c"></script>
-<script src="js/app.js?v=20261112c"></script>
-<script src="js/psq-data.js?v=20261112c"></script>
+<script src="js/patch.js?v=20261112d"></script>
+<script src="js/api.js?v=20261112d"></script>
+<script src="js/data.js?v=20261112d"></script>
+<script src="js/app.js?v=20261112d"></script>
+<script src="js/psq-data.js?v=20261112d"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -199,10 +199,12 @@
   // giỏ hàng đổi thì tính lại số tiền giảm
   const couponFresh = () => { if (coupon && coupon.sub !== cart.total()) { const er = applyCoupon(coupon.code); if (er) toast(er, 'err'); } };
   const due = () => Math.max(0, cart.total() + ship - off());
-  const walletBal = () => shopBal() + cashBal();
+  const availBal = () => { if (!u || !window.ADB) return 0; try { return ADB.balances(ADB.load(), u.id).avail || 0; } catch (e) { return 0; } };
+  const walletBal = () => shopBal() + availBal() + cashBal();
   const walletOk = () => !!u && walletBal() >= due();
   const payUsed = () => form.pay === 'wallet' ? Math.min(shopBal(), due()) : 0;
-  const cashUsed = () => form.pay === 'wallet' ? Math.min(cashBal(), due() - payUsed()) : 0;
+  const availUsed = () => form.pay === 'wallet' ? Math.min(availBal(), due() - payUsed()) : 0;
+  const cashUsed = () => form.pay === 'wallet' ? Math.min(cashBal(), due() - payUsed() - availUsed()) : 0;
 
   $('#lookup').closest('.card').querySelector('.stat-ico').innerHTML = icon('search');
 
@@ -290,7 +292,7 @@
       </div>
       <h3 class="mt-3" style="font-size:16px;margin-bottom:12px">Phương thức thanh toán</h3>
       <div class="choice">
-        <label class="${u ? '' : 'off'}"><input type="radio" name="pay" value="wallet"${form.pay === 'wallet' ? ' checked' : ''}${u ? '' : ' disabled'}><span class="c-ico">${icon('wallet')}</span><span><b>Thanh toán bằng ví điểm</b><small>${u ? `Trừ ví điểm mua hàng (${PS(shopBal())}) trước, còn lại trừ ví tiền mặt (${money(cashBal())}).` : '<a class="gold" href="thanh-vien.html">Đăng nhập</a> để thanh toán bằng ví.'}</small></span></label>
+        <label class="${u ? '' : 'off'}"><input type="radio" name="pay" value="wallet"${form.pay === 'wallet' ? ' checked' : ''}${u ? '' : ' disabled'}><span class="c-ico">${icon('wallet')}</span><span><b>Thanh toán bằng ví điểm</b><small>${u ? `Trừ lần lượt ví điểm mua hàng (${PS(shopBal())}), ví điểm khả dụng (${PS(availBal())}), rồi ví tiền mặt (${money(cashBal())}).` : '<a class="gold" href="thanh-vien.html">Đăng nhập</a> để thanh toán bằng ví.'}</small></span></label>
         <label><input type="radio" name="pay" value="bank"${form.pay === 'bank' ? ' checked' : ''}><span class="c-ico">${icon('card')}</span><span><b>Chuyển khoản ngân hàng</b><small>Đơn được xử lý ngay khi nhận được chuyển khoản.</small></span></label>
       </div>
       <div id="walletBox">${walletNote()}</div>
@@ -332,7 +334,7 @@
           <dl class="kv"><dt>Người nhận</dt><dd>${esc(form.name)}</dd><dt>Điện thoại</dt><dd>${esc(form.phone)}</dd>${form.email ? `<dt>Email</dt><dd style="word-break:break-all">${esc(form.email)}</dd>` : ''}<dt>Địa chỉ</dt><dd>${esc(form.address)}, ${esc(form.province)}</dd>${form.note ? `<dt>Ghi chú</dt><dd>${esc(form.note)}</dd>` : ''}</dl></div>
         <div class="box"><h4>${icon('wallet')} Thanh toán <button class="link-btn" type="button" data-go="1">Sửa</button></h4>
           <p style="font-size:14px"><b>${form.pay === 'bank' ? 'Chuyển khoản ngân hàng' : 'Thanh toán bằng ví điểm'}</b></p>
-          <p class="muted mt-1" style="font-size:13px">${form.pay === 'bank' ? `Chuyển khoản tới ${esc(S.bank.name)}, số tài khoản ${esc(S.bank.account)}, nội dung ghi mã đơn hàng.` : `${payUsed() ? `Ví điểm mua hàng trừ ${PS(payUsed())}. ` : ''}${cashUsed() ? `Ví tiền mặt trừ ${money(cashUsed())}. ` : ''}Đơn được ghi nhận đã thanh toán ngay.`}</p></div>
+          <p class="muted mt-1" style="font-size:13px">${form.pay === 'bank' ? `Chuyển khoản tới ${esc(S.bank.name)}, số tài khoản ${esc(S.bank.account)}, nội dung ghi mã đơn hàng.` : `${payUsed() ? `Ví điểm mua hàng trừ ${PS(payUsed())}. ` : ''}${availUsed() ? `Ví điểm khả dụng trừ ${PS(availUsed())}. ` : ''}${cashUsed() ? `Ví tiền mặt trừ ${money(cashUsed())}. ` : ''}Đơn được ghi nhận đã thanh toán ngay.`}</p></div>
       </div>
       <div class="box mt-2" style="padding:0">
         <div class="lines">${it.map(x => { const p = PSQ.pv(x.id, x.v); return `<div class="sum-item" style="padding:10px 0;border-bottom:1px solid var(--line)"><span class="cart-thumb">${art(p)}<i>${x.qty}</i></span><b>${esc(p.name)} <span class="dim">x ${x.qty}</span></b><span class="nowrap gold">${money(p.price * x.qty)}</span></div>`; }).join('')}</div>
@@ -342,7 +344,7 @@
         <div class="row"><span class="muted">Phí giao hàng</span><span class="${ship ? '' : 'green'}">${ship ? money(ship) : 'Miễn phí'}</span></div>
         ${off() ? `<div class="row"><span class="muted">Mã giảm giá ${esc(coupon.code)}</span><span class="green">-${money(off())}</span></div>` : ''}
         <div class="row grand"><span>Tổng thanh toán</span><b>${money(sub + ship - off())}</b></div>
-        ${payUsed() ? `<div class="row" data-pt-line><span class="muted">Trừ ví điểm mua hàng</span><span class="green">-${PS(payUsed())}</span></div>` : ''}${cashUsed() ? `<div class="row"><span class="muted">Trừ ví tiền mặt</span><span class="cyan">-${money(cashUsed())}</span></div>` : ''}${payUsed() || cashUsed() ? `<div class="row"><span class="muted">Còn phải thanh toán</span><b class="gold">${money(sub + ship - off() - payUsed() - cashUsed())}</b></div>` : ''}
+        ${payUsed() ? `<div class="row" data-pt-line><span class="muted">Trừ ví điểm mua hàng</span><span class="green">-${PS(payUsed())}</span></div>` : ''}${availUsed() ? `<div class="row"><span class="muted">Trừ ví điểm khả dụng</span><span class="green">-${PS(availUsed())}</span></div>` : ''}${cashUsed() ? `<div class="row"><span class="muted">Trừ ví tiền mặt</span><span class="cyan">-${money(cashUsed())}</span></div>` : ''}${payUsed() || availUsed() || cashUsed() ? `<div class="row"><span class="muted">Còn phải thanh toán</span><b class="gold">${money(sub + ship - off() - payUsed() - availUsed() - cashUsed())}</b></div>` : ''}
       </div>
       <p class="dim mt-2" style="font-size:12px">Bấm xác nhận nghĩa là anh chị đồng ý với chính sách đổi trả và bảo hành của Phúc Sinh QuanTum. Nhân viên sẽ gọi xác nhận trước khi giao.</p>
       <div class="nav-btns"><button class="btn btn-ghost" type="button" data-go="1">${icon('back')} Quay lại</button><button class="btn btn-gold btn-lg" type="button" id="placeBtn">${icon('check')} Xác nhận đặt hàng</button></div>
@@ -353,11 +355,11 @@
   function walletNote() {
     if (form.pay !== 'wallet' || !u) return '';
     const lack = due() - walletBal();
-    return lack > 0 ? `<p class="pts-note mt-2">${icon('info')}<span>Ví còn thiếu <b class="gold">${money(lack)}</b> cho đơn này. <a class="gold" href="thanh-vien.html#nap-diem">Nạp tiền vào ví tiền mặt</a> rồi quay lại, hoặc chọn chuyển khoản.</span></p>`
-      : `<p class="pts-note mt-2">${icon('check')}<span>Ví đủ thanh toán ${money(due())}.${payUsed() ? ` Trừ ${PS(payUsed())} ví mua hàng` : ''}${cashUsed() ? `${payUsed() ? ',' : ' Trừ'} ${money(cashUsed())} ví tiền mặt` : ''}.</span></p>`;
+    return lack > 0 ? `<p class="pts-note mt-2">${icon('info')}<span>Ba ví cộng lại còn thiếu <b class="gold">${money(lack)}</b> cho đơn này. <a class="gold" href="thanh-vien.html#nap-diem">Nạp tiền vào ví tiền mặt</a> rồi quay lại, hoặc chọn chuyển khoản.</span></p>`
+      : `<p class="pts-note mt-2">${icon('check')}<span>Ví đủ thanh toán ${money(due())}. Trừ ${[payUsed() ? PS(payUsed()) + ' ví mua hàng' : '', availUsed() ? PS(availUsed()) + ' ví điểm khả dụng' : '', cashUsed() ? money(cashUsed()) + ' ví tiền mặt' : ''].filter(Boolean).join(', ')}.</span></p>`;
   }
   function viewSuccess(o) {
-    const sp = o.shopPaid || 0, cp = o.cashPaid || 0, due = Math.max(0, o.total - sp - cp), bank = o.pay === 'bank' && due > 0;
+    const sp = (o.shopPaid || 0) + (o.availPaid || 0), cp = o.cashPaid || 0, due = Math.max(0, o.total - sp - cp), bank = o.pay === 'bank' && due > 0;
     const unpaid = bank && o.status === 'pending';
     return `<div class="card glow-mix success${unpaid ? ' unpaid' : ''}">
       <div class="ok-ico">${icon(unpaid ? 'clock' : 'check')}</div>
@@ -370,7 +372,7 @@
       <ol class="pay-steps"><li class="on"><i>1</i>Chuyển khoản</li><li><i>2</i>Gửi ảnh bill</li><li><i>3</i>Công ty xác nhận</li></ol>` : ''}
       <div class="info">
         <div class="box" style="padding:16px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--line)">
-          <dl class="kv"><dt>Tổng đơn hàng</dt><dd><b class="${sp || cp ? '' : 'gold'}" style="font-size:${sp || cp ? 15 : 18}px">${money(o.total)}</b></dd>${sp ? `<dt>Đã dùng điểm</dt><dd class="green">${PS(sp)}</dd>` : ''}${cp ? `<dt>Ví tiền mặt</dt><dd class="cyan">${money(cp)}</dd>` : ''}${sp || cp ? `<dt>Còn phải trả</dt><dd><b class="gold" style="font-size:18px">${money(due)}</b></dd>` : ''}<dt>Giao đến</dt><dd>${esc(o.address)}</dd><dt>Thanh toán</dt><dd>${due === 0 ? (sp && cp ? 'Ví điểm mua hàng và ví tiền mặt' : cp ? 'Ví tiền mặt' : 'Ví điểm mua hàng') : bank ? 'Chuyển khoản ngân hàng' : 'Khi nhận hàng (COD)'}</dd></dl>
+          <dl class="kv"><dt>Tổng đơn hàng</dt><dd><b class="${sp || cp ? '' : 'gold'}" style="font-size:${sp || cp ? 15 : 18}px">${money(o.total)}</b></dd>${sp ? `<dt>Đã dùng điểm</dt><dd class="green">${PS(sp)}</dd>` : ''}${cp ? `<dt>Ví tiền mặt</dt><dd class="cyan">${money(cp)}</dd>` : ''}${sp || cp ? `<dt>Còn phải trả</dt><dd><b class="gold" style="font-size:18px">${money(due)}</b></dd>` : ''}<dt>Giao đến</dt><dd>${esc(o.address)}</dd><dt>Thanh toán</dt><dd>${due === 0 ? [o.shopPaid ? 'ví điểm mua hàng' : '', o.availPaid ? 'ví điểm khả dụng' : '', cp ? 'ví tiền mặt' : ''].filter(Boolean).join(', ').replace(/^./, x => x.toUpperCase()) : bank ? 'Chuyển khoản ngân hàng' : 'Khi nhận hàng (COD)'}</dd></dl>
         </div>
         ${bank ? `<div class="bank mt-2" id="bankBox"><p style="font-size:14px;margin-bottom:10px"><b>${unpaid ? 'Bước 1. ' : ''}Chuyển khoản theo thông tin này</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Số tiền</dt><dd>${money(due)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due, o.id)}</div>${payWait()}`
           : due === 0 ? `<p class="pts-note mt-2">${icon('check')}<span>Đơn đã thanh toán đủ bằng ví. ${sp ? `Ví mua hàng còn <b>${PS(shopBal())}</b>. ` : ''}${cp ? `Ví tiền mặt còn <b>${money(cashBal())}</b>. ` : ''} Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận giao hàng.</span></p>`
@@ -450,10 +452,10 @@
     if (e.target.closest('#cpOff')) { coupon = null; render(); return; }
     if (e.target.closest('#placeBtn')) {
       const b = $('#placeBtn'); b.disabled = true;
-      const want = payUsed(), wantCash = cashUsed(); // tính trước khi giỏ hàng được xóa
+      const want = payUsed(), wantAvail = availUsed(), wantCash = cashUsed(); // tính trước khi giỏ hàng được xóa
       const saveAddr = u && !form.addrId && form.saveAddr ? { line: form.address.trim(), province: form.province } : null;
       const res = PSQ.placeOrder({ name: form.name, phone: normPhone(form.phone), email: form.email, address: `${form.address}, ${form.province}`, note: form.note, pay: form.pay },
-        Object.assign({ useShop: u ? want : 0, useCash: u ? wantCash : 0, saveAddr, coupon: coupon ? coupon.code : '' }, !u && form.ref ? { ref: form.ref.toUpperCase() } : {}));
+        Object.assign({ useShop: u ? want : 0, useAvail: u ? wantAvail : 0, useCash: u ? wantCash : 0, saveAddr, coupon: coupon ? coupon.code : '' }, !u && form.ref ? { ref: form.ref.toUpperCase() } : {}));
       if (res.error) { b.disabled = false; toast(res.error, 'err'); return; }
       placed = res.order; coupon = null;
       render(true); toast('Đặt hàng thành công: ' + placed.id);

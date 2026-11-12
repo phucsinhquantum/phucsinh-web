@@ -561,10 +561,17 @@
     },
     // dùng ví tiền mặt để thanh toán đơn (sau phần điểm mua hàng)
     spendCash(d, u, order, amount) {
-      const b = ADB.balances(d, u.id).cash; amount = Math.min(Math.round(+amount), b, order.total - (order.shopPaid || 0));
+      const b = ADB.balances(d, u.id).cash; amount = Math.min(Math.round(+amount), b, order.total - (order.shopPaid || 0) - (order.availPaid || 0));
       if (!(amount > 0)) return 0;
       credit(d, u.id, 'cash', 'spend', -amount, 'Thanh toán đơn ' + order.id, order.id);
       order.cashPaid = amount; return amount;
+    },
+    // dùng ví điểm khả dụng trả một phần đơn thường (sau ví mua hàng, trước ví tiền mặt), 1 PS = 1đ
+    spendAvailPart(d, u, order, amount) {
+      const b = ADB.balances(d, u.id).avail; amount = Math.min(Math.round(+amount), b, order.total - (order.shopPaid || 0) - (order.cashPaid || 0));
+      if (!(amount > 0)) return 0;
+      credit(d, u.id, 'avail', 'spend', -amount, 'Thanh toán đơn ' + order.id, order.id);
+      order.availPaid = amount; return amount;
     },
     // trả trọn đơn (gói CTV, gói đại lý) bằng ví điểm khả dụng, 1 PS = 1đ; không đủ điểm thì không trừ
     spendAvail(d, u, order) {

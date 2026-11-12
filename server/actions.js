@@ -142,7 +142,7 @@ function botFanpages(d, A, body, stamp) {
   return { ok: true, added, updated, bad, showing: fanList(d).length };
 }
 function orderText(o) {
-  const paid = (o.shopPaid || 0) + (o.cashPaid || 0);
+  const paid = (o.shopPaid || 0) + (o.cashPaid || 0) + (o.availPaid || 0);
   return `${o.name} · ${o.phone}\n${(o.items || []).map(x => `${x.qty} x ${x.name}`).join('\n')}\nTổng ${money(o.total)}${o.discount ? ` (đã giảm ${money(o.discount)}, mã ${o.coupon})` : ''}${paid ? `, đã trả bằng ví ${money(paid)}` : ''}${o.address ? `\nĐịa chỉ: ${o.address}` : ''}`;
 }
 
@@ -329,7 +329,7 @@ const ACTIONS = {
     o.claims = (o.claims || 0) + 1;
     const f = c.saveBill(o.id, bill.buf, bill.type);
     (o.bills = o.bills || []).push({ f, at: c.stamp() });
-    const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
+    const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0) - (o.availPaid || 0));
     const what = c.A.isAgentPkgOrder(o) ? 'gói đại lý' : (o.items || []).some(x => x.id === c.A.PKG_ID) ? 'gói kích hoạt CTV' : 'đơn';
     c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${orderText(o)}\nSố tiền cần nhận ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
     c.log('Khách gửi bill chuyển khoản', o.id);
@@ -409,14 +409,16 @@ const ACTIONS = {
       c.A.codeUse(d, cc, o);
     }
     d.orders.unshift(o);
-    let used = 0, usedC = 0;
+    let used = 0, usedA = 0, usedC = 0;
     if (me) {
+      // trừ lần lượt: ví mua hàng, ví điểm khả dụng, ví tiền mặt
       if (int(args.useShop) > 0) used = A.spendShop(d, me, o, int(args.useShop));
+      if (int(args.useAvail) > 0) usedA = A.spendAvailPart(d, me, o, int(args.useAvail));
       if (int(args.useCash) > 0) usedC = A.spendCash(d, me, o, int(args.useCash));
-      if (used || usedC) {
-        const full = used + usedC >= o.total;
+      if (used || usedA || usedC) {
+        const full = used + usedA + usedC >= o.total;
         if (full) A.setStatus(d, o, 'paid');
-        c.log('Thanh toán bằng ví', `${o.id}: ${me.name}${used ? ` dùng ${ps(used)} ví mua hàng` : ''}${usedC ? ` trả ${money(usedC)} ví tiền mặt` : ''}${full ? ', đã thanh toán đủ' : ''}`);
+        c.log('Thanh toán bằng ví', `${o.id}: ${me.name}${used ? ` dùng ${ps(used)} ví mua hàng` : ''}${usedA ? ` dùng ${ps(usedA)} ví điểm khả dụng` : ''}${usedC ? ` trả ${money(usedC)} ví tiền mặt` : ''}${full ? ', đã thanh toán đủ' : ''}`);
       }
       const sa = args.saveAddr;
       if (sa && str(sa.line).length >= 5) {
@@ -425,7 +427,7 @@ const ACTIONS = {
       }
     }
     c.log('Đặt hàng', `${o.id}: ${name}, ${money(o.total)}`);
-    const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
+    const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0) - (o.availPaid || 0));
     // chưa thanh toán thì chưa báo Telegram; khách gửi bill chuyển khoản (paidClaim) mới báo kèm đủ chi tiết đơn
     if (!due) c.notify(`Đơn hàng mới ${o.id} (đã thanh toán bằng ví)\n${orderText(o)}`);
     if (email) c.mail(email, `Xác nhận đơn hàng ${o.id}`, 'Đơn hàng', wrapMail(c.site, 'Cảm ơn ' + c.e(name) + ' đã đặt hàng',

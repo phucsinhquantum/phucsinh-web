@@ -381,7 +381,7 @@ function verifyPage(req, res, url) {
 
 /* ---------- duyệt đã nhận tiền: dùng cho trang xác nhận (Telegram) ---------- */
 const fmVnd = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ';
-const dueOf = o => Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
+const dueOf = o => Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0) - (o.availPaid || 0));
 function approveOrder(o, via) {
   const owner = D.users.find(u => A().isOwner(u)) || null;
   ACTOR = owner; const r = A().setStatus(D, o, 'paid');
@@ -409,7 +409,7 @@ async function confirmPage(req, res, url) {
   const billImgs = (x, t) => (x.bills || []).length ? `<p style="margin:0 0 8px"><b>Ảnh bill khách gửi</b> (đối chiếu với tài khoản ngân hàng)</p>${x.bills.map(b => `<a href="/api/bill?f=${encodeURIComponent(b.f)}&t=${encodeURIComponent(t)}" target="_blank"><img src="/api/bill?f=${encodeURIComponent(b.f)}&t=${encodeURIComponent(t)}" alt="Bill chuyển khoản" style="display:block;width:100%;border-radius:10px;margin:0 0 10px;border:1px solid #3a3122"></a>`).join('')}` : '<p style="font-size:13px">Khách chưa gửi ảnh bill.</p>';
   const owner = D.users.find(u => A().isOwner(u)) || null;
   if (o) {
-    const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0));
+    const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0) - (o.availPaid || 0));
     if (o.status !== 'pending') { store.useToken(t); return page('Đơn đã xử lý', `<h1>Đơn ${esc(o.id)} đã được xử lý</h1><p>Trạng thái hiện tại: ${esc(o.status)}.</p>`); }
     if (req.method === 'POST') {
       const r = approveOrder(o, 'từ tin Telegram');
@@ -590,7 +590,7 @@ const sinceOf = o => o.at || ((o.bills || [])[0] || {}).at || (o.date + ' 00:00'
 function staleList(min = 10) {
   const cut = vnStamp(Date.now() - min * 6e4);
   return D.orders.filter(o => o.status === 'pending' && sinceOf(o) <= cut)
-    .map(o => ({ id: o.id, name: o.name, phone: o.phone || '', total: o.total, due: Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0)), since: sinceOf(o), bills: (o.bills || []).map(b => b.f), sentAt: o.staleSent || 0 }))
+    .map(o => ({ id: o.id, name: o.name, phone: o.phone || '', total: o.total, due: Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0) - (o.availPaid || 0)), since: sinceOf(o), bills: (o.bills || []).map(b => b.f), sentAt: o.staleSent || 0 }))
     .sort((a, b) => (b.bills.length > 0) - (a.bills.length > 0) || (a.since < b.since ? -1 : 1));
 }
 function staleSend(list) {
