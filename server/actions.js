@@ -790,11 +790,13 @@ const ACTIONS = {
     if (!u || u.role === 'admin') return err('Chỉ cấp được cho tài khoản thành viên.');
     if (u.tier === 'daily') return err(`${u.name} đã là Đại lý.`);
     if (!note) return err('Anh nhập lý do cấp để lưu vào nhật ký.');
+    if (!verifyPass(String(c.args.pass || ''), c.me.pass)) return err('Mật khẩu xác nhận chưa đúng.');
     const date = c.today(), from = u.tier || 'khach';
     if (from === 'khach') u.activated = date;
     u.tier = 'daily'; u.agentSince = date; delete u.agentPending; delete u.ctvPending; u.agentGrant = { by: c.me.id, date, note, from };
     if (c.args.points !== false && P.agentPkgPoints > 0) A.credit(d, u.id, 'shop', 'package', P.agentPkgPoints, 'Quản trị cấp gói đại lý: ' + note, '', { date });
-    c.log('Cấp gói đại lý', `${u.name} (${u.code}) từ ${A.TIERS[from] ? A.TIERS[from].name : from}${c.args.points !== false ? ', cộng ' + ps(P.agentPkgPoints) : ', không cộng điểm'}: ${note}`, u);
+    const txt = `${u.name} (${u.code}) từ ${A.TIERS[from] ? A.TIERS[from].name : from} lên Đại lý${c.args.points !== false ? ', cộng ' + ps(P.agentPkgPoints) + ' vào ví mua hàng' : ', không cộng điểm'}: ${note}`;
+    c.log('Cấp gói đại lý', txt, u); c.notify(`🎖 Cấp gói đại lý (không thu tiền)\n${txt}\nNgười làm: ${c.me.name}`);
     return { ok: true };
   } },
   memberSponsor: { auth: 'admin', perm: 'members', run(c) {
