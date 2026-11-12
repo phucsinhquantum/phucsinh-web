@@ -179,6 +179,15 @@ async function flow() {
       // gói do quản trị cấp: lên CTV, không có thưởng giới thiệu
       const G = await reg('CTV cấp G', 'ktg', B.r.me.code);
       ok(!(await owner.act('ctvGrant', { id: G.r.me.id, note: 'Thử cấp' })).error && ((await G.c.boot()).me || {}).tier === 'ctv', 'chủ sở hữu cấp gói CTV: lên CTV ngay');
+      {
+        const dbg = async () => (await owner.req('GET', '/api/admin/db')).json.db, d0 = await dbg(), g0 = ENG.ADB.balances(d0, G.r.me.id).shop, nC = (d0.commissions || []).length;
+        ok(!!(await G.c.act('agentGrant', { id: G.r.me.id, note: 'x' })).error, 'cấp gói đại lý: thành viên tự cấp bị chặn');
+        ok(/lý do/.test((await owner.act('agentGrant', { id: G.r.me.id, note: '' })).error || ''), 'cấp gói đại lý: bắt buộc ghi lý do');
+        ok(!(await owner.act('agentGrant', { id: G.r.me.id, note: 'Thử cấp đại lý' })).error, 'chủ sở hữu cấp gói đại lý');
+        const d1 = await dbg(), plan1 = ENG.ADB.plan(d1);
+        ok(((await G.c.boot()).me || {}).tier === 'daily' && ENG.ADB.balances(d1, G.r.me.id).shop === g0 + plan1.agentPkgPoints && (d1.commissions || []).length === nC && !ENG.ADB.fund(d1).diff, 'cấp gói đại lý: lên Đại lý ngay, cộng điểm gói vào ví mua hàng, tuyến trên không có hoa hồng, quỹ cân');
+        ok(/đã là Đại lý/.test((await owner.act('agentGrant', { id: G.r.me.id, note: 'lần 2' })).error || ''), 'cấp gói đại lý: không cấp 2 lần');
+      }
       db = (await owner.req('GET', '/api/admin/db')).json.db;
       ok(!com(B.r.me.id, 'ref').some(c => c.from === G.r.me.id), 'gói CTV do quản trị cấp không trả thưởng giới thiệu');
       // rút tiền mặt: thuế chỉ trên phần chưa chịu thuế (thưởng giới thiệu, thu nhập CTV); tiền từ ví hoa hồng đã trừ thuế

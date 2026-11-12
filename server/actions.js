@@ -783,6 +783,20 @@ const ACTIONS = {
     c.log('Cấp gói CTV', `${u.name} (${u.code})${c.args.points !== false ? ', cộng ' + ps(P.pkgPoints) : ', không cộng điểm'}: ${note}`, u);
     return { ok: true };
   } },
+  // chủ sở hữu cấp gói đại lý không thu tiền (anh Tuân 12/11): lên Đại lý ngay, cộng điểm gói vào ví mua hàng;
+  // tuyến trên không nhận hoa hồng của gói (gói vốn không trả hoa hồng), đơn mua sau đó tính bình thường
+  agentGrant: { auth: 'owner', run(c) {
+    const { d, A } = c, u = A.user(d, c.args.id), P = A.plan(d), note = str(c.args.note, 120);
+    if (!u || u.role === 'admin') return err('Chỉ cấp được cho tài khoản thành viên.');
+    if (u.tier === 'daily') return err(`${u.name} đã là Đại lý.`);
+    if (!note) return err('Anh nhập lý do cấp để lưu vào nhật ký.');
+    const date = c.today(), from = u.tier || 'khach';
+    if (from === 'khach') u.activated = date;
+    u.tier = 'daily'; u.agentSince = date; delete u.agentPending; delete u.ctvPending; u.agentGrant = { by: c.me.id, date, note, from };
+    if (c.args.points !== false && P.agentPkgPoints > 0) A.credit(d, u.id, 'shop', 'package', P.agentPkgPoints, 'Quản trị cấp gói đại lý: ' + note, '', { date });
+    c.log('Cấp gói đại lý', `${u.name} (${u.code}) từ ${A.TIERS[from] ? A.TIERS[from].name : from}${c.args.points !== false ? ', cộng ' + ps(P.agentPkgPoints) : ', không cộng điểm'}: ${note}`, u);
+    return { ok: true };
+  } },
   memberSponsor: { auth: 'admin', perm: 'members', run(c) {
     const { d, A } = c, u = A.user(d, c.args.id), k = str(c.args.code, 40).toUpperCase();
     if (!u || u.role === 'admin') return err('Chỉ đổi được cho tài khoản thành viên.');
