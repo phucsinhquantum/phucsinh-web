@@ -459,6 +459,8 @@ async function remindShip(force) {
   const h = vnNow().getUTCHours(), day = vnDay(), chats = shipChats();
   if (!env.TELEGRAM_BOT_TOKEN || !chats.length) return { sent: 0, error: 'Chưa cấu hình Telegram.' };
   if (!force && (h < 8 || h >= 18)) return { sent: 0 };
+  // bản thử: đơn là dữ liệu giả, không tự nhắc (bấm tay vẫn được); bật lại bằng TEST_REMIND=1
+  if (!force && TEST && env.TEST_REMIND !== '1') return { sent: 0 };
   const list = toShip(force ? '9999' : day).filter(o => force || o.remindedOn !== day);
   // đánh dấu và lưu trước khi gửi, để lần kiểm tra sau không nhắc trùng dù đang gửi dở
   const jobs = list.map(o => { o.reminds = (o.reminds || 0) + 1; o.remindedOn = day; return { o, photo: productPhoto(o), text: shipText(o, o.reminds) }; });
@@ -608,7 +610,7 @@ let staleSlot = '';
 setInterval(() => {
   try {
     const t = vnNow(), h = t.getUTCHours(), slot = t.toISOString().slice(0, 10) + ':' + h;
-    if (![9, 14, 20].includes(h) || staleSlot === slot || !env.TELEGRAM_BOT_TOKEN || (D.settings || {}).staleAuto === false) return;
+    if (![9, 14, 20].includes(h) || staleSlot === slot || (TEST && env.TEST_REMIND !== '1') || !env.TELEGRAM_BOT_TOKEN || (D.settings || {}).staleAuto === false) return;
     staleSlot = slot; const L = staleList(); if (L.length) staleSend(L);
   } catch (e) { console.error('[đơn sót]', e); }
 }, 5 * 6e4);
