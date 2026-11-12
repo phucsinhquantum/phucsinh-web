@@ -781,6 +781,7 @@ const ACTIONS = {
     u.tier = 'ctv'; u.activated = date; u.ctvGrant = { by: c.me.id, date, note };
     if (c.args.points !== false) { A.credit(d, u.id, 'shop', 'package', P.pkgPoints, 'Quản trị cấp gói cộng tác viên: ' + note, '', { date }); u.pkgLeft = (u.pkgLeft || 0) + P.pkgPoints; }
     c.log('Cấp gói CTV', `${u.name} (${u.code})${c.args.points !== false ? ', cộng ' + ps(P.pkgPoints) : ', không cộng điểm'}: ${note}`, u);
+    c.notify(`🎖 Cấp gói CTV (không thu tiền)\n${u.name} (${u.code}) từ Khách hàng lên CTV${c.args.points !== false ? ', cộng ' + ps(P.pkgPoints) + ' vào ví mua hàng' : ', không cộng điểm'}: ${note}\nNgười làm: ${c.me.name}`);
     return { ok: true };
   } },
   // chủ sở hữu cấp gói đại lý không thu tiền (anh Tuân 12/11): lên Đại lý ngay, cộng điểm gói vào ví mua hàng;
