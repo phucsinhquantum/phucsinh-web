@@ -371,6 +371,41 @@ async function flow() {
     ok(/đã hoàn lại/.test((await owner.act('memberWalletUndo', { ref: lg[0].ref, pass: 'KiemTra@2026' })).error || ''), 'Điều chỉnh điểm: không hoàn lại 2 lần');
     ok(/khả dụng hoặc điểm thưởng/.test((await owner.act('memberWallet', { id: B.r.me.id, op: 'toshop', from: 'shop', amount: 10, note: 'x', pass: 'KiemTra@2026' })).error || ''), 'Điều chỉnh điểm: chỉ chuyển từ ví khả dụng, điểm thưởng sang ví mua hàng');
     }
+    {
+    // khách tự đổi sản phẩm khi đơn chưa giao (anh Tuân 12/11): chỉ bằng hoặc cao hơn, bù bằng ví hoặc chuyển khoản, tối đa 3 lần
+    const dbNow = async () => (await owner.req('GET', '/api/admin/db')).json.db;
+    const balOf = async uid => ENG.ADB.balances(await dbNow(), uid);
+    const S = await reg('Đổi Đơn Thử', 'ktsd', A.r.me && A.r.me.code); S.r.me = S.r.me || S.c.me;
+    ok(!(await owner.act('ctvGrant', { id: S.r.me.id, note: 'kiểm tra đổi đơn' })).error, 'Đổi đơn: cấp gói CTV để có điểm mua hàng');
+    const prods = ENG.PRODUCTS.filter(p => p.active !== false && p.id !== ENG.ADB.PKG_ID && p.id !== ENG.ADB.AGENT_PKG_ID && !(p.variants || []).length).sort((a, b) => a.price - b.price);
+    const Q = prods[0], Q2 = prods.find(p => p.id !== Q.id && p.price === Q.price), Big = prods.find(p => p.price > Q.price * 2);
+    const sInfo = { name: 'Đổi Đơn Thử', phone: '0911222333', address: '1 Đường Thử, Quận 1', pay: 'bank' };
+    const o1 = ((await S.c.act('placeOrder', { items: [{ id: Q.id, qty: 2 }], info: sInfo })).result || {}).order || {};
+    ok(o1.status === 'pending', 'Đổi đơn: đặt đơn chuyển khoản chờ duyệt');
+    ok(/Không tìm thấy/.test((await A.c.act('orderEdit', { id: o1.id, info: { address: '9 Đường Khác, Quận 3' } })).error || ''), 'Đổi đơn: người khác không đổi được');
+    ok(/chưa thay đổi/.test((await S.c.act('orderEdit', { id: o1.id, info: {} })).error || ''), 'Đổi đơn: không đổi gì thì báo');
+    ok(/bằng hoặc cao hơn/.test((await S.c.act('orderEdit', { id: o1.id, items: [{ id: Q.id, qty: 1 }] })).error || ''), 'Đổi đơn: đổi sang tổng thấp hơn bị chặn');
+    const e1 = (await S.c.act('orderEdit', { id: o1.id, info: { address: '9 Đường Khác, Quận 3' } })).result || {};
+    ok(e1.order && e1.order.address === '9 Đường Khác, Quận 3' && e1.order.edits === 1 && e1.order.total === o1.total, 'Đổi đơn: sửa địa chỉ, giữ mã đơn và tổng');
+    const b0 = await balOf(S.r.me.id), bigDiff = Big.price - Q.price * 2;
+    const e2 = (await S.c.act('orderEdit', { id: o1.id, items: [{ id: Big.id, qty: 1 }], pay: 'wallet' })).result || {};
+    ok(e2.diff === bigDiff && e2.order.shopPaid === bigDiff && (await balOf(S.r.me.id)).shop === b0.shop - bigDiff && e2.due === o1.total, `Đổi đơn chờ duyệt: đổi lên ${Big.name}, bù ${bigDiff} bằng ví mua hàng, phần cũ vẫn chuyển khoản`);
+    // đơn đã thanh toán, chưa giao
+    const n0 = s.log().length, o2 = ((await S.c.act('placeOrder', { items: [{ id: Q.id, qty: 1 }], info: sInfo })).result || {}).order || {};
+    await confirm(s, guest, n0, 'Đổi đơn', S.c, o2.id, sInfo.phone);
+    if (Q2) { const e0 = (await S.c.act('orderEdit', { id: o2.id, items: [{ id: Q2.id, qty: 1 }] })).result || {}; ok(e0.diff === 0 && e0.order.items[0].id === Q2.id && e0.order.status === 'paid', 'Đổi đơn đã thanh toán: đổi sang món bằng giá, không cần bù'); }
+    ok(/chưa đủ/.test((await S.c.act('orderEdit', { id: o2.id, items: [{ id: (Q2 || Q).id, qty: 2 }], pay: 'wallet' })).error || ''), 'Đổi đơn: ví không đủ phần bù thì báo chọn chuyển khoản');
+    const e4 = (await S.c.act('orderEdit', { id: o2.id, items: [{ id: (Q2 || Q).id, qty: 2 }], pay: 'bank' })).result || {};
+    const o2c = (await dbNow()).orders.find(x => x.id === o2.id);
+    ok(e4.diff === Q.price && o2c.exchange && o2c.exchange.due === Q.price && o2c.status === 'paid', 'Đổi đơn đã thanh toán: bù chuyển khoản thì chờ công ty xác nhận');
+    ok(/chờ công ty xác nhận/.test((await S.c.act('orderEdit', { id: o2.id, info: { note: 'x' } })).error || ''), 'Đổi đơn: đang chờ tiền bù thì chưa đổi tiếp');
+    const ob = await bo('?status=all', bk.key), bob = (ob.j.orders || []).find(x => x.id === o2.id);
+    ok(bob && bob.edits === (Q2 ? 2 : 1) && bob.editedAt && bob.items[0].qty === 2, 'Đổi đơn: Trợ Lý thấy sản phẩm mới, số lần đổi và giờ đổi');
+    const o3 = ((await S.c.act('placeOrder', { items: [{ id: Q.id, qty: 1 }], info: sInfo })).result || {}).order || {};
+    for (const k of [1, 2, 3]) await S.c.act('orderEdit', { id: o3.id, info: { note: 'lần ' + k } });
+    ok(/đổi 3 lần/.test((await S.c.act('orderEdit', { id: o3.id, info: { note: 'lần 4' } })).error || ''), 'Đổi đơn: tối đa 3 lần');
+    ok(!ENG.ADB.fund(await dbNow()).diff, 'Đổi đơn: sổ quỹ cân đối');
+    }
     ok(rb && rb.refLink === `http://127.0.0.1:${s.port}/thanh-vien.html?ref=${B.r.me.code}`, 'An An: có link giới thiệu của người được tra để gửi khách đăng ký');
     const H = client(s.port), hr = await H.act('register', { name: 'Nguyễn Văn Hà', username: 'ktha', email: 'ktha@kiem-tra.vn', phone: '0912345678', pass: '123456a', ref: A.r.me.code, agree: true });
     ok(!hr.error, 'An An: thêm thành viên Nguyễn Văn Hà' + (hr.error ? ': ' + hr.error : ''));
@@ -582,6 +617,20 @@ async function seed() {
     X.spendAvailPart(d, K, o3, 300000); ok(o3.availPaid === 300000 && bal().avail === 700000, 'đơn trả trọn bằng ví điểm khả dụng');
     X.refundOrder(d, o3); ok(bal().avail === 1000000, 'hủy đơn: hoàn lại đúng ví điểm khả dụng');
     ok(X.fund(d).diff === diff0, 'trả bằng ví điểm khả dụng: sổ quỹ không lệch thêm');
+  }
+  // anh Tuân 12/11: khách đổi đơn đã thanh toán lên cao hơn, bù bằng ví: trừ ngay, hoa hồng phần bù vào ví điểm thưởng
+  {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: {} }; X.plan(d);
+    const day = new Date().toISOString().slice(0, 10);
+    d.users.push({ id: 'S', name: 'S', tier: 'ctv', sponsor: null, role: 'member' }, { id: 'K', name: 'K', tier: 'khach', sponsor: 'S', role: 'member' });
+    d.orders.push({ id: 'tu-S', userId: 'S', status: 'done', settled: true, total: 100000, items: [{ id: 'x', price: 100000, qty: 1 }], date: day });
+    d.wallet.push({ id: 'sd', user: 'K', wallet: 'avail', type: 'adjust', amount: 5000000, note: 'nạp thử', date: day, status: 'done' });
+    const K = d.users[1], o = { id: 'ex1', userId: 'K', status: 'pending', pay: 'bank', total: 1000000, items: [{ id: 'x', name: 'x', price: 1000000, qty: 1 }], date: day }; d.orders.push(o);
+    X.setStatus(d, o, 'paid'); const before = d.wallet.filter(w => w.user === 'S').length;
+    ok(!!X.memberSwap(d, o, K, [{ id: 'x', name: 'x', price: 1000000, qty: 1 }, { id: 'y', name: 'y', price: 500000, qty: 1 }], 'wallet').used, 'đổi đơn đã thanh toán, bù 500.000 bằng ví');
+    const rows = d.wallet.filter(w => w.user === 'S').slice(before), bon = rows.filter(w => w.wallet === 'bonus').reduce((x, w) => x + w.amount, 0), csh = rows.filter(w => w.wallet === 'cash').reduce((x, w) => x + w.amount, 0);
+    ok(o.availPaid === 500000 && !o.exchange && bon === 50000 && csh === 0, `bù bằng điểm: hoa hồng 10% phần bù = 50.000 vào ví điểm thưởng (thực tế điểm thưởng ${bon}, tiền mặt ${csh})`);
+    ok(!X.memberSwap(d, o, K, [{ id: 'x', name: 'x', price: 1000000, qty: 1 }], 'wallet').used && /bằng hoặc cao hơn/.test(X.memberSwap(d, o, K, [{ id: 'x', name: 'x', price: 1000000, qty: 1 }], 'wallet').error || ''), 'đổi đơn sang tổng thấp hơn bị chặn');
   }
   // đại lý tự mua (anh Tuân 04/11): B đại lý mua 10tr nhận 25% = 2.500.000; A (đại lý, giới thiệu B) nhận 40% = 1.000.000; C (CTV, trên A) 10% = 100.000
   for (const self of [1, 0]) {

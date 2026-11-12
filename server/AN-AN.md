@@ -62,4 +62,4 @@ Cùng khóa x-bot-key. Mỗi ngày (ví dụ 22h) n8n đọc từng fanpage An A
 
 - `status`: `chua-giao` (mặc định: chờ xác nhận, đã thanh toán, đang giao), `all`, hoặc một trạng thái `pending|paid|ship|done|failed`.
 - `from`, `to`: ngày giờ VN dạng `YYYY-MM-DD` (theo ngày đặt).
-- Trả `{ status, from, to, count, total, orders: [{ id, at, status, statusName, total, pay, name, phone, address, note, items: [{name, qty, price}], buyer: {code, tier}, ref: {name, code}, shipBy, shipAt }] }`, mới nhất trước, tối đa 2000 đơn.
+- Trả `{ status, from, to, count, total, orders: [{ id, at, status, statusName, total, pay, name, phone, address, note, items: [{name, qty, price}], buyer: {code, tier}, ref: {name, code}, shipBy, shipAt, edits, editedAt }] }` (edits: số lần khách tự sửa đơn, editedAt: lúc sửa gần nhất), mới nhất trước, tối đa 2000 đơn.

@@ -179,6 +179,7 @@
   // phần đơn trả bằng điểm (ví mua hàng, ví điểm khả dụng): hoa hồng phần này vào ví điểm thưởng (anh Tuân chốt 12/11)
   function ptsShare(d, orderId) {
     const o = (d.orders || []).find(x => x.id === orderId); if (!o || !(o.total > 0)) return 0;
+    if (o.ptsNow != null) return o.ptsNow;   // phần bù đổi sản phẩm vừa trả bằng điểm
     return Math.min(1, ((+o.shopPaid || 0) + (+o.availPaid || 0)) / o.total);
   }
   function payCommission(d, c) {
@@ -590,6 +591,42 @@
       o.refunded = true; return (o.shopPaid || 0) + (o.cashPaid || 0) + (o.availPaid || 0);
     },
     // đơn đã nhận tiền (đã thanh toán, đã hoàn thành, hoặc đang giao mà không phải trả khi nhận hàng): không hủy được, chỉ đổi sản phẩm
+    // khách tự đổi sản phẩm (anh Tuân 12/11): đơn của mình, chưa giao, không phải đơn gói, tối đa 3 lần.
+    // Chỉ đổi sang tổng bằng hoặc cao hơn; phần chênh trả bằng ví (mua hàng, khả dụng, tiền mặt) hoặc chuyển khoản thêm.
+    EDIT_MAX: 3,
+    editBlock(o, uid) {
+      if (!o || o.userId !== uid) return 'Không tìm thấy đơn hàng.';
+      if (!['pending', 'paid'].includes(o.status)) return 'Đơn đã giao hoặc đã hủy nên không đổi được nữa. Anh chị liên hệ nhân viên giúp em.';
+      if ((o.items || []).some(isPkgItem)) return 'Đơn gói không đổi được.';
+      if (o.exchange && o.exchange.due > 0) return 'Đơn đang chờ công ty xác nhận tiền bù lần đổi trước.';
+      return '';
+    },
+    // trả thêm cho đơn bằng ví: trừ lần lượt ví mua hàng, ví điểm khả dụng, ví tiền mặt; không đủ thì không trừ
+    payExtra(d, u, o, amount) {
+      const b = ADB.balances(d, u.id), have = Math.max(0, b.shop) + Math.max(0, b.avail) + Math.max(0, b.cash);
+      if (have < amount) return { error: `Ba ví cộng lại còn ${PSQ.money(have)}, chưa đủ ${PSQ.money(amount)} phần bù. Anh chị chọn chuyển khoản thêm.` };
+      let left = amount; const used = {};
+      for (const [w, f] of [['shop', 'shopPaid'], ['avail', 'availPaid'], ['cash', 'cashPaid']]) {
+        const a = Math.min(left, Math.max(0, b[w])); if (!(a > 0)) continue;
+        credit(d, u.id, w, 'spend', -a, 'Bù đổi sản phẩm đơn ' + o.id, o.id); o[f] = (o[f] || 0) + a; used[w] = a; left -= a;
+      }
+      return { used };
+    },
+    memberSwap(d, o, u, items, pay) {
+      const old = (o.items || []).map(x => Object.assign({}, x)), diff = items.reduce((s, x) => s + x.price * x.qty, 0) - itemsTotal(o);
+      if (diff < 0) return { error: `Chỉ đổi sang sản phẩm có tổng bằng hoặc cao hơn đơn cũ (${PSQ.money(itemsTotal(o))}). Đơn mới đang thấp hơn ${PSQ.money(-diff)}.` };
+      if (diff > 0 && pay === 'wallet') { const b = ADB.balances(d, u.id), have = Math.max(0, b.shop) + Math.max(0, b.avail) + Math.max(0, b.cash); if (have < diff) return { error: `Ba ví cộng lại còn ${PSQ.money(have)}, chưa đủ ${PSQ.money(diff)} phần bù. Anh chị chọn chuyển khoản thêm.` }; }
+      if (o.stockOut) { ADB.stockBack(d, o, old); o.stockOut = false; o.items = items; ADB.stockOut(d, o); } else o.items = items;
+      o.total += diff;
+      (o.exchanges = o.exchanges || []).push({ date: now(), at: nowAt(), from: old, to: items, diff, pay: diff ? pay : '', by: 'Khách ' + (u.name || '') });
+      let used = null;
+      if (diff && pay === 'wallet') used = ADB.payExtra(d, u, o, diff).used;
+      if (diff && o.status !== 'pending') {
+        o.exchange = { due: diff, diff, date: now(), pay };
+        if (pay === 'wallet') { o.ptsNow = 1; ADB.confirmTopup(d, o); delete o.ptsNow; }   // bù bằng điểm: hoa hồng phần bù vào ví điểm thưởng
+      }
+      return { diff, used };
+    },
     locked(o) { return !!o && (o.settled || ['paid', 'done'].includes(o.status) || (o.status === 'ship' && o.pay !== 'cod')); },
     // tồn kho: null là chưa quản lý (coi như còn hàng)
     stockOf(d, id) { const s = d.stock || {}; return id in s ? +s[id] || 0 : null; },

@@ -448,7 +448,8 @@ function productPhoto(o) {
   }
   return null;
 }
-const shipText = (o, n) => `🚚 Nhắc giao hàng${n > 1 ? ` (lần ${n})` : ''}: đơn ${o.id}
+const shipText = (o, n) => `🚚 Nhắc giao hàng${n > 1 ? ` (lần ${n})` : ''}: đơn ${o.id}${o.edits ? `
+✏️ ĐÃ ĐỔI ${o.edits} lần, lần cuối ${o.editedAt || ''}: soạn theo nội dung dưới đây` : ''}
 Đặt ngày ${String(o.date || '').slice(0, 10).split('-').reverse().join('/')}, đã thanh toán
 Khách: ${o.name} · ${o.phone || ''}
 Địa chỉ: ${o.address || ''}

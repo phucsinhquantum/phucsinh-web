@@ -141,6 +141,23 @@ function botFanpages(d, A, body, stamp) {
   if (body.full !== false) F.forEach(f => { if (f.managed && !seen.has(f.id)) f.managed = false; });
   return { ok: true, added, updated, bad, showing: fanList(d).length };
 }
+// dựng dòng hàng từ giỏ (giá, PS tính thưởng, phân loại lấy từ máy chủ), kiểm tra kho
+function buildItems(c, list) {
+  const { d, A } = c, items = [];
+  for (const x of (Array.isArray(list) ? list : []).slice(0, 50)) {
+    const p = c.products.find(q => q.id === x.id), qty = int(x.qty);
+    if (!p || p.id === A.PKG_ID || p.id === A.AGENT_PKG_ID || p.active === false) return err('Có sản phẩm không còn bán, anh chị tải lại trang giúp em.');
+    if (qty < 1 || qty > 999) return err('Số lượng chưa đúng.');
+    const L = lineOf(p, x.v); if (!L) return err(`${p.name}: anh chị chọn lại phân loại giúp em (tải lại trang).`);
+    const st = A.stockOf(d, p.id), had = items.filter(i => i.id === p.id).reduce((n, i) => n + i.qty, 0);
+    if (st !== null && had + qty > st) return err(st ? `${p.name} chỉ còn ${st} trong kho, anh chị giảm số lượng giúp em.` : `${p.name} đã hết hàng, anh chị bỏ sản phẩm này khỏi giỏ.`);
+    const f = items.find(i => i.id === p.id && (i.v || '') === (L.v || '')); if (f) f.qty += qty; else items.push(Object.assign({ id: p.id }, L.v ? { v: L.v } : {}, { name: L.name, price: L.price, qty }, L.ps != null ? { ps: L.ps } : {}));
+  }
+  if (!items.length) return err('Giỏ hàng đang trống.');
+  return { items };
+}
+const itemsLine = items => (items || []).map(x => `${x.qty} x ${x.name}`).join(', ');
+const sameItems = (a, b) => JSON.stringify((a || []).map(x => [x.id, x.v || '', x.qty]).sort()) === JSON.stringify((b || []).map(x => [x.id, x.v || '', int(x.qty)]).sort());
 function orderText(o) {
   const paid = (o.shopPaid || 0) + (o.cashPaid || 0) + (o.availPaid || 0);
   return `${o.name} · ${o.phone}\n${(o.items || []).map(x => `${x.qty} x ${x.name}`).join('\n')}\nTổng ${money(o.total)}${o.discount ? ` (đã giảm ${money(o.discount)}, mã ${o.coupon})` : ''}${paid ? `, đã trả bằng ví ${money(paid)}` : ''}${o.address ? `\nĐịa chỉ: ${o.address}` : ''}`;
@@ -377,17 +394,7 @@ const ACTIONS = {
   } },
   placeOrder: { auth: 'guest', run(c) {
     const { d, A, args, me } = c, info = args.info || {};
-    const items = [];
-    for (const x of (Array.isArray(args.items) ? args.items : []).slice(0, 50)) {
-      const p = c.products.find(q => q.id === x.id), qty = int(x.qty);
-      if (!p || p.id === A.PKG_ID || p.id === A.AGENT_PKG_ID || p.active === false) return err('Có sản phẩm không còn bán, anh chị tải lại trang giúp em.');
-      if (qty < 1 || qty > 999) return err('Số lượng chưa đúng.');
-      const L = lineOf(p, x.v); if (!L) return err(`${p.name}: anh chị chọn lại phân loại giúp em (tải lại trang).`);
-      const st = A.stockOf(d, p.id), had = items.filter(i => i.id === p.id).reduce((n, i) => n + i.qty, 0);
-      if (st !== null && had + qty > st) return err(st ? `${p.name} chỉ còn ${st} trong kho, anh chị giảm số lượng giúp em.` : `${p.name} đã hết hàng, anh chị bỏ sản phẩm này khỏi giỏ.`);
-      const f = items.find(i => i.id === p.id && (i.v || '') === (L.v || '')); if (f) f.qty += qty; else items.push(Object.assign({ id: p.id }, L.v ? { v: L.v } : {}, { name: L.name, price: L.price, qty }, L.ps != null ? { ps: L.ps } : {}));
-    }
-    if (!items.length) return err('Giỏ hàng đang trống.');
+    const B = buildItems(c, args.items); if (B.error) return B; const items = B.items;
     const name = str(info.name, 80), phone = normPhone(info.phone), email = str(info.email, 120), address = str(info.address, 300), pay = info.pay === 'wallet' ? 'wallet' : 'bank';
     if (name.length < 2 || !/^0\d{9}$/.test(phone) || address.length < 5) return err('Anh chị kiểm tra lại họ tên, số điện thoại và địa chỉ nhận hàng.');
     if (email && !EMAIL.test(email)) return err('Email chưa đúng định dạng.');
@@ -435,6 +442,42 @@ const ACTIONS = {
        ${due ? `<p>Anh chị chuyển khoản <b>${money(due)}</b> tới ${c.e(c.site.bank.name)} ${c.e(c.site.bank.account)} (${c.e(c.site.bank.owner)}), nội dung <b>${o.id}</b>.</p>` : '<p>Đơn đã thanh toán đủ bằng ví.</p>'}
        <p>Giao tới: ${c.e(address)}</p>`));
     return { order: o };
+  } },
+
+  // khách tự đổi sản phẩm / sửa người nhận khi đơn chưa giao (anh Tuân 12/11): giữ mã đơn, tối đa 3 lần,
+  // chỉ đổi sang tổng bằng hoặc cao hơn, phần chênh trả bằng ví hoặc chuyển khoản thêm; Telegram báo trước/sau
+  orderEdit: { auth: 'member', run(c) {
+    const { d, A, me, args } = c, o = d.orders.find(x => x.id === str(args.id, 20));
+    const why = A.editBlock(o, me.id); if (why) return err(why);
+    if ((o.edits || 0) >= A.EDIT_MAX) return err(`Đơn đã đổi ${A.EDIT_MAX} lần, anh chị liên hệ nhân viên để đổi tiếp giúp em.`);
+    const info = args.info || {}, name = str(info.name ?? o.name, 80), phone = normPhone(info.phone ?? o.phone), address = str(info.address ?? o.address, 300), note = str(info.note ?? o.note, 500);
+    if (name.length < 2 || !/^0\d{9}$/.test(phone) || address.length < 5) return err('Anh chị kiểm tra lại họ tên, số điện thoại và địa chỉ nhận hàng.');
+    let items = null;
+    if (Array.isArray(args.items) && !sameItems(o.items, args.items)) {
+      if (o.coupon) return err('Đơn có mã giảm giá nên không đổi sản phẩm được, anh chị liên hệ nhân viên giúp em.');
+      const B = buildItems(c, args.items); if (B.error) return B; items = B.items;
+    }
+    const changes = [];
+    if (name !== o.name) changes.push(`Người nhận: ${o.name} → ${name}`);
+    if (phone !== o.phone) changes.push(`Điện thoại: ${o.phone} → ${phone}`);
+    if (address !== o.address) changes.push(`Địa chỉ: ${o.address} → ${address}`);
+    if (note !== (o.note || '')) changes.push(`Ghi chú: ${note || '(trống)'}`);
+    if (!items && !changes.length) return err('Anh chị chưa thay đổi gì.');
+    const pay = args.pay === 'wallet' ? 'wallet' : 'bank', total0 = o.total, before = itemsLine(o.items), wasPaid = o.status !== 'pending';
+    let sw = null;
+    if (items) { sw = A.memberSwap(d, o, me, items, pay); if (sw.error) return sw; }
+    Object.assign(o, { name, phone, address, note });
+    o.edits = (o.edits || 0) + 1; o.editedAt = c.stamp();
+    (o.editLog = o.editLog || []).push({ at: o.editedAt, n: o.edits, before: items ? before : '', after: items ? itemsLine(items) : '', total0, total: o.total, diff: sw ? sw.diff : 0, pay: sw && sw.diff ? pay : '', changes });
+    const paid = (o.shopPaid || 0) + (o.availPaid || 0) + (o.cashPaid || 0), due = wasPaid ? (o.exchange ? o.exchange.due : 0) : Math.max(0, o.total - paid);
+    let full = false;
+    if (!wasPaid && paid && !due) { const r = A.setStatus(d, o, 'paid'); full = !r.error; }
+    const usedTxt = sw && sw.used ? Object.entries(sw.used).map(([w, a]) => w === 'cash' ? money(a) + ' ví tiền mặt' : ps(a) + (w === 'avail' ? ' ví điểm khả dụng' : ' ví mua hàng')).join(', ') : '';
+    const diff = sw ? sw.diff : 0;
+    c.log('Khách đổi đơn', `${o.id} lần ${o.edits}: ${[items ? `${before} → ${itemsLine(items)}, ${money(total0)} → ${money(o.total)}${usedTxt ? `, bù bằng ${usedTxt}` : ''}` : '', ...changes].filter(Boolean).join('; ')}`);
+    const payTxt = !diff ? '' : usedTxt ? `\nKhách bù ${money(diff)} bằng ví: ${usedTxt}.` : wasPaid ? `\n⚠️ Khách sẽ chuyển khoản bù ${money(diff)}, nội dung ${o.id}. Nhận được tiền thì bấm "Đã nhận bù" ở Quản trị > Đơn hàng.` : `\nSố tiền cần chuyển khoản nay là ${money(due)}.${(o.bills || []).length ? ' ⚠️ Khách đã gửi bill trước khi đổi, anh đối chiếu đúng số mới.' : ''}`;
+    c.notify(`✏️ Khách đổi đơn ${o.id} (lần ${o.edits})${wasPaid ? ', đơn đã thanh toán' : ''}\n${me.name} (@${me.username})${items ? `\nTrước: ${before} · ${money(total0)}\nSau: ${itemsLine(items)} · ${money(o.total)}` : ''}${changes.length ? '\n' + changes.join('\n') : ''}${payTxt}${full ? '\nĐơn nay đã trả đủ bằng ví.' : ''}\nNhân viên soạn hàng theo nội dung mới này.`);
+    return { ok: true, order: o, diff, due, used: sw ? sw.used : null, paid: full };
   } },
 
   /* ===== thành viên ===== */
@@ -929,7 +972,7 @@ function botOrders(d, A, a) {
   const pub = u => u ? { name: u.name || '', code: u.code || '', tier: u.tier || '' } : null;
   const orders = list.slice(0, 2000).map(o => { const buyer = o.userId && A.user(d, o.userId), ref = (buyer && buyer.sponsor && A.user(d, buyer.sponsor)) || (o.refBy && A.user(d, o.refBy)) || null;
     return { id: o.id, at: o.at || o.date || '', status: o.status, statusName: ORDER_NAME[o.status] || o.status, total: +o.total || 0, pay: o.pay || '', name: o.name || '', phone: o.phone || '', address: o.address || '', note: o.note || '',
-      items: (o.items || []).map(x => ({ name: x.name, qty: +x.qty || 0, price: +x.price || 0 })), buyer: buyer ? { code: buyer.code || '', tier: buyer.tier || '' } : null, ref: ref ? { name: ref.name || '', code: ref.code || '' } : null, shipBy: o.shipBy || '', shipAt: o.shipAt || '' }; });
+      items: (o.items || []).map(x => ({ name: x.name, qty: +x.qty || 0, price: +x.price || 0 })), buyer: buyer ? { code: buyer.code || '', tier: buyer.tier || '' } : null, ref: ref ? { name: ref.name || '', code: ref.code || '' } : null, shipBy: o.shipBy || '', shipAt: o.shipAt || '', edits: o.edits || 0, editedAt: o.editedAt || '' }; });
   return { status: st, from, to, count: list.length, total: list.reduce((s, o) => s + (+o.total || 0), 0), orders };
 }
 const botKeyOf = store => (store.getJSON('secret:bot') || {}).key || '';

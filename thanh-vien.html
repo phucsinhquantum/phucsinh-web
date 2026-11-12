@@ -25,8 +25,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261112d">
-<script src="js/lang.js?v=20261112d"></script>
+<link rel="stylesheet" href="css/app.css?v=20261112e">
+<script src="js/lang.js?v=20261112e"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -245,11 +245,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261112d"></script>
-<script src="js/api.js?v=20261112d"></script>
-<script src="js/data.js?v=20261112d"></script>
-<script src="js/app.js?v=20261112d"></script>
-<script src="js/psq-data.js?v=20261112d"></script>
+<script src="js/patch.js?v=20261112e"></script>
+<script src="js/api.js?v=20261112e"></script>
+<script src="js/data.js?v=20261112e"></script>
+<script src="js/app.js?v=20261112e"></script>
+<script src="js/psq-data.js?v=20261112e"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -677,10 +677,69 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       const md = modal(`<div class="card-head"><h3>Đơn #${esc(o.id)}</h3>${pay && !(o.bills || []).length ? '<span class="badge pending">Chờ thanh toán</span>' : statusBadge(o.status)}<button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
         ${(o.items || []).map(x => `<div class="row between" style="padding:6px 0;gap:10px"><span>${esc(x.name)} x${x.qty}</span><b class="nowrap">${money(x.price * x.qty)}</b></div>`).join('')}
         <div class="divider"></div>${o.shopPaid ? `<div class="row between"><span class="muted">Trả bằng ví điểm mua hàng</span><b class="green">${ps(o.shopPaid)}</b></div>` : ''}${o.availPaid ? `<div class="row between"><span class="muted">Trả bằng ví điểm khả dụng</span><b class="green">${ps(o.availPaid)}</b></div>` : ''}${o.cashPaid ? `<div class="row between"><span class="muted">Trả bằng ví tiền mặt</span><b class="cyan">${money(o.cashPaid)}</b></div>` : ''}<div class="row between mt-1"><span class="muted">Tổng</span><b class="gold">${money(o.total)}</b></div>
-        <p class="dim mt-2" style="font-size:13px">Ngày đặt ${fdate(o)} · ${esc(PAYN[o.pay] || o.pay || '')}</p>
+        <p class="dim mt-2" style="font-size:13px">Ngày đặt ${fdate(o)} · ${esc(PAYN[o.pay] || o.pay || '')}${o.edits ? ` · <span class="gold">đã sửa ${o.edits} lần</span>` : ''}</p>
+        ${o.exchange && o.exchange.due > 0 ? `<div class="bank mt-2"><p style="font-size:14px;margin-bottom:8px"><b>Chờ chuyển khoản bù ${money(o.exchange.due)}</b> cho lần đổi sản phẩm</p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)} BU</b></dd></dl>${PSQ.qr(o.exchange.due, o.id + ' BU')}<p class="dim mt-1" style="font-size:12px">Chuyển xong anh chị gửi ảnh bill qua Zalo công ty, nhân viên xác nhận rồi giao hàng.</p></div>` : ''}
+        ${editable(o) ? `<div class="row mt-2" style="gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-outline-gold" type="button" data-edit>${icon('edit')} Đổi sản phẩm / sửa người nhận</button><span class="dim" style="font-size:12px;align-self:center">Đổi được khi đơn chưa giao, sang tổng bằng hoặc cao hơn${(o.edits || 0) ? `, còn ${Math.max(0, ADB.EDIT_MAX - o.edits)} lần` : ''}.</span></div>` : ''}
         ${pay ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due(o), o.id)}</div>${waitBox(o)}` : ''}`);
       if (pay) billWait('order', o, () => { md.close(); render(); }, 'Đã nhận thanh toán đơn ' + o.id, 'Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.');
+      const eb = md.el.querySelector('[data-edit]');
+      if (eb) eb.addEventListener('click', () => { md.close(); editOrder(o); });
     }));
+  }
+  // khách tự đổi sản phẩm khi đơn chưa giao (tổng bằng hoặc cao hơn, bù bằng ví hoặc chuyển khoản), sửa người nhận, địa chỉ, ghi chú
+  const editable = o => !!window.ADB && ADB.editBlock && !ADB.editBlock(o, (auth.user() || {}).id) && (o.edits || 0) < ADB.EDIT_MAX;
+  function editOrder(o) {
+    const lines = (o.items || []).map(x => ({ id: x.id, v: x.v || '', qty: x.qty, name: x.name, price: x.price }));
+    const sellable = (window.PRODUCTS || []).filter(p => p.active !== false && p.id !== ADB.PKG_ID && p.id !== ADB.AGENT_PKG_ID && !(PSQ.stockOf && PSQ.stockOf(p.id) === 0));
+    const opts = sellable.flatMap(p => (p.variants || []).length ? p.variants.filter(x => x && x.id).map(x => { const q = PSQ.pv(p.id, x.id); return { k: p.id + '|' + x.id, name: q.name, price: q.price }; }) : [{ k: p.id + '|', name: p.name, price: +p.price || 0 }]);
+    const base = (o.items || []).reduce((s, x) => s + x.price * x.qty, 0), sumL = () => lines.reduce((s, x) => s + x.price * x.qty, 0);
+    const wal = (() => { try { const b = ADB.balances(ADB.load(), o.userId); return Math.max(0, b.shop) + Math.max(0, b.avail) + Math.max(0, b.cash); } catch (e) { return 0; } })();
+    const md = modal(`<div class="card-head"><h3>Đổi đơn #${esc(o.id)}</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      ${o.coupon ? `<p class="biz-note">${icon('info')}Đơn có mã giảm giá ${esc(o.coupon)} nên chỉ sửa được người nhận, địa chỉ, ghi chú. Muốn đổi sản phẩm anh chị liên hệ nhân viên.</p>` : ''}
+      <div id="eLines"></div>
+      ${o.coupon ? '' : `<div class="row mt-1" style="gap:8px"><select class="input" id="eAdd" style="flex:1"><option value="">Thêm sản phẩm…</option>${opts.map(x => `<option value="${esc(x.k)}">${esc(x.name)} · ${money(x.price)}</option>`).join('')}</select></div>`}
+      <div class="row between mt-2"><span class="muted">Tiền hàng cũ</span><span>${money(base)}</span></div>
+      <div class="row between"><span class="muted">Tiền hàng mới</span><b class="gold" id="eTotal"></b></div>
+      <p class="mt-1" id="eDiff" style="font-size:13px"></p>
+      <div id="ePay" class="mt-1" hidden><label class="row" style="gap:8px;align-items:center"><input type="radio" name="ePay" value="wallet"${wal ? ' checked' : ' disabled'}> Bù bằng ví điểm <span class="dim" style="font-size:12px">(ví mua hàng, khả dụng, tiền mặt: còn ${money(wal)}, phải đủ phần bù)</span></label><label class="row mt-1" style="gap:8px;align-items:center"><input type="radio" name="ePay" value="bank"${wal ? '' : ' checked'}> Chuyển khoản thêm</label></div>
+      <div class="divider"></div>
+      <form id="eForm" class="grid" style="gap:10px">
+        <label class="field"><span>Người nhận</span><input class="input" name="name" value="${esc(o.name || '')}" required></label>
+        <label class="field"><span>Điện thoại</span><input class="input" name="phone" value="${esc(o.phone || '')}" required></label>
+        <label class="field"><span>Địa chỉ nhận hàng</span><input class="input" name="address" value="${esc(o.address || '')}" required></label>
+        <label class="field"><span>Ghi chú</span><input class="input" name="note" value="${esc(o.note || '')}"></label>
+        <p class="dim" style="font-size:12px">Chỉ đổi sang tổng bằng hoặc cao hơn đơn cũ, không hoàn tiền. Mỗi đơn đổi tối đa ${ADB.EDIT_MAX} lần (còn ${ADB.EDIT_MAX - (o.edits || 0)}).</p>
+        <p class="err" id="eErr" style="color:var(--red)"></p>
+        <div class="row" style="gap:8px;justify-content:flex-end"><button class="btn" type="button" data-close>Đóng</button><button class="btn btn-gold" type="submit">${icon('check')} Lưu thay đổi</button></div>
+      </form>`);
+    const box = md.el.querySelector('#eLines');
+    const draw = () => {
+      box.innerHTML = lines.map((x, i) => `<div class="row between" style="padding:6px 0;gap:10px;align-items:center"><span style="flex:1">${esc(x.name)}<br><small class="dim">${money(x.price)}</small></span>${o.coupon ? `<b>x${x.qty}</b>` : `<input class="input" type="number" min="1" max="999" value="${x.qty}" data-q="${i}" style="width:72px"><button class="icon-btn" type="button" data-rm="${i}" aria-label="Bỏ">${icon('close')}</button>`}</div>`).join('') || '<p class="dim">Chưa có sản phẩm nào.</p>';
+      upd();
+    };
+    function upd() {
+      const n = sumL(), df = n - base, el = md.el.querySelector('#eDiff');
+      md.el.querySelector('#eTotal').textContent = money(n);
+      el.innerHTML = df < 0 ? `<span style="color:var(--red)">Thấp hơn đơn cũ ${money(-df)}. Anh chị chọn thêm sản phẩm cho bằng hoặc cao hơn.</span>` : df > 0 ? `Cần bù thêm <b class="gold">${money(df)}</b>` : '<span class="dim">Bằng đơn cũ, không cần bù.</span>';
+      md.el.querySelector('#ePay').hidden = !(df > 0);
+      const wr = md.el.querySelector('[name=ePay][value=wallet]'), br = md.el.querySelector('[name=ePay][value=bank]'); if (wr && br) { wr.disabled = wal < df; if (wr.disabled) br.checked = true; }
+    }
+    draw();
+    box.addEventListener('input', e => { const i = e.target.dataset.q; if (i != null) { lines[i].qty = Math.max(1, Math.min(999, Math.round(+e.target.value || 1))); upd(); } });
+    box.addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { lines.splice(+b.dataset.rm, 1); draw(); } });
+    const add = md.el.querySelector('#eAdd');
+    if (add) add.addEventListener('change', () => { const x = opts.find(y => y.k === add.value); if (!x) return; const [id, v] = x.k.split('|'), f = lines.find(l => l.id === id && l.v === v); if (f) f.qty++; else lines.push({ id, v, qty: 1, name: x.name, price: x.price }); add.value = ''; draw(); });
+    md.el.querySelector('#eForm').addEventListener('submit', e => {
+      e.preventDefault(); const f = e.target, er = md.el.querySelector('#eErr'); er.textContent = '';
+      if (!lines.length) { er.textContent = 'Đơn cần ít nhất 1 sản phẩm.'; return; }
+      if (sumL() < base) { er.textContent = 'Đơn mới phải bằng hoặc cao hơn tiền hàng cũ ' + money(base) + '.'; return; }
+      const pw = (md.el.querySelector('[name=ePay]:checked') || {}).value || 'bank';
+      if (sumL() > base && !confirm(`Bù thêm ${money(sumL() - base)} bằng ${pw === 'wallet' ? 'ví điểm (trừ ngay)' : 'chuyển khoản'}?`)) return;
+      const r = act('orderEdit', { id: o.id, pay: pw, items: lines.map(x => Object.assign({ id: x.id, qty: x.qty }, x.v ? { v: x.v } : {})), info: { name: f.name.value, phone: f.phone.value, address: f.address.value, note: f.note.value } }, null, er);
+      if (!r) return;
+      toast(r.paid ? 'Đã đổi đơn, đơn đã trả đủ bằng ví.' : r.used ? 'Đã đổi đơn, đã trừ ' + money(r.diff) + ' từ ví.' : r.due ? 'Đã đổi đơn. Số tiền cần chuyển khoản: ' + money(r.due) : 'Đã cập nhật đơn.');
+      md.close(); render();
+    });
   }
 
   /* ---------- VÍ ---------- */
