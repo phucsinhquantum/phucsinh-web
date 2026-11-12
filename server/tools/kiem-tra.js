@@ -646,6 +646,21 @@ async function seed() {
     X.memberSwap(d, o, B, [{ id: 'y', name: 'y', price: 2000000, qty: 1 }], 'wallet');
     ok(got('B') === 500000 && got('A') === 200000 && got('B', 'bonus') === 500000 && got('A', 'bonus') === 200000, `đổi lên 2tr bù 1tr bằng ví: B thêm 250.000, A thêm 100.000, đều vào điểm thưởng (thực tế B ${got('B')}, A ${got('A')})`);
   }
+  // bù bằng chuyển khoản: hoa hồng khoản bù tính như đơn tiền (B tự mua vào tiền mặt, A 90% điểm thưởng + 10% ví mua hàng), dù đơn gốc trả bằng điểm
+  {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: {} }; X.plan(d);
+    const day = new Date().toISOString().slice(0, 10);
+    d.users.push({ id: 'A', name: 'A', tier: 'daily', sponsor: null, role: 'member' }, { id: 'B', name: 'B', tier: 'daily', sponsor: 'A', role: 'member' });
+    ['A', 'B'].forEach(id => d.orders.push({ id: 'tu-' + id, userId: id, status: 'done', settled: true, total: 100000, items: [{ id: 'x', price: 100000, qty: 1 }], date: day }));
+    d.wallet.push({ id: 'sd', user: 'B', wallet: 'avail', type: 'adjust', amount: 5000000, note: 'nạp thử', date: day, status: 'done' });
+    const B = d.users[1], o = { id: 'exc', userId: 'B', status: 'pending', pay: 'wallet', total: 1000000, items: [{ id: 'x', name: 'x', price: 1000000, qty: 1 }], date: day }; d.orders.push(o);
+    X.spendAvailPart(d, B, o, 1000000); X.setStatus(d, o, 'paid');
+    const n0 = d.wallet.length; X.memberSwap(d, o, B, [{ id: 'y', name: 'y', price: 2000000, qty: 1 }], 'bank');
+    ok(d.wallet.length === n0 && o.exchange && o.exchange.due === 1000000, 'bù chuyển khoản: chưa tính hoa hồng khi công ty chưa nhận tiền');
+    X.confirmTopup(d, o);
+    const rows = d.wallet.slice(n0), got = (u, w) => rows.filter(x => x.user === u && x.wallet === w).reduce((s, x) => s + x.amount, 0);
+    ok(got('B', 'cash') === 250000 && got('B', 'bonus') === 0 && got('A', 'bonus') === 90000 && got('A', 'shop') === 10000 && o.ptsNow == null, `bù chuyển khoản 1tr: B 250.000 tiền mặt, A 90.000 điểm thưởng + 10.000 ví mua hàng (thực tế B ${got('B', 'cash')}/${got('B', 'bonus')}, A ${got('A', 'bonus')}/${got('A', 'shop')})`);
+  }
   // đại lý tự mua (anh Tuân 04/11): B đại lý mua 10tr nhận 25% = 2.500.000; A (đại lý, giới thiệu B) nhận 40% = 1.000.000; C (CTV, trên A) 10% = 100.000
   for (const self of [1, 0]) {
     const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: { plan: { selfAgent: self } } }; X.plan(d);

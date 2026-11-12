@@ -183,7 +183,7 @@
     return Math.min(1, ((+o.shopPaid || 0) + (+o.availPaid || 0)) / o.total);
   }
   function payCommission(d, c) {
-    const P = plan(d), pr = ptsShare(d, c.order), dt = c.paidAt || c.date;
+    const P = plan(d), pr = c.pts != null ? c.pts : ptsShare(d, c.order), dt = c.paidAt || c.date;
     const fromName = (ADB.user(d, c.from) || {}).name || '', tag = pr >= 1 ? ' (đơn trả bằng điểm)' : pr > 0 ? ' (phần đơn trả bằng điểm)' : '';
     const ptsPart = Math.round(c.amount * pr), rest = c.amount - ptsPart;
     if (c.kind === 'ref') {
@@ -228,6 +228,7 @@
   }
   function addCommission(d, c) {
     c = Object.assign({ id: uid('hh'), level: 1, status: 'paid' }, c);
+    const od = c.order && (d.orders || []).find(x => x.id === c.order); if (c.pts == null && od && od.ptsNow != null) c.pts = od.ptsNow;   // phần bù đổi sản phẩm: tỷ lệ điểm của riêng khoản bù
     if (!c.at && (!c.date || c.date === now())) c.at = nowAt();
     (d.commissions = d.commissions || []).push(c);
     if (c.status === 'paid') payCommission(d, c);
@@ -712,6 +713,7 @@
     confirmTopup(d, o) {
       if (!o.exchange || !(o.exchange.due > 0)) return { error: 'Đơn không có khoản bù.' };
       const diff = o.exchange.due; o.extraPaid = (o.extraPaid || 0) + diff; delete o.exchange;
+      const had = o.ptsNow != null; if (!had) o.ptsNow = 0;   // bù chuyển khoản: hoa hồng khoản bù tính như đơn tiền
       if (o.settled) {
         // phần bù tính hoa hồng y như một đơn đã thanh toán có giá trị bằng phần bù: tự mua (đại lý/CTV), không thì người giới thiệu; tầng trên tính nối như thường
         const buyer = ADB.user(d, o.userId), sp = buyer && buyer.sponsor ? ADB.user(d, buyer.sponsor) : o.refBy ? ADB.user(d, o.refBy) : null, P = plan(d);
@@ -721,6 +723,7 @@
         else if (sp) directCommission(d, o, buyer || { id: null }, sp, base, date, 'Phần bù đổi sản phẩm');
         if (buyer && buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = now(); }
       }
+      if (!had) delete o.ptsNow;
       return { diff };
     },
     isPkgOrder(o) { return (o.items || []).some(isPkgItem); },
