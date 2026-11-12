@@ -632,6 +632,20 @@ async function seed() {
     ok(o.availPaid === 500000 && !o.exchange && bon === 50000 && csh === 0, `bù bằng điểm: hoa hồng 10% phần bù = 50.000 vào ví điểm thưởng (thực tế điểm thưởng ${bon}, tiền mặt ${csh})`);
     ok(!X.memberSwap(d, o, K, [{ id: 'x', name: 'x', price: 1000000, qty: 1 }], 'wallet').used && /bằng hoặc cao hơn/.test(X.memberSwap(d, o, K, [{ id: 'x', name: 'x', price: 1000000, qty: 1 }], 'wallet').error || ''), 'đổi đơn sang tổng thấp hơn bị chặn');
   }
+  // phần bù đổi sản phẩm tính hoa hồng như đơn mới: đại lý B (người giới thiệu là đại lý A) mua 1tr bằng ví khả dụng, đổi lên 2tr bù 1tr bằng ví
+  {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: {} }; X.plan(d);
+    const day = new Date().toISOString().slice(0, 10);
+    d.users.push({ id: 'A', name: 'A', tier: 'daily', sponsor: null, role: 'member' }, { id: 'B', name: 'B', tier: 'daily', sponsor: 'A', role: 'member' });
+    ['A', 'B'].forEach(id => d.orders.push({ id: 'tu-' + id, userId: id, status: 'done', settled: true, total: 100000, items: [{ id: 'x', price: 100000, qty: 1 }], date: day }));
+    d.wallet.push({ id: 'sd', user: 'B', wallet: 'avail', type: 'adjust', amount: 5000000, note: 'nạp thử', date: day, status: 'done' });
+    const B = d.users[1], o = { id: 'exb', userId: 'B', status: 'pending', pay: 'wallet', total: 1000000, items: [{ id: 'x', name: 'x', price: 1000000, qty: 1 }], date: day }; d.orders.push(o);
+    X.spendAvailPart(d, B, o, 1000000); X.setStatus(d, o, 'paid');
+    const got = (u, w) => d.wallet.filter(x => x.user === u && x.ref === 'exb' && ['commission', 'override'].includes(x.type) && (!w || x.wallet === w)).reduce((s, x) => s + x.amount, 0);
+    ok(got('B') === 250000 && got('A') === 100000, `đơn 1tr trả bằng ví khả dụng: B tự mua 250.000, A 100.000 (thực tế ${got('B')}, ${got('A')})`);
+    X.memberSwap(d, o, B, [{ id: 'y', name: 'y', price: 2000000, qty: 1 }], 'wallet');
+    ok(got('B') === 500000 && got('A') === 200000 && got('B', 'bonus') === 500000 && got('A', 'bonus') === 200000, `đổi lên 2tr bù 1tr bằng ví: B thêm 250.000, A thêm 100.000, đều vào điểm thưởng (thực tế B ${got('B')}, A ${got('A')})`);
+  }
   // đại lý tự mua (anh Tuân 04/11): B đại lý mua 10tr nhận 25% = 2.500.000; A (đại lý, giới thiệu B) nhận 40% = 1.000.000; C (CTV, trên A) 10% = 100.000
   for (const self of [1, 0]) {
     const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: { plan: { selfAgent: self } } }; X.plan(d);

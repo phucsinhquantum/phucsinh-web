@@ -713,8 +713,12 @@
       if (!o.exchange || !(o.exchange.due > 0)) return { error: 'Đơn không có khoản bù.' };
       const diff = o.exchange.due; o.extraPaid = (o.extraPaid || 0) + diff; delete o.exchange;
       if (o.settled) {
-        const buyer = ADB.user(d, o.userId), sp = buyer && buyer.sponsor ? ADB.user(d, buyer.sponsor) : null, P = plan(d);
-        if (sp) directCommission(d, o, buyer, sp, Math.round(diff * (itemsTotal(o) ? itemsPs(o) / itemsTotal(o) : 1)), now(), 'Phần bù đổi sản phẩm');
+        // phần bù tính hoa hồng y như một đơn đã thanh toán có giá trị bằng phần bù: tự mua (đại lý/CTV), không thì người giới thiệu; tầng trên tính nối như thường
+        const buyer = ADB.user(d, o.userId), sp = buyer && buyer.sponsor ? ADB.user(d, buyer.sponsor) : o.refBy ? ADB.user(d, o.refBy) : null, P = plan(d);
+        const base = Math.round(diff * (itemsTotal(o) ? itemsPs(o) / itemsTotal(o) : 1)), date = now(), tier = buyer ? buyer.tier : '';
+        const selfRate = tier === 'daily' ? P.agentRate : tier === 'ctv' ? P.ctvRate : 0;
+        if (base > 0 && selfRate && +(P.selfAgent ?? 1)) addCommission(d, { kind: 'direct', self: true, order: o.id, user: buyer.id, from: buyer.id, rate: selfRate, base, amount: pct(base, selfRate), date, note: (tier === 'daily' ? 'Đại lý tự mua hàng' : 'CTV tự mua hàng') + ', phần bù đổi sản phẩm' });
+        else if (sp) directCommission(d, o, buyer || { id: null }, sp, base, date, 'Phần bù đổi sản phẩm');
         if (buyer && buyer.tier !== 'daily' && ADB.spent(d, buyer.id) >= P.agentThreshold) { buyer.tier = 'daily'; buyer.agentSince = now(); }
       }
       return { diff };
