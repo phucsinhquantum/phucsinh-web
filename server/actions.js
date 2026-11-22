@@ -713,6 +713,7 @@ const ACTIONS = {
     if (!ev) return err('Không tìm thấy sự kiện.');
     if (c.me.role !== 'admin' && !(ev.spinners || []).includes(c.me.id)) return err('Anh chị chưa được cấp quyền quay sự kiện này.');
     const r = c.A.wheelEventDraw(c.d, ev.id); if (r.error) return r;
+    r.winner.by = c.me.name;   // ghi vào biên bản quay
     c.log('Quay sự kiện', `${ev.name}: ${c.me.name} quay, ${r.name}${r.winner.prize ? ' trúng ' + r.winner.prize : ''}`);
     return { name: r.name, index: r.index, pool: r.pool, winner: r.winner };
   } },

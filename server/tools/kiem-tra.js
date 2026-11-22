@@ -677,6 +677,25 @@ async function seed() {
     ok(fe('PSQ1234') === 'TAM UNG PSQ1234' && payNote(E.SITE, 'PSQ1234') === 'TAM UNG PSQ1234', 'nội dung chuyển khoản mặc định: TAM UNG PSQ1234 (trang và máy chủ giống nhau)');
     ok(fe('PSQ1234', '{ma} thanh toán!') === 'PSQ1234 THANH TOAN' && payNote({ payNote: 'đặt cọc' }, 'PSQ9') === 'DAT COC PSQ9' && fe('PSQ1', '') === 'PSQ1', 'nội dung chuyển khoản: bỏ dấu, bỏ ký tự lạ, thiếu {ma} thì thêm mã đơn, bỏ trống thì chỉ mã đơn');
   }
+  // anh Tuân 22/11: vòng quay sự kiện bốc thăm bằng số ngẫu nhiên mật mã, xáo tên khi bắt đầu, có biên bản quay
+  {
+    const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: {} }; X.plan(d);
+    let cr = 0; const g = globalThis.crypto.getRandomValues; globalThis.crypto.getRandomValues = a => { cr++; return g.call(globalThis.crypto, a); };
+    const cnt = Array(9).fill(0); for (let i = 0; i < 9000; i++) cnt[X.randInt(9)]++;
+    globalThis.crypto.getRandomValues = g;
+    ok(cr >= 9000 && cnt.every(c => c > 800 && c < 1200), `randInt dùng số ngẫu nhiên mật mã, chia đều 9 ô (${cnt.join(',')})`);
+    const names = Array.from({ length: 9 }, (_, i) => 'Người ' + (i + 1));
+    const W = X.wheel(d), ev = { id: 'skt', name: 'Zoom thử', mode: 'random', removeWinners: true, participants: names.slice(), prizes: [{ name: 'Quà', qty: 3 }], winners: [] }; W.events.push(ev);
+    X.wheelEventStart(ev); const order1 = ev.participants.slice();
+    ok(ev.live && ev.shuffledAt && order1.slice().sort().join() === names.slice().sort().join(), 'Bắt đầu sự kiện: xáo thứ tự tên, đủ người, không trùng');
+    ev.live = false; X.wheelEventStart(ev);
+    ok(ev.participants.join() === order1.join(), 'Bắt đầu lại: giữ thứ tự đã xáo');
+    for (let k = 0; k < 3; k++) { const r = X.wheelEventDraw(d, ev.id); if (r.winner) r.winner.by = 'Quản trị'; }
+    const wn = ev.winners.map(w => w.name);
+    ok(wn.length === 3 && new Set(wn).size === 3 && wn.every(n => names.includes(n)) && !ev.live, 'Quay 3 giải: 3 người khác nhau, trao đủ tự kết thúc');
+    const rp = X.wheelEventReport(ev, { spinners: ['A'] });
+    ok(/BIÊN BẢN QUAY THƯỞNG: Zoom thử/.test(rp) && wn.every((n, i) => rp.includes('Lần ' + (i + 1)) && rp.includes('trúng: ' + n)) && rp.includes('9. ') && /Quản trị bấm quay/.test(rp), 'Biên bản quay: đủ người tham dự, từng lần quay, người bấm');
+  }
   // đại lý tự mua (anh Tuân 04/11): B đại lý mua 10tr nhận 25% = 2.500.000; A (đại lý, giới thiệu B) nhận 40% = 1.000.000; C (CTV, trên A) 10% = 100.000
   for (const self of [1, 0]) {
     const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: { plan: { selfAgent: self } } }; X.plan(d);

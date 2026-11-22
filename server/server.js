@@ -124,7 +124,7 @@ function eventDone() {
     ev.reported = stamp(); ch = true;
     // sự kiện đã xong từ lâu (trước khi có tính năng này): chỉ đánh dấu, không báo
     if (!last || Date.now() + 7 * 36e5 - Date.parse(last.slice(0, 16).replace(' ', 'T') + ':00Z') > 12 * 36e5) return;
-    tell(`🎉 Sự kiện vòng quay "${ev.name}" đã kết thúc${ev.date ? ' (' + ev.date + ')' : ''}.\nĐã trao ${won.length}${n ? '/' + n : ''} giải. Danh sách người trúng thưởng:\n${won.map((w, i) => `${i + 1}. ${w.name}${w.prize ? ' · ' + w.prize : ''}${w.at ? ' · ' + String(w.at).slice(11, 16) : ''}`).join('\n')}`);
+    tell(`🎉 Sự kiện vòng quay "${ev.name}" đã kết thúc${ev.date ? ' (' + ev.date + ')' : ''}.\nĐã trao ${won.length}${n ? '/' + n : ''} giải. Danh sách người trúng thưởng:\n${won.map((w, i) => `${i + 1}. ${w.name}${w.prize ? ' · ' + w.prize : ''}${w.at ? ' · ' + String(w.at).slice(11, 19) : ''}`).join('\n')}\nBiên bản quay: ${BASE}/vong-quay.html?ev=${encodeURIComponent(ev.id)}&bien-ban=1`);
   });
   return ch;
 }

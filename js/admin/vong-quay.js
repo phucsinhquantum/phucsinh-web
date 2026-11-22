@@ -153,15 +153,21 @@
         <div class="row wrap" style="gap:6px">${ev.mode === 'fixed' ? `<span class="badge violet">Chỉ định người trúng (${(ev.fixedWinners || []).length})</span>` : '<span class="badge ok">Ngẫu nhiên</span>'}${ev.removeWinners ? '<span class="badge">Loại người đã trúng</span>' : ''}${ev.announce !== false ? '<span class="badge gold">Thông báo trên web</span>' : ''}${ev.live ? '<span class="badge ok">● Đang diễn ra</span>' : ''}</div>
         <div style="font-size:13px"><span class="dim">Người được bấm quay:</span> ${(ev.spinners || []).length ? ev.spinners.map(id => `<b>${esc(uname(d, id))}</b>`).join(', ') : 'chỉ quản trị'}</div>
         ${(ev.winners || []).length ? `<div style="font-size:13px"><span class="dim">Đã trúng:</span> ${ev.winners.map(w => `<b>${esc(w.name)}</b>${w.prize ? ' <span class="gold">(' + esc(w.prize) + ')</span>' : ''}`).join(', ')}</div>` : '<div class="dim" style="font-size:13px">Chưa quay</div>'}
-        <div class="row wrap" style="gap:8px">${ev.live ? `<button class="btn btn-sm btn-ghost" type="button" data-we-live="${ev.id}" style="border-color:rgba(255,107,107,.5);color:var(--red)">■ Kết thúc sự kiện</button>` : `<button class="btn btn-sm btn-gold" type="button" data-we-live="${ev.id}">▶ Bắt đầu sự kiện</button>`}<a class="btn btn-sm" href="vong-quay.html?ev=${encodeURIComponent(ev.id)}#su-kien" target="_blank" rel="noopener">${icon('sparkle')} Mở vòng quay</a><button class="btn btn-sm" type="button" data-we-edit="${ev.id}">${icon('edit')} Sửa</button><button class="btn btn-sm btn-ghost" type="button" data-we-reset="${ev.id}">Quay lại từ đầu</button><button class="btn btn-sm btn-ghost" type="button" data-we-del="${ev.id}" aria-label="Xóa">${icon('trash')}</button></div></div>`; }).join('')}</div>` : `<div class="empty">${icon('users')}Chưa có sự kiện nào.</div>`}</div>`;
+        <div class="row wrap" style="gap:8px">${ev.live ? `<button class="btn btn-sm btn-ghost" type="button" data-we-live="${ev.id}" style="border-color:rgba(255,107,107,.5);color:var(--red)">■ Kết thúc sự kiện</button>` : `<button class="btn btn-sm btn-gold" type="button" data-we-live="${ev.id}">▶ Bắt đầu sự kiện</button>`}<a class="btn btn-sm" href="vong-quay.html?ev=${encodeURIComponent(ev.id)}#su-kien" target="_blank" rel="noopener">${icon('sparkle')} Mở vòng quay</a><button class="btn btn-sm" type="button" data-we-edit="${ev.id}">${icon('edit')} Sửa</button><button class="btn btn-sm" type="button" data-we-report="${ev.id}">${icon('book')} Biên bản</button><button class="btn btn-sm btn-ghost" type="button" data-we-reset="${ev.id}">Quay lại từ đầu</button><button class="btn btn-sm btn-ghost" type="button" data-we-del="${ev.id}" aria-label="Xóa">${icon('trash')}</button></div></div>`; }).join('')}</div>` : `<div class="empty">${icon('users')}Chưa có sự kiện nào.</div>`}</div>`;
     box.onclick = e => {
       const ed = e.target.closest('[data-we-edit],[data-we-add]'), rs = e.target.closest('[data-we-reset]'), del = e.target.closest('[data-we-del]');
       if (ed) return eventForm(E.find(x => x.id === ed.dataset.weEdit));
+      const rpb = e.target.closest('[data-we-report]');
+      if (rpb) { const ev = E.find(x => x.id === rpb.dataset.weReport); if (!ev) return;
+        const txt = ADB.wheelEventReport(ev, { spinners: (ev.spinners || []).map(id => uname(d, id)) });
+        const m = modal(`<div class="row"><h3>Biên bản quay</h3>${closeBtn}</div><pre style="white-space:pre-wrap;font:13px/1.55 inherit;max-height:60vh;overflow:auto;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(txt)}</pre><div class="row mt-2" style="gap:8px;justify-content:flex-end"><button class="btn btn-gold" type="button" data-rp-copy>${icon('copy')} Sao chép</button></div>`);
+        m.el.querySelector('[data-rp-copy]').onclick = () => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Đã sao chép biên bản'), () => toast('Máy không cho sao chép, anh chị bôi đen chữ để chép.'));
+        return; }
       const d2 = ADB.load(), W2 = ADB.wheel(d2);
       const lv = e.target.closest('[data-we-live]');
       if (lv) { const ev = W2.events.find(x => x.id === lv.dataset.weLive); if (!ev) return;
         if (ev.live && !confirm('Kết thúc sự kiện "' + ev.name + '"? Bảng thông báo trên web sẽ tắt.')) return;
-        ev.live = !ev.live; if (ev.live) { ev.liveAt = PSQ.stampVN(); delete ev.endAt; delete ev.reported; } else ev.endAt = PSQ.stampVN();
+        if (!ev.live) ADB.wheelEventStart(ev); else { ev.live = false; ev.endAt = PSQ.stampVN(); }
         commit(d2, ev.live ? 'Bắt đầu sự kiện vòng quay' : 'Kết thúc sự kiện vòng quay', ev.name, ev.live ? 'Đã bắt đầu: mọi người đang mở web sẽ thấy bảng thông báo trong khoảng nửa phút' : 'Đã kết thúc sự kiện' + ((ev.winners || []).length ? ', bot sẽ báo danh sách trúng thưởng lên Telegram' : '')); draw(); return; }
       if (rs) { const ev = W2.events.find(x => x.id === rs.dataset.weReset); if (!ev || !confirm('Xóa kết quả đã quay của "' + ev.name + '"?')) return; ev.winners = []; delete ev.reported; delete ev.endAt; commit(d2, 'Đặt lại vòng quay sự kiện', ev.name, 'Đã xóa kết quả, có thể quay lại'); draw(); }
       if (del) { const ev = W2.events.find(x => x.id === del.dataset.weDel); if (!ev || !confirm('Xóa sự kiện "' + ev.name + '"?')) return; W2.events = W2.events.filter(x => x !== ev); commit(d2, 'Xóa sự kiện vòng quay', ev.name, 'Đã xóa sự kiện'); draw(); }
@@ -205,7 +211,8 @@
       const spinners = [...new Set(SL.map(x => x.u.id))];
       const v = { name: $('#weN', m.el).value.trim(), kind: $('#weK', m.el).value, date: $('#weD', m.el).value, participants, prizes, mode, fixedWinners, removeWinners: $('#weR', m.el).checked, spinners, announce: $('#weA', m.el).checked };
       const d = ADB.load(), W = ADB.wheel(d);
-      if (ev) Object.assign(W.events.find(x => x.id === ev.id) || {}, v); else W.events.unshift({ id: ADB.uid('sk'), winners: [], ...v });
+      const me = (PSQ.auth.user() || {}).name || '';
+      if (ev) { const cur = W.events.find(x => x.id === ev.id) || {}; if (JSON.stringify(cur.participants) !== JSON.stringify(participants)) delete cur.shuffledAt; Object.assign(cur, v); } else W.events.unshift({ id: ADB.uid('sk'), winners: [], createdBy: me, ...v });
       commit(d, ev ? 'Sửa sự kiện vòng quay' : 'Tạo sự kiện vòng quay', `${v.name}: ${participants.length} người, ${mode === 'fixed' ? 'chỉ định ' + fixedWinners.length + ' người trúng' : 'ngẫu nhiên'}${spinners.length ? '; người quay: ' + SL.map(x => x.u.name).join(', ') : ''}`, 'Đã lưu sự kiện');
       m.close(); draw();
     });

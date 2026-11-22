@@ -18,6 +18,7 @@ function createEngine(ctx) {
   const noop = () => {};
   const doc = { createElement: () => ({ click: noop }), addEventListener: noop, querySelector: () => null, querySelectorAll: () => [] };
   const sb = {
+    crypto: require('crypto').webcrypto,   // bốc thăm vòng quay sự kiện bằng số ngẫu nhiên mật mã
     console, Date, Math, JSON, Intl, Object, Array, String, Number, Boolean, RegExp, Set, Map, Promise, Error,
     setTimeout, clearTimeout, URLSearchParams, localStorage: ls, document: doc, navigator: {},
     location: { search: '', origin: '', pathname: '', hash: '' }, addEventListener: noop

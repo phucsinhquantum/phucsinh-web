@@ -19,8 +19,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261122a">
-<script src="js/lang.js?v=20261122a"></script>
+<link rel="stylesheet" href="css/app.css?v=20261122b">
+<script src="js/lang.js?v=20261122b"></script>
 </head>
 <body data-page="wheel">
 <div id="page" data-title="Vòng quay may mắn" data-crumb="Vòng quay may mắn">
@@ -100,12 +100,12 @@
 
 </div>
 
-<script src="js/patch.js?v=20261122a"></script>
-<script src="js/api.js?v=20261122a"></script>
-<script src="js/data.js?v=20261122a"></script>
+<script src="js/patch.js?v=20261122b"></script>
+<script src="js/api.js?v=20261122b"></script>
+<script src="js/data.js?v=20261122b"></script>
 <script src="js/analytics.js?v=ph2" defer></script>
-<script src="js/app.js?v=20261122a"></script>
-<script src="js/psq-data.js?v=20261122a"></script>
+<script src="js/app.js?v=20261122b"></script>
+<script src="js/psq-data.js?v=20261122b"></script>
 <script>
 (function () {
   const { $, $$, esc, icon, toast, modal, fdate, auth } = PSQ;
@@ -395,6 +395,14 @@
   const isAdmin = () => { const u = auth.user(); return !!(u && u.role === 'admin' && u.status !== 'locked'); };
   const ev = Wheel($('#whEvWheel'), { mode: 'event', onSpin: evSpin, onTick: (i, s) => { $('#whNow').textContent = s ? shown(s.label) : '...'; } });
   const KIND = { online: 'Zoom online', offline: 'Offline' };
+  // biên bản quay: người tham dự theo thứ tự trên vòng, từng lần quay (giờ, người bấm, người trúng), sao chép gửi nhóm
+  function evReport(E) {
+    const txt = ADB.wheelEventReport(E, { show: shown, spinners: E.spinNames || [] });
+    const md = PSQ.modal(`<div class="card-head"><h3>Biên bản quay</h3><button class="icon-btn" type="button" data-close style="margin-left:auto" aria-label="Đóng">${icon('close')}</button></div>
+      <pre style="white-space:pre-wrap;font:13px/1.55 inherit;max-height:60vh;overflow:auto;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px;padding:12px">${esc(txt)}</pre>
+      <div class="row mt-2" style="gap:8px;justify-content:flex-end"><button class="btn" type="button" data-close>Đóng</button><button class="btn btn-gold" type="button" id="rpCopy">${icon('copy')} Sao chép</button></div>`);
+    md.el.querySelector('#rpCopy').onclick = () => { (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Đã sao chép biên bản, anh chị dán vào nhóm Zalo/Telegram.'), () => { const r = document.createRange(); r.selectNodeContents(md.el.querySelector('pre')); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Đã chọn chữ, anh chị bấm Sao chép trên máy.'); }); };
+  }
   function curEvent(d) { return evSel === 'quick' ? null : ADB.wheel(d).events.find(e => e.id === evSel) || null; }
   function evRender(keepWheel) {
     const d = ADB.load(), W = ADB.wheel(d);
@@ -452,7 +460,8 @@
     ev.hub.disabled = !canSpin || !pool.length; ev.hub.classList.toggle('wh-armed', canSpin && pool.length > 0);
     status($('#whEvStatus'), !pool.length ? (E ? 'Không còn người tham dự trong vòng.' : 'Tạo vòng quay ở khung bên cạnh.') : canSpin ? `Bấm <b class="gold">QUAY</b> để chọn người may mắn${prizeNow ? ' nhận <b class="gold">' + esc(clean(prizeNow)) + '</b>' : ''}.` : 'Đang chờ người tổ chức quay.');
     $('#whWinSub').textContent = winners.length ? winners.length + ' người' + (slots.length ? ' / ' + slots.length + ' giải' : '') : 'Chưa có ai';
-    $('#whWinAct').innerHTML = !E && winners.length ? `<button class="btn btn-sm btn-ghost" type="button" id="whClear">${icon('trash')} Xóa kết quả</button>` : '';
+    $('#whWinAct').innerHTML = !E && winners.length ? `<button class="btn btn-sm btn-ghost" type="button" id="whClear">${icon('trash')} Xóa kết quả</button>` : E ? `<button class="btn btn-sm btn-outline-gold" type="button" id="whReport">${icon('book')} Biên bản quay</button>` : '';
+    const rp = $('#whReport'); if (rp) { rp.onclick = () => evReport(E); if (PSQ.qs('bien-ban') && !evReport.auto) { evReport.auto = 1; setTimeout(() => evReport(E), 300); } }
     const cl = $('#whClear'); if (cl) cl.onclick = () => { if (!confirm('Xóa danh sách người trúng của vòng quay nhanh?')) return; quick.winners = []; saveQuick(); evRender(); };
     $('#whWinners').innerHTML = winners.length ? `<ol class="wh-wins">${winners.map((w, i) => `<li><span class="wh-wn">${i + 1}</span><div style="min-width:0"><b>${esc(shown(w.name))}</b>${w.prize ? `<small class="gold">${esc(w.prize)}</small>` : ''}</div><time class="dim">${esc(String(w.at || '').slice(11, 16))}</time></li>`).join('')}</ol>` : `<div class="empty" style="padding:24px 10px">${icon('award')}Người trúng sẽ hiện ở đây.</div>`;
     $('#whFs').innerHTML = document.body.classList.contains('wh-fs-on') ? `${icon('close')}<span class="wh-fs-t">Thoát toàn màn hình</span>` : `${icon('grid')}<span class="wh-fs-t">Toàn màn hình</span>`;

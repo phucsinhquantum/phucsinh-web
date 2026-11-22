@@ -880,6 +880,36 @@
     // sự kiện còn đang mở: đang bật và chưa trao hết giải
     wheelEventOpen(ev) { const n = eventSlots(ev).length; return !!ev && !!ev.live && (!ev.date || ev.date >= vnISO().slice(0, 10)) && (!n || (ev.winners || []).length < n); },
     // quay một lượt sự kiện: trả về tên người trúng
+    // số ngẫu nhiên mật mã (crypto) từ 0 đến n-1, không lệch phân phối; máy không có crypto thì dùng Math.random
+    randInt(n) {
+      n = Math.floor(n); if (!(n > 1)) return 0;
+      try { const c = typeof crypto !== 'undefined' && crypto; if (c && c.getRandomValues) { const a = new Uint32Array(1), lim = Math.floor(4294967296 / n) * n; do c.getRandomValues(a); while (a[0] >= lim); return a[0] % n; } } catch (e) {}
+      return Math.floor(Math.random() * n);
+    },
+    // xáo thứ tự (Fisher–Yates) bằng số ngẫu nhiên mật mã
+    shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = ADB.randInt(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; },
+    // bắt đầu sự kiện: xáo thứ tự tên trên vòng quay 1 lần (giữ cố định tới khi sửa danh sách)
+    wheelEventStart(ev) {
+      if (!ev.shuffledAt) { ev.participants = ADB.shuffle(ev.participants || []); ev.shuffledAt = stampNow(); }
+      ev.live = true; ev.liveAt = stampNow(); delete ev.endAt; delete ev.reported; return ev;
+    },
+    // biên bản quay: chữ để sao chép gửi nhóm
+    wheelEventReport(ev, opt = {}) {
+      const W = ev.winners || [], slots = eventSlots(ev), L = [], sh = opt.show || (x => x);
+      L.push('BIÊN BẢN QUAY THƯỞNG: ' + ev.name);
+      if (ev.date) L.push('Ngày: ' + ev.date.split('-').reverse().join('/'));
+      if (ev.createdBy) L.push('Người tạo sự kiện: ' + ev.createdBy);
+      if (opt.spinners && opt.spinners.length) L.push('Người được bấm quay: ' + opt.spinners.join(', '));
+      L.push('Cách chọn người trúng: ' + (ev.mode === 'fixed' ? 'quản trị chỉ định trước' : 'máy chủ bốc thăm ngẫu nhiên (số ngẫu nhiên mật mã), không ai chỉnh được kết quả'));
+      if (ev.liveAt) L.push('Bắt đầu: ' + ev.liveAt);
+      L.push('', `Người tham dự (${(ev.participants || []).length}, theo thứ tự trên vòng quay${ev.shuffledAt ? ', đã xáo trộn lúc bắt đầu' : ''}):`);
+      (ev.participants || []).forEach((n, i) => L.push(`${i + 1}. ${sh(n)}`));
+      L.push('', `Kết quả (${W.length}${slots.length ? '/' + slots.length : ''} giải):`);
+      W.forEach((w, i) => L.push(`Lần ${i + 1} · ${w.at || ''} · ${w.by ? w.by + ' bấm quay · ' : ''}trúng: ${sh(w.name)}${w.prize ? ' (' + w.prize + ')' : ''}`));
+      if (!W.length) L.push('Chưa quay.');
+      if (ev.endAt) L.push('', 'Kết thúc: ' + ev.endAt);
+      return L.join('\n');
+    },
     wheelEventDraw(d, eventId) {
       const ev = wheelData(d).events.find(e => e.id === eventId); if (!ev) return { error: 'Không tìm thấy sự kiện.' };
       const pool = eventPool(ev); if (!pool.length) return { error: 'Không còn người tham dự trong vòng quay.' };
@@ -891,7 +921,7 @@
         const next = (ev.fixedWinners || []).map(n => String(n).trim()).filter(Boolean).find(n => !won.has(normName(n)) && pool.some(p => normName(p) === normName(n)));
         if (next) name = pool.find(p => normName(p) === normName(next));
       }
-      if (name == null) name = pool[Math.floor(Math.random() * pool.length)];
+      if (name == null) name = pool[ADB.randInt(pool.length)];
       const w = { name, prize: slots[ev.winners.length] || '', at: stampNow() };
       ev.winners.push(w);
       if (slots.length && ev.winners.length >= slots.length) { ev.live = false; ev.endAt = w.at; }
