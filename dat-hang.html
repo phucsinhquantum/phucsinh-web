@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261112g">
-<script src="js/lang.js?v=20261112g"></script>
+<link rel="stylesheet" href="css/app.css?v=20261122a">
+<script src="js/lang.js?v=20261122a"></script>
 <style>
   .steps { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .step { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; color: var(--text-3); text-align: left; cursor: default; }
@@ -163,11 +163,11 @@
   </section>
 </div>
 
-<script src="js/patch.js?v=20261112g"></script>
-<script src="js/api.js?v=20261112g"></script>
-<script src="js/data.js?v=20261112g"></script>
-<script src="js/app.js?v=20261112g"></script>
-<script src="js/psq-data.js?v=20261112g"></script>
+<script src="js/patch.js?v=20261122a"></script>
+<script src="js/api.js?v=20261122a"></script>
+<script src="js/data.js?v=20261122a"></script>
+<script src="js/app.js?v=20261122a"></script>
+<script src="js/psq-data.js?v=20261122a"></script>
 <script>
 (function () {
   const { $, $$, esc, money, icon, art, cart, product, auth, toast, statusBadge, fdate } = PSQ;
@@ -297,7 +297,7 @@
       </div>
       <div id="walletBox">${walletNote()}</div>
       <div class="bank" id="bankBox"${form.pay === 'bank' ? '' : ' hidden'}>
-        <dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Nội dung</dt><dd>Mã đơn hàng (hiện sau khi đặt)</dd></dl>
+        <dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Nội dung</dt><dd>${esc(payNoteOf('PSQ…'))} (mã đơn hiện sau khi đặt)</dd></dl>
       </div>
       <div class="nav-btns"><button class="btn btn-ghost" type="button" data-go="0">${icon('back')} Quay lại giỏ hàng</button><button class="btn btn-gold" type="submit">Xem lại đơn ${icon('arrow')}</button></div>
     </form>`;
@@ -374,7 +374,7 @@
         <div class="box" style="padding:16px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--line)">
           <dl class="kv"><dt>Tổng đơn hàng</dt><dd><b class="${sp || cp ? '' : 'gold'}" style="font-size:${sp || cp ? 15 : 18}px">${money(o.total)}</b></dd>${sp ? `<dt>Đã dùng điểm</dt><dd class="green">${PS(sp)}</dd>` : ''}${cp ? `<dt>Ví tiền mặt</dt><dd class="cyan">${money(cp)}</dd>` : ''}${sp || cp ? `<dt>Còn phải trả</dt><dd><b class="gold" style="font-size:18px">${money(due)}</b></dd>` : ''}<dt>Giao đến</dt><dd>${esc(o.address)}</dd><dt>Thanh toán</dt><dd>${due === 0 ? [o.shopPaid ? 'ví điểm mua hàng' : '', o.availPaid ? 'ví điểm khả dụng' : '', cp ? 'ví tiền mặt' : ''].filter(Boolean).join(', ').replace(/^./, x => x.toUpperCase()) : bank ? 'Chuyển khoản ngân hàng' : 'Khi nhận hàng (COD)'}</dd></dl>
         </div>
-        ${bank ? `<div class="bank mt-2" id="bankBox"><p style="font-size:14px;margin-bottom:10px"><b>${unpaid ? 'Bước 1. ' : ''}Chuyển khoản theo thông tin này</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Số tiền</dt><dd>${money(due)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due, o.id)}</div>${payWait()}`
+        ${bank ? `<div class="bank mt-2" id="bankBox"><p style="font-size:14px;margin-bottom:10px"><b>${unpaid ? 'Bước 1. ' : ''}Chuyển khoản theo thông tin này</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(S.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(S.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(S.bank.owner)}</dd><dt>Số tiền</dt><dd>${money(due)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(payNoteOf(o.id))}</b></dd></dl>${PSQ.qr(due, payNoteOf(o.id))}</div>${payWait()}`
           : due === 0 ? `<p class="pts-note mt-2">${icon('check')}<span>Đơn đã thanh toán đủ bằng ví. ${sp ? `Ví mua hàng còn <b>${PS(shopBal())}</b>. ` : ''}${cp ? `Ví tiền mặt còn <b>${money(cashBal())}</b>. ` : ''} Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận giao hàng.</span></p>`
           : `<p class="pts-note mt-2">${icon('truck')}<span>Nhân viên sẽ gọi số <b>${esc(o.phone)}</b> để xác nhận. Anh chị kiểm tra hàng rồi thanh toán ${money(due)} khi nhận.</span></p>`}
       </div>

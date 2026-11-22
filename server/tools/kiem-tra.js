@@ -671,6 +671,12 @@ async function seed() {
     const rows = d.wallet.slice(n0), got = (u, w) => rows.filter(x => x.user === u && x.wallet === w).reduce((s, x) => s + x.amount, 0);
     ok(got('B', 'cash') === 250000 && got('B', 'bonus') === 0 && got('A', 'bonus') === 90000 && got('A', 'shop') === 10000 && o.ptsNow == null, `bù chuyển khoản 1tr: B 250.000 tiền mặt, A 90.000 điểm thưởng + 10.000 ví mua hàng (thực tế B ${got('B', 'cash')}/${got('B', 'bonus')}, A ${got('A', 'bonus')}/${got('A', 'shop')})`);
   }
+  // nội dung chuyển khoản đơn hàng theo mẫu (anh Tuân 22/11): mặc định "tam ung {ma}", bỏ dấu, in hoa
+  {
+    const { payNote } = require('../actions'), fe = E.sandbox.payNoteOf;
+    ok(fe('PSQ1234') === 'TAM UNG PSQ1234' && payNote(E.SITE, 'PSQ1234') === 'TAM UNG PSQ1234', 'nội dung chuyển khoản mặc định: TAM UNG PSQ1234 (trang và máy chủ giống nhau)');
+    ok(fe('PSQ1234', '{ma} thanh toán!') === 'PSQ1234 THANH TOAN' && payNote({ payNote: 'đặt cọc' }, 'PSQ9') === 'DAT COC PSQ9' && fe('PSQ1', '') === 'PSQ1', 'nội dung chuyển khoản: bỏ dấu, bỏ ký tự lạ, thiếu {ma} thì thêm mã đơn, bỏ trống thì chỉ mã đơn');
+  }
   // đại lý tự mua (anh Tuân 04/11): B đại lý mua 10tr nhận 25% = 2.500.000; A (đại lý, giới thiệu B) nhận 40% = 1.000.000; C (CTV, trên A) 10% = 100.000
   for (const self of [1, 0]) {
     const X = E.ADB, d = { users: [], orders: [], commissions: [], wallet: [], settings: { plan: { selfAgent: self } } }; X.plan(d);

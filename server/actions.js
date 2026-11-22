@@ -22,6 +22,8 @@ function lineOf(p, v) {
   const x = L.find(y => y.id === v); if (!x) return null;
   return { v: x.id, name: p.name + ' - ' + String(x.name || '').slice(0, 80), price: Math.max(0, int(x.price)), ps: psVal(x) };
 }
+// nội dung chuyển khoản đơn hàng theo mẫu Thiết lập (giống payNoteOf ở js/data.js)
+const payNote = (site, id) => { let t = String((site && site.payNote) ?? 'tam ung {ma}').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Za-z0-9{} ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40); if (!t.includes('{ma}')) t = (t + ' {ma}').trim(); return t.replace('{ma}', id).toUpperCase(); };
 const normPhone = p => String(p || '').replace(/[^\d]/g, '').replace(/^84/, '0');
 const err = e => ({ error: e });
 
@@ -348,7 +350,7 @@ const ACTIONS = {
     (o.bills = o.bills || []).push({ f, at: c.stamp() });
     const due = Math.max(0, o.total - (o.shopPaid || 0) - (o.cashPaid || 0) - (o.availPaid || 0));
     const what = c.A.isAgentPkgOrder(o) ? 'gói đại lý' : (o.items || []).some(x => x.id === c.A.PKG_ID) ? 'gói kích hoạt CTV' : 'đơn';
-    c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${orderText(o)}\nSố tiền cần nhận ${money(due)}, nội dung ${o.id}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
+    c.notify(`🧾 Khách gửi bill chuyển khoản ${what} ${o.id}\n${orderText(o)}\nSố tiền cần nhận ${money(due)}, nội dung ${payNote(c.site, o.id)}\nAnh đối chiếu với tài khoản ${c.site.bank && c.site.bank.name || 'ngân hàng'} rồi bấm duyệt.`, { kind: 'order', ref: o.id, button: '✅ Duyệt đã nhận tiền' }, bill);
     c.log('Khách gửi bill chuyển khoản', o.id);
     return { ok: true };
   } },
@@ -439,7 +441,7 @@ const ACTIONS = {
     if (!due) c.notify(`Đơn hàng mới ${o.id} (đã thanh toán bằng ví)\n${orderText(o)}`);
     if (email) c.mail(email, `Xác nhận đơn hàng ${o.id}`, 'Đơn hàng', wrapMail(c.site, 'Cảm ơn ' + c.e(name) + ' đã đặt hàng',
       `<p>Mã đơn: <b>${o.id}</b></p><table style="width:100%;border-collapse:collapse">${items.map(x => `<tr><td style="padding:4px 0">${x.qty} x ${c.e(x.name)}</td><td style="text-align:right">${money(x.price * x.qty)}</td></tr>`).join('')}${o.discount ? `<tr><td>Mã giảm giá ${c.e(o.coupon)}</td><td style="text-align:right">-${money(o.discount)}</td></tr>` : ''}<tr><td style="padding-top:8px"><b>Tổng</b></td><td style="text-align:right"><b>${money(o.total)}</b></td></tr></table>
-       ${due ? `<p>Anh chị chuyển khoản <b>${money(due)}</b> tới ${c.e(c.site.bank.name)} ${c.e(c.site.bank.account)} (${c.e(c.site.bank.owner)}), nội dung <b>${o.id}</b>.</p>` : '<p>Đơn đã thanh toán đủ bằng ví.</p>'}
+       ${due ? `<p>Anh chị chuyển khoản <b>${money(due)}</b> tới ${c.e(c.site.bank.name)} ${c.e(c.site.bank.account)} (${c.e(c.site.bank.owner)}), nội dung <b>${c.e(payNote(c.site, o.id))}</b>.</p>` : '<p>Đơn đã thanh toán đủ bằng ví.</p>'}
        <p>Giao tới: ${c.e(address)}</p>`));
     return { order: o };
   } },
@@ -994,4 +996,4 @@ function botOrders(d, A, a) {
 }
 const botKeyOf = store => (store.getJSON('secret:bot') || {}).key || '';
 
-module.exports = { botOrders, botLookup, botProducts, fanList, fanWhy, fanRule, botFanpages, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };
+module.exports = { payNote, botOrders, botLookup, botProducts, fanList, fanWhy, fanRule, botFanpages, botKeyOf, ACTIONS, scopeFor, hashPass, verifyPass, clean, wrapMail };

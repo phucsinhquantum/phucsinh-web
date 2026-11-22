@@ -17,7 +17,7 @@ const path = require('path');
 const zlib = require('zlib');
 const { openStore } = require('./store');
 const { createEngine, esc, today } = require('./engine');
-const { ACTIONS, scopeFor, hashPass, clean, botOrders, botLookup, botProducts, botKeyOf, fanList, botFanpages } = require('./actions');
+const { ACTIONS, scopeFor, hashPass, clean, payNote, botOrders, botLookup, botProducts, botKeyOf, fanList, botFanpages } = require('./actions');
 const { sendMail } = require('./mail');
 const N = require('./notify'), { chatName, chatsOf } = N;
 const P = require('../js/patch.js');
@@ -417,7 +417,7 @@ async function confirmPage(req, res, url) {
       if (!r.error) notify(env, { text: `✅ Đã duyệt đơn ${o.id}: ${o.name}, đã nhận ${money(due)}.` }).catch(() => {});
       return page('Đã xác nhận', r.error ? `<h1>Chưa xác nhận được</h1><p>${esc(r.error)}</p>` : `<h1>✅ Đã xác nhận đơn ${esc(o.id)}</h1><p>Đơn chuyển sang ${o.status === 'done' ? 'Hoàn thành' : 'Đã thanh toán'}.</p>`);
     }
-    return page('Xác nhận đơn ' + o.id, `<h1>Xác nhận đã nhận tiền</h1><dl><dt>Đơn</dt><dd><b>${esc(o.id)}</b></dd><dt>Khách</dt><dd>${esc(o.name)} · ${esc(o.phone || '')}</dd><dt>Sản phẩm</dt><dd>${o.items.map(x => esc(x.qty + ' x ' + x.name)).join('<br>')}</dd><dt>Số tiền</dt><dd><b>${money(due)}</b></dd><dt>Nội dung CK</dt><dd>${esc(o.id)}</dd></dl>${billImgs(o, t)}
+    return page('Xác nhận đơn ' + o.id, `<h1>Xác nhận đã nhận tiền</h1><dl><dt>Đơn</dt><dd><b>${esc(o.id)}</b></dd><dt>Khách</dt><dd>${esc(o.name)} · ${esc(o.phone || '')}</dd><dt>Sản phẩm</dt><dd>${o.items.map(x => esc(x.qty + ' x ' + x.name)).join('<br>')}</dd><dt>Số tiền</dt><dd><b>${money(due)}</b></dd><dt>Nội dung CK</dt><dd>${esc(payNote(E.SITE, o.id))}</dd></dl>${billImgs(o, t)}
       <p style="background:#3a2c10;border:1px solid #f3c76b;border-radius:10px;padding:10px 12px;color:#f3c76b;font-weight:700;margin:0 0 12px">Bước cuối: bấm nút vàng bên dưới thì mới duyệt xong. Chỉ mở trang này thì đơn vẫn chờ.</p><form method="post"><input type="hidden" name="t" value="${esc(t)}"><button type="submit">✅ Đã nhận ${money(due)}</button></form><p style="font-size:13px">Chỉ bấm khi tiền đã vào tài khoản.</p>`);
   }
   const u = A().user(D, tp.user) || {};
@@ -601,7 +601,7 @@ function staleSend(list) {
   tell(`⏰ ${fresh.length} đơn đặt quá 10 phút chưa duyệt (${withBill.length} đơn đã gửi bill):\n${fresh.slice(0, 40).map(x => `• ${x.id} · ${x.name} · ${fm(x.due)} · ${x.bills.length ? 'đã gửi bill' : 'chưa gửi bill'} · ${x.since}`).join('\n')}${fresh.length > 40 ? `\n… và ${fresh.length - 40} đơn nữa` : ''}${withBill.length ? '\nĐơn đã gửi bill có tin riêng bên dưới kèm nút duyệt. Mở nút rồi bấm thêm nút vàng "Đã nhận" mới xong.' : ''}`);
   withBill.slice(0, 15).forEach(x => {
     let photo = null; try { const f = x.bills[x.bills.length - 1], ext = f.split('.').pop(); photo = { buf: fs.readFileSync(path.join(BILL_DIR, f)), type: BILL_MIME[ext] }; } catch (e) {}
-    tell(`🧾 Đơn sót ${x.id} · ${x.name} · ${x.phone}\nCần nhận ${fm(x.due)}, nội dung ${x.id}\nĐặt lúc ${x.since}. Anh đối chiếu tài khoản rồi bấm duyệt.`, { kind: 'order', ref: x.id, button: '✅ Duyệt đã nhận tiền' }, photo);
+    tell(`🧾 Đơn sót ${x.id} · ${x.name} · ${x.phone}\nCần nhận ${fm(x.due)}, nội dung ${payNote(E.SITE, x.id)}\nĐặt lúc ${x.since}. Anh đối chiếu tài khoản rồi bấm duyệt.`, { kind: 'order', ref: x.id, button: '✅ Duyệt đã nhận tiền' }, photo);
   });
   fresh.forEach(x => { const o = D.orders.find(y => y.id === x.id); if (o) o.staleSent = now; }); save();
   return { sent: fresh.length, recent: list.length - fresh.length };

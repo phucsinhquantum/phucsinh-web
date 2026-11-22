@@ -25,8 +25,8 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/app.css?v=20261112g">
-<script src="js/lang.js?v=20261112g"></script>
+<link rel="stylesheet" href="css/app.css?v=20261122a">
+<script src="js/lang.js?v=20261122a"></script>
 <style>
   /* đăng nhập, đăng ký */
   .terms-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
@@ -245,11 +245,11 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
   <div id="view"></div>
 </div>
 
-<script src="js/patch.js?v=20261112g"></script>
-<script src="js/api.js?v=20261112g"></script>
-<script src="js/data.js?v=20261112g"></script>
-<script src="js/app.js?v=20261112g"></script>
-<script src="js/psq-data.js?v=20261112g"></script>
+<script src="js/patch.js?v=20261122a"></script>
+<script src="js/api.js?v=20261122a"></script>
+<script src="js/data.js?v=20261122a"></script>
+<script src="js/app.js?v=20261122a"></script>
+<script src="js/psq-data.js?v=20261122a"></script>
 <script>
 (function () {
   const { $, esc, money, icon, auth, statusBadge, toast, initials, fdate, modal, short, today } = PSQ;
@@ -559,7 +559,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
       <ul class="pkg-list mt-2">${perkLi(d, 'dailyPkg')}</ul>
       <p class="muted mt-2" style="font-size:13px">Quyền lợi Đại lý:</p><ul class="pkg-list">${perkLi(d, 'daily')}</ul></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn gói đại lý #' + esc(o.id), 'tạo ngày ' + fdate(o), statusBadge(o.status))}
-        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}${ptsBox(d, me, o.total, o)}
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(payNoteOf(o.id))}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, payNoteOf(o.id)) : ''}</div>${waitBox(o)}${ptsBox(d, me, o.total, o)}
         <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản lên Đại lý ngay khi công ty duyệt bill chuyển khoản, hoặc ngay lập tức nếu trả bằng điểm.</p></div>`
       : `<div class="card glow-cyan">${head('Đăng ký ngay', 'thanh toán bằng chuyển khoản')}
         <p class="muted" style="font-size:14px">Chuyển khoản: bấm nút bên dưới để tạo đơn, trang hiện thông tin chuyển khoản với nội dung là mã đơn. Hoặc trả bằng điểm khả dụng nếu ví đủ điểm.</p>
@@ -591,7 +591,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
           <ul class="pkg-list">${perkLi(d, 'ctvFee')}</ul></div></div>
       <p class="muted mt-2" style="font-size:13px">Sau khi kích hoạt, anh chị là Cộng tác viên: nhận hoa hồng ${P.ctvRate}% đơn hàng của người mình giới thiệu và ${P.ctvOverRate}% thu nhập của người mình giới thiệu. Đóng gói xong, điểm vào ví mua hàng; đơn hàng đầu tiên được thanh toán thì tài khoản lên Cộng tác viên. Tổng mua cộng dồn đạt ${money(P.agentThreshold)} thì lên Đại lý.</p></div>`;
     const status = o ? `<div class="card glow-cyan">${head('Đơn kích hoạt #' + esc(o.id), 'tạo ngày ' + fdate(o), statusBadge(o.status))}
-        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, o.id) : ''}</div>${waitBox(o)}${ptsBox(d, me, o.total, o)}
+        <div class="bank"><p style="font-size:14px;margin:0 0 10px"><b>Thông tin chuyển khoản</b></p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(B.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(B.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(B.owner)}</dd><dt>Số tiền</dt><dd>${money(o.total)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(payNoteOf(o.id))}</b></dd></dl>${o.status === 'pending' ? PSQ.qr(o.total, payNoteOf(o.id)) : ''}</div>${waitBox(o)}${ptsBox(d, me, o.total, o)}
         <p class="dim mt-2" style="font-size:13px">${icon('info')} Tài khoản được kích hoạt Cộng tác viên ngay khi công ty duyệt bill chuyển khoản, hoặc ngay lập tức nếu trả bằng điểm. Anh chị có thể xem trạng thái tại Đơn hàng của tôi.</p></div>`
       : `<div class="card glow-cyan">${head('Kích hoạt ngay', 'thanh toán bằng chuyển khoản')}
         <p class="muted" style="font-size:14px">Chuyển khoản: bấm nút bên dưới để tạo đơn, trang hiện thông tin chuyển khoản với nội dung là mã đơn. Hoặc trả bằng điểm khả dụng nếu ví đủ điểm.</p>
@@ -680,7 +680,7 @@ var kh = /[?&]kich-hoat=([^&#]+)/.exec(location.search); if (kh) location.replac
         <p class="dim mt-2" style="font-size:13px">Ngày đặt ${fdate(o)} · ${esc(PAYN[o.pay] || o.pay || '')}${o.edits ? ` · <span class="gold">đã sửa ${o.edits} lần</span>` : ''}</p>
         ${o.exchange && o.exchange.due > 0 ? `<div class="bank mt-2"><p style="font-size:14px;margin-bottom:8px"><b>Chờ chuyển khoản bù ${money(o.exchange.due)}</b> cho lần đổi sản phẩm</p><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)} BU</b></dd></dl>${PSQ.qr(o.exchange.due, o.id + ' BU')}<p class="dim mt-1" style="font-size:12px">Chuyển xong anh chị gửi ảnh bill qua Zalo công ty, nhân viên xác nhận rồi giao hàng.</p></div>` : ''}
         ${editable(o) ? `<div class="row mt-2" style="gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-outline-gold" type="button" data-edit>${icon('edit')} Đổi sản phẩm / sửa người nhận</button><span class="dim" style="font-size:12px;align-self:center">Đổi được khi đơn chưa giao, sang tổng bằng hoặc cao hơn${(o.edits || 0) ? `, còn ${Math.max(0, ADB.EDIT_MAX - o.edits)} lần` : ''}.</span></div>` : ''}
-        ${pay ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(o.id)}</b></dd></dl>${PSQ.qr(due(o), o.id)}</div>${waitBox(o)}` : ''}`);
+        ${pay ? `<div class="bank"><dl class="kv"><dt>Ngân hàng</dt><dd>${esc(SITE.bank.name)}</dd><dt>Số tài khoản</dt><dd><b class="gold">${esc(SITE.bank.account)}</b></dd><dt>Chủ tài khoản</dt><dd>${esc(SITE.bank.owner)}</dd><dt>Nội dung</dt><dd><b class="cyan">${esc(payNoteOf(o.id))}</b></dd></dl>${PSQ.qr(due(o), payNoteOf(o.id))}</div>${waitBox(o)}` : ''}`);
       if (pay) billWait('order', o, () => { md.close(); render(); }, 'Đã nhận thanh toán đơn ' + o.id, 'Cảm ơn anh chị! Nhân viên sẽ gọi xác nhận và giao hàng sớm nhất.');
       const eb = md.el.querySelector('[data-edit]');
       if (eb) eb.addEventListener('click', () => { md.close(); editOrder(o); });

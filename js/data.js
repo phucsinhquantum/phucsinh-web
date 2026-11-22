@@ -17,6 +17,8 @@ window.SITE = {
   address: '41 Nguyễn Đình Chiểu, Phường Sài Gòn, TP. Hồ Chí Minh',
   hours: 'Thứ 2 đến Chủ nhật, 8:00 đến 20:00',
   hoursNote: 'Kể cả ngày lễ',
+  // nội dung chuyển khoản đơn hàng (mã QR tự điền), {ma} là mã đơn; sửa ở Quản trị > Thiết lập hệ thống (anh Tuân 22/11)
+  payNote: 'tam ung {ma}',
   // chính sách mua sắm (trang Liên hệ), sửa ở Quản trị > Thiết lập hệ thống
   policies: [
     { t: 'Đổi trả trong 7 ngày', d: ['Đổi trả trong 7 ngày nếu sản phẩm lỗi do sản xuất hoặc giao sai mẫu.', 'Sản phẩm còn nguyên tem, hộp và giấy kiểm định.', 'Miễn phí vận chuyển khi lỗi từ phía PSQ.'] },
@@ -231,6 +233,7 @@ window.ABOUT_DEFAULT = JSON.parse(JSON.stringify({ about: window.ABOUT, team: wi
     const v = JSON.parse(localStorage.getItem('psq_site_v1')); if (!v || typeof v !== 'object') return;
     ['brand', 'phone', 'zalo', 'email', 'address', 'hours'].forEach(k => { if (typeof v[k] === 'string' && v[k].trim()) SITE[k] = v[k].trim(); });
     ['messenger', 'mapEmbed', 'hoursNote'].forEach(k => { if (typeof v[k] === 'string') SITE[k] = v[k].trim(); });
+    if (typeof v.payNote === 'string') SITE.payNote = v.payNote.trim();
     if (Array.isArray(v.policies)) v.policies.slice(0, 4).forEach((p, i) => { if (p && typeof p.t === 'string' && p.t.trim()) SITE.policies[i] = { t: p.t.trim(), d: (Array.isArray(p.d) ? p.d : []).map(x => String(x).trim()).filter(Boolean) }; });
     if (v.bank) ['name', 'account', 'owner'].forEach(k => { if (typeof v.bank[k] === 'string' && v.bank[k].trim()) SITE.bank[k] = v.bank[k].trim(); });
     if (v.social) ['facebook', 'youtube', 'tiktok', 'zalo'].forEach(k => { if (typeof v.social[k] === 'string') SITE.social[k] = v.social[k].trim(); });
@@ -287,3 +290,11 @@ window.PERKS = (function () {
   Object.keys(D).forEach(k => { out[k] = v && Array.isArray(v[k]) ? v[k].filter(x => typeof x === 'string' && x.trim()) : D[k].slice(); });
   return out;
 })();
+
+// nội dung chuyển khoản của đơn hàng theo mẫu SITE.payNote: bỏ dấu, chỉ giữ chữ, số, khoảng trắng (ngân hàng nào cũng nhận); thiếu {ma} thì thêm mã đơn ở cuối
+function payNoteOf(id, tpl) {
+  let t = String(tpl == null ? SITE.payNote : tpl || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Za-z0-9{} ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!t.includes('{ma}')) t = (t + ' {ma}').trim();
+  return t.replace('{ma}', id).toUpperCase();
+}
+if (typeof window !== 'undefined') window.payNoteOf = payNoteOf;

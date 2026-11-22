@@ -260,7 +260,7 @@
           <div class="field full"><label for="hs-mapEmbed">Link nhúng Google Maps (không bắt buộc)</label><input class="input" id="hs-mapEmbed" name="mapEmbed" value="${esc(SITE.mapEmbed || '')}" placeholder="https://www.google.com/maps/embed?..."${dis}></div>
           <div class="ht-sec full mt-2">Tài khoản nhận chuyển khoản</div>
           ${f('bankName', 'Ngân hàng', SITE.bank.name)}${f('bankAccount', 'Số tài khoản', SITE.bank.account)}
-          ${f('bankOwner', 'Chủ tài khoản', SITE.bank.owner)}
+          ${f('bankOwner', 'Chủ tài khoản', SITE.bank.owner)}${f('payNote', 'Nội dung chuyển khoản đơn hàng ({ma} là mã đơn)', SITE.payNote || '', 'text', ' placeholder="tam ung {ma}" maxlength="40"')}<p class="dim" style="font-size:12px;grid-column:1/-1" id="payNoteEx">Mã QR tự điền, ví dụ: <b>${esc(payNoteOf('PSQ1234'))}</b>. Viết không dấu, ngắn gọn; bỏ trống thì chỉ ghi mã đơn.</p>
           <div class="ht-sec full mt-2">Link mạng xã hội</div>
           <p class="dim full" style="font-size:12.5px;margin:0">Để trống mục nào thì mục đó hiện "sắp ra mắt" ở trang Liên hệ và ẩn ở chân trang.</p>
           ${f('facebook', 'Facebook', SITE.social.facebook, 'url', ' placeholder="https://facebook.com/..."')}${f('messenger', 'Messenger (mã trang, tên trang không dấu hoặc link m.me)', SITE.messenger, 'text', ' placeholder="770088739523660"')}
@@ -324,7 +324,7 @@
         });
         const site = { brand: v('shopName'), phone: v('hotline'), zalo: v('zalo'), email: v('email'), address: v('address'), hours: v('hours'), hoursNote: v('hoursNote'), mapEmbed: v('mapEmbed'), messenger: v('messenger'),
           policies: [0, 1, 2, 3].map(i => ({ t: v('pol' + i + 't'), d: v('pol' + i + 'd').split('\n').map(x => x.trim()).filter(Boolean) })),
-          bank: { name: v('bankName'), account: v('bankAccount'), owner: v('bankOwner') }, social: { facebook: v('facebook'), zalo: v('zaloOA'), youtube: v('youtube'), tiktok: v('tiktok') } };
+          bank: { name: v('bankName'), account: v('bankAccount'), owner: v('bankOwner') }, payNote: v('payNote'), social: { facebook: v('facebook'), zalo: v('zaloOA'), youtube: v('youtube'), tiktok: v('tiktok') } };
         const t0 = Date.now();
         try { localStorage.setItem('psq_site_v1', JSON.stringify(site)); } catch (er) {}
         ADB.log(d2, 'Thiết lập hệ thống', `Gói ${money(plan.pkgPrice)} (${money(plan.pkgPoints)} PS); CTV tuyến dưới ${plan.ctvOverRate}%; CTV ${plan.ctvRate}%, đại lý ${plan.agentRate}%, thu nhập đại lý ${plan.overrideRate}% (${plan.overrideShop}% vào ví mua hàng); thuế ${plan.taxRate}%; lên đại lý ${money(plan.agentThreshold)}; gói tính vào doanh số ${money(plan.pkgCountsAs)}; rút tối thiểu ${money(mw)}`); ADB.save(d2);
