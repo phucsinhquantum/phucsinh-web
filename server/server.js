@@ -558,8 +558,24 @@ function serveStatic(req, res, url) {
   });
 }
 
+// Zalo Mini App (chạy ở tên miền của Zalo) gọi được các thao tác dành cho khách: xem dữ liệu, đặt hàng, đăng ký.
+// Không cho gửi cookie (không có Allow-Credentials) nên trang khác không dùng được phiên đăng nhập của thành viên.
+const MINIAPP_ORIGIN = /^https:\/\/([a-z0-9-]+\.)*(zdn\.vn|zadn\.vn|zalo\.me|zaloapp\.com)$/i;
+const DEV_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+function cors(req, res) {
+  const o = String(req.headers.origin || '');
+  if (!o || !(MINIAPP_ORIGIN.test(o) || (TEST && DEV_ORIGIN.test(o)) || (env.CORS_DEV === '1' && DEV_ORIGIN.test(o)))) return false;
+  res.setHeader('access-control-allow-origin', o);
+  res.setHeader('vary', 'origin');
+  res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
+  res.setHeader('access-control-allow-headers', 'content-type, x-psq');
+  res.setHeader('access-control-max-age', '86400');
+  return true;
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
+  if (url.pathname.startsWith('/api/') && cors(req, res) && req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   if (url.pathname.startsWith('/api/')) return api(req, res, url).catch(e => { console.error(e); if (!res.headersSent) send(res, e.code === 413 ? 413 : 500, { error: e.code === 413 ? e.message : 'Máy chủ gặp lỗi.' }); });
   if (env.SERVE_STATIC === '0') return send(res, 404, 'Không tìm thấy');
   serveStatic(req, res, url);
