@@ -192,7 +192,9 @@ function readBody(req, limit) {
   });
 }
 const sidCookie = (t, maxAge, name = 'psq_sid') => `${name}=${t || ''}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${SECURE ? '; Secure' : ''}`;
-const meOf = req => { const id = store.session(cookies(req).psq_sid); const u = id && A().user(D, id); return u && u.status !== 'locked' ? u : null; };
+// Zalo Mini App không dùng được cookie của web: gửi mã phiên qua tiêu đề x-psq-token (chỉ tài khoản thành viên)
+const sidOf = req => cookies(req).psq_sid || String(req.headers['x-psq-token'] || '').slice(0, 200) || undefined;
+const meOf = req => { const id = store.session(sidOf(req)); const u = id && A().user(D, id); if (u && !cookies(req).psq_sid && u.role === 'admin') return null; return u && u.status !== 'locked' ? u : null; };
 // quản trị đang xem tài khoản thành viên: phiên thành viên tạo riêng, ghi mã quản trị; phiên quản trị gốc giữ ở cookie psq_asid
 const IMP_HOURS = 2;
 const impOf = req => { const i = store.sessionInfo(cookies(req).psq_sid); if (!i || !/^imp:/.test(i.ua)) return null; const a = A().user(D, i.ua.slice(4)); return isAdmin(a) ? a : null; };
@@ -259,7 +261,7 @@ async function api(req, res, url) {
   let body; try { body = raw ? JSON.parse(raw) : {}; } catch (e) { return send(res, 400, { error: 'Dữ liệu không đọc được.' }); }
 
   if (route === '/api/logout') {
-    const ck = cookies(req); store.endSession(ck.psq_sid);
+    const ck = cookies(req); store.endSession(sidOf(req));
     // thoát chế độ xem thay: trả lại phiên quản trị gốc
     if (imp && store.session(ck.psq_asid) === imp.id) {
       (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: imp.name, action: 'Thôi xem tài khoản', detail: `${me.name} (@${me.username || ''})` }); save();
@@ -286,7 +288,7 @@ async function api(req, res, url) {
     if (def.auth === 'owner' && !A().isOwner(me)) return send(res, 403, { error: 'Chỉ chủ sở hữu làm được việc này.' });
     const ip = ipOf(req), guarded = ['login', 'resetPass', 'forgot', 'register'].includes(body.name);
     if (guarded && limited(ip)) return send(res, 429, { error: 'Anh chị thử lại sau 15 phút.' });
-    ACTOR = me; const sid = cookies(req).psq_sid;
+    ACTOR = me; const sid = sidOf(req);
     const ctx = ctxFor(me, body.args || {}, sid);
     let r;
     try { r = def.async ? await def.run(ctx) : def.run(ctx); }
@@ -296,7 +298,13 @@ async function api(req, res, url) {
     after();
     const headers = {};
     let who = me;
-    if (r && r.login) { headers['set-cookie'] = sidCookie(store.newSession(r.login, req.headers['user-agent'], ip), 30 * 86400); who = A().user(D, r.login); delete r.login; }
+    if (r && r.login) {
+      const lu = A().user(D, r.login), app = req.headers['x-psq-app'] === 'zalo';
+      if (app && lu && lu.role === 'admin') return send(res, 200, { error: 'Tài khoản quản trị chỉ đăng nhập trên web.' });
+      const t = store.newSession(r.login, app ? 'zalo-miniapp' : req.headers['user-agent'], ip);
+      if (app) r.token = t; else headers['set-cookie'] = sidCookie(t, 30 * 86400);
+      who = lu; delete r.login;
+    }
     return send(res, 200, Object.assign({ result: r || { ok: true } }, bootPayload(who, who === me ? imp : null)), headers);
   }
 
@@ -558,8 +566,24 @@ function serveStatic(req, res, url) {
   });
 }
 
+// Zalo Mini App (chạy ở tên miền của Zalo) gọi được các thao tác dành cho khách: xem dữ liệu, đặt hàng, đăng ký.
+// Không cho gửi cookie (không có Allow-Credentials) nên trang khác không dùng được phiên đăng nhập của thành viên.
+const MINIAPP_ORIGIN = /^https:\/\/([a-z0-9-]+\.)*(zdn\.vn|zadn\.vn|zalo\.me|zaloapp\.com)$/i;
+const DEV_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+function cors(req, res) {
+  const o = String(req.headers.origin || '');
+  if (!o || !(MINIAPP_ORIGIN.test(o) || (TEST && DEV_ORIGIN.test(o)) || (env.CORS_DEV === '1' && DEV_ORIGIN.test(o)))) return false;
+  res.setHeader('access-control-allow-origin', o);
+  res.setHeader('vary', 'origin');
+  res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
+  res.setHeader('access-control-allow-headers', 'content-type, x-psq, x-psq-token, x-psq-app');
+  res.setHeader('access-control-max-age', '86400');
+  return true;
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
+  if (url.pathname.startsWith('/api/') && cors(req, res) && req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   if (url.pathname.startsWith('/api/')) return api(req, res, url).catch(e => { console.error(e); if (!res.headersSent) send(res, e.code === 413 ? 413 : 500, { error: e.code === 413 ? e.message : 'Máy chủ gặp lỗi.' }); });
   if (env.SERVE_STATIC === '0') return send(res, 404, 'Không tìm thấy');
   serveStatic(req, res, url);
