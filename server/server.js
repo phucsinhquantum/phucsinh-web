@@ -254,6 +254,20 @@ async function api(req, res, url) {
   }
   if (req.method === 'GET' && route === '/api/admin/db') return isAdmin(me) ? send(res, 200, bootPayload(me)) : send(res, 403, { error: 'Anh chị đăng nhập tài khoản quản trị.' });
   if (route === '/api/bot/lookup' || route === '/api/bot/products' || route === '/api/bot/fanpages' || route === '/api/bot/orders') return botApi(req, res, url, route.split('/').pop());
+  // Zalo Mini App: Zalo báo khi người dùng rút lại đồng ý chia sẻ dữ liệu / yêu cầu xóa dữ liệu.
+  // Mini App không lấy thông tin tài khoản Zalo (tên, số điện thoại Zalo) nên không có dữ liệu Zalo để xóa:
+  // chỉ ghi nhật ký và báo Telegram để quản trị xử lý nếu khách yêu cầu xóa tài khoản thành viên.
+  if (route === '/api/zalo-webhook') {
+    if (req.method !== 'POST') return send(res, 200, { ok: true });
+    let raw = ''; try { raw = await readBody(req, 64e3); } catch (e) { return send(res, 413, { error: 'Quá lớn.' }); }
+    let ev = {}; try { ev = JSON.parse(raw || '{}'); } catch (e) { /* không phải JSON */ }
+    const name = String(ev.event_name || ev.event || ev.type || 'không rõ').slice(0, 80);
+    (D.logs = D.logs || []).unshift({ id: A().uid('nk'), date: stamp(), actor: 'Zalo', action: 'Zalo Mini App báo sự kiện', detail: `${name}: ${raw.slice(0, 500)}` });
+    if (D.logs.length > 5000) D.logs.length = 5000;
+    save();
+    try { tell(`Zalo Mini App báo: ${name}. Nếu khách yêu cầu xóa dữ liệu, anh kiểm tra trong Nhật ký.`); } catch (e) { /* bỏ qua */ }
+    return send(res, 200, { ok: true });
+  }
   if (req.method !== 'POST') return send(res, 405, { error: 'Sai phương thức.' });
   // chống gửi giả từ trang khác: trình duyệt chỉ gửi được tiêu đề này khi cùng tên miền
   if (req.headers['x-psq'] !== '1') return send(res, 403, { error: 'Yêu cầu không hợp lệ.' });
